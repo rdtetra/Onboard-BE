@@ -7,8 +7,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsRelations } from 'typeorm';
 import { hashPassword } from '../../utils/crypto.util';
 import { User } from '../../common/entities/user.entity';
+import { Role } from '../../common/entities/role.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 
 @Injectable()
@@ -16,6 +18,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
   ) {}
 
   async create(ctx: RequestContext, createUserDto: CreateUserDto): Promise<User> {
@@ -25,10 +29,19 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
+    const tenantRole = await this.roleRepository.findOne({
+      where: { name: RoleName.TENANT },
+    });
+
+    if (!tenantRole) {
+      throw new Error('TENANT role not found. Please ensure roles are seeded.');
+    }
+
     const hashedPassword = await hashPassword(createUserDto.password);
     const user = this.userRepository.create({
       ...createUserDto,
       password: hashedPassword,
+      role: tenantRole,
     });
 
     return this.userRepository.save(user);
@@ -39,7 +52,7 @@ export class UsersService {
     relations?: FindOptionsRelations<User>,
   ): Promise<User[]> {
     return this.userRepository.find({
-      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt'],
+      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt'],
       relations,
     });
   }
@@ -51,7 +64,7 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
-      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt'],
+      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt'],
       relations,
     });
 

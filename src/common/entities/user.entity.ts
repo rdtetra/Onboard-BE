@@ -1,5 +1,6 @@
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
+import { Role } from './role.entity';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -14,4 +15,8 @@ export class User extends BaseEntity {
 
   @Column({ nullable: true, name: 'email_verified_at', type: 'timestamp' })
   emailVerifiedAt: Date | null;
+
+  @ManyToOne(() => Role, (role) => role.users)
+  @JoinColumn({ name: 'role_id' })
+  role: Role;
 }

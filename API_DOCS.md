@@ -6,6 +6,32 @@ All endpoints except public auth endpoints require a Bearer token in the Authori
 Authorization: Bearer <access_token>
 ```
 
+## Permissions-Based Authorization
+Endpoints can require specific permissions using the `@Allow()` decorator. Users must have all specified permissions to access the endpoint. If a user lacks required permissions, they will receive a `403 Forbidden` response.
+
+**Available Permissions:**
+- `CREATE_USER` - Create new users
+- `UPDATE_USER` - Update existing users
+- `DELETE_USER` - Delete users
+- `READ_USER` - Read user data
+
+Permissions are assigned to users and included in the JWT token. The system automatically checks permissions on protected endpoints.
+
+**Example Usage:**
+```typescript
+@Get('users')
+@Allow(Permission.READ_USER)
+getUsers() { ... }
+
+@Post('users')
+@Allow(Permission.CREATE_USER)
+createUser() { ... }
+
+@Patch('users/:id')
+@Allow(Permission.UPDATE_USER)
+updateUser() { ... }
+```
+
 ## Response Format
 All responses follow this format:
 ```json
@@ -158,6 +184,8 @@ All responses follow this format:
 
 **Public:** No (Requires Authentication)
 
+**Required Permissions:** `READ_USER`
+
 **Headers:**
 ```
 Authorization: Bearer <access_token>
@@ -223,6 +251,8 @@ Authorization: Bearer <access_token>
 
 **Public:** No (Requires Authentication)
 
+**Required Permissions:** `CREATE_USER`
+
 **Headers:**
 ```
 Authorization: Bearer <access_token>
@@ -261,6 +291,8 @@ Authorization: Bearer <access_token>
 **PATCH** `/users/:id`
 
 **Public:** No (Requires Authentication)
+
+**Required Permissions:** `UPDATE_USER`
 
 **Headers:**
 ```
@@ -303,6 +335,8 @@ Authorization: Bearer <access_token>
 **DELETE** `/users/:id`
 
 **Public:** No (Requires Authentication)
+
+**Required Permissions:** `DELETE_USER`
 
 **Headers:**
 ```
@@ -385,6 +419,17 @@ Authorization: Bearer <access_token>
   "message": ["User with this email already exists"],
   "success": false,
   "statusCode": 409,
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
+
+### 403 Forbidden
+```json
+{
+  "url": "/endpoint",
+  "message": ["Insufficient permissions"],
+  "success": false,
+  "statusCode": 403,
   "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```

@@ -25,7 +25,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<JwtUser> {
-    // JWT strategy runs before request interceptor, so create minimal context
     const minimalContext: RequestContext = {
       user: null,
       url: '/auth/validate',
@@ -34,6 +33,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       requestId: uuidv4(),
     };
     const user = await this.usersService.findOne(minimalContext, payload.sub);
-    return { userId: user.id, email: user.email };
+    return {
+      userId: user.id,
+      email: user.email,
+    };
   }
 }

@@ -8,11 +8,14 @@ import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 import { RequestInterceptor } from './common/interceptors/request.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { User } from './common/entities/user.entity';
 import { UsedToken } from './common/entities/used-token.entity';
+import { Permission } from './common/entities/permission.entity';
+import { Role } from './common/entities/role.entity';
 
 @Module({
   imports: [
@@ -39,7 +42,7 @@ import { UsedToken } from './common/entities/used-token.entity';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'onboard'),
-        entities: [User, UsedToken],
+            entities: [User, UsedToken, Permission, Role],
         synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
       }),
       inject: [ConfigService],
@@ -50,14 +53,18 @@ import { UsedToken } from './common/entities/used-token.entity';
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+        {
+          provide: APP_GUARD,
+          useClass: JwtAuthGuard,
+        },
+        {
+          provide: APP_GUARD,
+          useClass: PermissionsGuard,
+        },
+        {
+          provide: APP_GUARD,
+          useClass: ThrottlerGuard,
+        },
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestInterceptor,
