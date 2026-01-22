@@ -13,7 +13,6 @@ export type AuthResponse = {
   user: {
     id: string;
     email: string;
-    firstName: string | null;
-    lastName: string | null;
+    fullName: string | null;
   };
 };

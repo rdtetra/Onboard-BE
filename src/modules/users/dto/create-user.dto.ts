@@ -17,11 +17,6 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  lastName?: string;
+  @MaxLength(200)
+  fullName?: string;
 }

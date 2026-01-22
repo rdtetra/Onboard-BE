@@ -39,7 +39,7 @@ export class UsersService {
     relations?: FindOptionsRelations<User>,
   ): Promise<User[]> {
     return this.userRepository.find({
-      select: ['id', 'email', 'firstName', 'lastName', 'createdAt', 'updatedAt'],
+      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt'],
       relations,
     });
   }
@@ -51,7 +51,7 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
-      select: ['id', 'email', 'firstName', 'lastName', 'createdAt', 'updatedAt'],
+      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt'],
       relations,
     });
 
