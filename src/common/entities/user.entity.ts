@@ -11,4 +11,7 @@ export class User extends BaseEntity {
 
   @Column({ nullable: true, name: 'full_name' })
   fullName: string;
+
+  @Column({ nullable: true, name: 'email_verified_at', type: 'timestamp' })
+  emailVerifiedAt: Date | null;
 }
