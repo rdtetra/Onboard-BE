@@ -11,6 +11,7 @@ import { RequestInterceptor } from './common/interceptors/request.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { User } from './common/entities/user.entity';
+import { UsedToken } from './common/entities/used-token.entity';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { User } from './common/entities/user.entity';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'onboard'),
-        entities: [User],
+        entities: [User, UsedToken],
         synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
       }),
       inject: [ConfigService],
