@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -84,21 +85,20 @@ export class AuthService {
 
   async forgotPassword(ctx: RequestContext, forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
     const user = await this.usersService.findByEmail(ctx, forgotPasswordDto.email);
-    
+
     if (!user) {
       return { message: 'If the email exists, a password reset link has been sent.' };
     }
 
     const resetSecret = this.configService.get<string>('JWT_RESET_SECRET');
     if (!resetSecret) {
-      throw new Error('JWT_RESET_SECRET is not defined in environment variables');
+      throw new InternalServerErrorException('JWT_RESET_SECRET is not defined in environment variables');
     }
 
-    const resetPayload: JwtPayload = { 
-      email: user.email, 
-      sub: user.id 
+    const resetPayload: JwtPayload = {
+      email: user.email,
+      sub: user.id,
     };
-    
     const resetToken = this.jwtService.sign(resetPayload, {
       secret: resetSecret,
       expiresIn: '30m',
@@ -116,7 +116,7 @@ export class AuthService {
 
     const resetSecret = this.configService.get<string>('JWT_RESET_SECRET');
     if (!resetSecret) {
-      throw new Error('JWT_RESET_SECRET is not defined in environment variables');
+      throw new InternalServerErrorException('JWT_RESET_SECRET is not defined in environment variables');
     }
 
     let decodedPayload: JwtPayload;
@@ -129,8 +129,8 @@ export class AuthService {
     }
 
     const existingToken = await this.usedTokenRepository.findOne({
-      where: { 
-        token: token,
+      where: {
+        token,
       },
     });
 
@@ -152,7 +152,7 @@ export class AuthService {
     });
 
     const tokenEntity = this.usedTokenRepository.create({
-      token: token,
+      token,
     });
 
     await this.usedTokenRepository.save(tokenEntity);

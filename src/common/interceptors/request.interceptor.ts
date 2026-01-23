@@ -19,13 +19,13 @@ export class RequestInterceptor implements NestInterceptor {
     const timestamp = new Date().toISOString();
     const requestId = uuidv4();
 
-        let user: RequestUser | null = null;
-        if (request.user) {
-          user = {
-            userId: request.user.userId,
-            email: request.user.email,
-          };
-        }
+    let user: RequestUser | null = null;
+    if (request.user) {
+      user = {
+        userId: request.user.userId,
+        email: request.user.email,
+      };
+    }
 
     const requestContext: RequestContext = {
       user,

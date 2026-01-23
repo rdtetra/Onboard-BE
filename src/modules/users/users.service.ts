@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsRelations } from 'typeorm';
@@ -34,7 +35,7 @@ export class UsersService {
     });
 
     if (!tenantRole) {
-      throw new Error('TENANT role not found. Please ensure roles are seeded.');
+      throw new InternalServerErrorException('TENANT role not found. Please ensure roles are seeded.');
     }
 
     const hashedPassword = await hashPassword(createUserDto.password);
