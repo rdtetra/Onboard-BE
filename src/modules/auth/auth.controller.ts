@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Headers } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -48,5 +48,23 @@ export class AuthController {
     @Body() resetPasswordDto: ResetPasswordDto,
   ): Promise<{ message: string }> {
     return this.authService.resetPassword(ctx, token, resetPasswordDto);
+  }
+
+  @Public()
+  @Get('session')
+  checkSession(
+    @RequestContext() ctx: RequestContextType,
+    @Headers('authorization') authorization: string | undefined,
+  ): Promise<{ message: string }> {
+    return this.authService.checkSession(ctx, authorization);
+  }
+
+  @Public()
+  @Post('logout')
+  logout(
+    @RequestContext() ctx: RequestContextType,
+    @Headers('authorization') authorization: string | undefined,
+  ): Promise<{ message: string }> {
+    return this.authService.logout(ctx, authorization);
   }
 }

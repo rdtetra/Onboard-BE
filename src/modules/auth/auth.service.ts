@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -30,7 +31,10 @@ export class AuthService {
     private usedTokenRepository: Repository<UsedToken>,
   ) {}
 
-  async register(ctx: RequestContext, registerDto: RegisterDto): Promise<AuthResponse> {
+  async register(
+    ctx: RequestContext,
+    registerDto: RegisterDto,
+  ): Promise<AuthResponse> {
     const user = await this.usersService.create(ctx, registerDto);
     const payload: JwtPayload = {
       email: user.email,
@@ -74,7 +78,11 @@ export class AuthService {
     };
   }
 
-  async validateUser(ctx: RequestContext, email: string, password: string): Promise<Omit<User, 'password'> | null> {
+  async validateUser(
+    ctx: RequestContext,
+    email: string,
+    password: string,
+  ): Promise<Omit<User, 'password'> | null> {
     const user = await this.usersService.findByEmail(ctx, email);
     if (user && (await comparePassword(password, user.password))) {
       const { password: _, ...result } = user;
@@ -83,16 +91,26 @@ export class AuthService {
     return null;
   }
 
-  async forgotPassword(ctx: RequestContext, forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
-    const user = await this.usersService.findByEmail(ctx, forgotPasswordDto.email);
+  async forgotPassword(
+    ctx: RequestContext,
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
+    const user = await this.usersService.findByEmail(
+      ctx,
+      forgotPasswordDto.email,
+    );
 
     if (!user) {
-      return { message: 'If the email exists, a password reset link has been sent.' };
+      return {
+        message: 'If the email exists, a password reset link has been sent.',
+      };
     }
 
     const resetSecret = this.configService.get<string>('JWT_RESET_SECRET');
     if (!resetSecret) {
-      throw new InternalServerErrorException('JWT_RESET_SECRET is not defined in environment variables');
+      throw new InternalServerErrorException(
+        'JWT_RESET_SECRET is not defined in environment variables',
+      );
     }
 
     const resetPayload: JwtPayload = {
@@ -106,17 +124,25 @@ export class AuthService {
 
     // TODO: send email with reset link
 
-    return { message: 'If the email exists, a password reset link has been sent.' };
+    return {
+      message: 'If the email exists, a password reset link has been sent.',
+    };
   }
 
-  async resetPassword(ctx: RequestContext, token: string | undefined, resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(
+    ctx: RequestContext,
+    token: string | undefined,
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
     if (!token) {
       throw new BadRequestException('Reset token is required');
     }
 
     const resetSecret = this.configService.get<string>('JWT_RESET_SECRET');
     if (!resetSecret) {
-      throw new InternalServerErrorException('JWT_RESET_SECRET is not defined in environment variables');
+      throw new InternalServerErrorException(
+        'JWT_RESET_SECRET is not defined in environment variables',
+      );
     }
 
     let decodedPayload: JwtPayload;
@@ -158,5 +184,72 @@ export class AuthService {
     await this.usedTokenRepository.save(tokenEntity);
 
     return { message: 'Password has been reset successfully' };
+  }
+
+  async checkSession(
+    ctx: RequestContext,
+    authorization: string | undefined,
+  ): Promise<{ message: string }> {
+    if (!authorization?.startsWith('Bearer ')) {
+      throw new ForbiddenException('Session is invalid');
+    }
+
+    const [, token] = authorization.split(' ');
+
+    if (!token) {
+      throw new ForbiddenException('Session is invalid');
+    }
+
+    const usedToken = await this.usedTokenRepository.findOne({
+      where: { token },
+    });
+    
+    if (usedToken) {
+      throw new ForbiddenException('Session is invalid');
+    }
+
+    const secret = this.configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new InternalServerErrorException(
+        'JWT_SECRET is not defined in environment variables',
+      );
+    }
+
+    this.verifyAccessToken(token, secret);
+
+    return { message: 'Session is valid' };
+  }
+
+  async logout(
+    ctx: RequestContext,
+    authorization: string | undefined,
+  ): Promise<{ message: string }> {
+    if (!authorization?.startsWith('Bearer ')) {
+      throw new BadRequestException('Authorization token is required');
+    }
+
+    const [, userToken] = authorization.split(' ');
+
+    if (!userToken) {
+      throw new BadRequestException('Authorization token is required');
+    }
+
+    const usedToken = this.usedTokenRepository.create({
+      token: userToken,
+    });
+
+    await this.usedTokenRepository.save(usedToken);
+
+    return {
+      message: 'Logged out',
+    };
+  }
+
+  private verifyAccessToken(token: string, secret: string): void {
+    try {
+      this.jwtService.verify<JwtPayload>(token, { secret });
+    } catch {
+      throw new ForbiddenException('Session is invalid');
+    }
   }
 }
