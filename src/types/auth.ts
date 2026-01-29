@@ -1,3 +1,5 @@
+import { RoleName } from './roles';
+
 export type JwtPayload = {
   email: string;
   sub: string;
@@ -14,5 +16,14 @@ export type AuthResponse = {
     id: string;
     email: string;
     fullName: string | null;
+  };
+};
+
+export type SessionResponse = {
+  message: string;
+  user: {
+    email: string;
+    fullName: string | null;
+    roleName: RoleName;
   };
 };

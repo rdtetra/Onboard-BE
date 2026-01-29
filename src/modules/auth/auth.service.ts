@@ -16,7 +16,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { JwtPayload, AuthResponse } from '../../types/auth';
+import { JwtPayload, AuthResponse, SessionResponse } from '../../types/auth';
 import { User } from '../../common/entities/user.entity';
 import { UsedToken } from '../../common/entities/used-token.entity';
 import type { RequestContext } from '../../types/request';
@@ -189,7 +189,7 @@ export class AuthService {
   async checkSession(
     ctx: RequestContext,
     authorization: string | undefined,
-  ): Promise<{ message: string }> {
+  ): Promise<SessionResponse> {
     if (!authorization?.startsWith('Bearer ')) {
       throw new ForbiddenException('Session is invalid');
     }
@@ -203,7 +203,7 @@ export class AuthService {
     const usedToken = await this.usedTokenRepository.findOne({
       where: { token },
     });
-    
+
     if (usedToken) {
       throw new ForbiddenException('Session is invalid');
     }
@@ -215,9 +215,24 @@ export class AuthService {
       );
     }
 
-    this.verifyAccessToken(token, secret);
+    const payload = this.verifyAccessToken(token, secret);
+    
+    const user = await this.usersService.findOne(ctx, payload.sub, {
+      role: true,
+    });
 
-    return { message: 'Session is valid' };
+    if (!user || !user.role) {
+      throw new ForbiddenException('Session is invalid');
+    }
+
+    return {
+      message: 'Session is valid',
+      user: {
+        email: user.email,
+        fullName: user.fullName ?? null,
+        roleName: user.role.name,
+      },
+    };
   }
 
   async logout(
@@ -245,9 +260,9 @@ export class AuthService {
     };
   }
 
-  private verifyAccessToken(token: string, secret: string): void {
+  private verifyAccessToken(token: string, secret: string): JwtPayload {
     try {
-      this.jwtService.verify<JwtPayload>(token, { secret });
+      return this.jwtService.verify<JwtPayload>(token, { secret });
     } catch {
       throw new ForbiddenException('Session is invalid');
     }

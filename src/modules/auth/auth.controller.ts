@@ -6,7 +6,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
-import { AuthResponse } from '../../types/auth';
+import { AuthResponse, SessionResponse } from '../../types/auth';
 import type { RequestContext as RequestContextType } from '../../types/request';
 
 @Controller('auth')
@@ -55,7 +55,7 @@ export class AuthController {
   checkSession(
     @RequestContext() ctx: RequestContextType,
     @Headers('authorization') authorization: string | undefined,
-  ): Promise<{ message: string }> {
+  ): Promise<SessionResponse> {
     return this.authService.checkSession(ctx, authorization);
   }
 
