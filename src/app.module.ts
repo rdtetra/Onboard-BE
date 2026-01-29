@@ -16,6 +16,7 @@ import { User } from './common/entities/user.entity';
 import { UsedToken } from './common/entities/used-token.entity';
 import { Permission } from './common/entities/permission.entity';
 import { Role } from './common/entities/role.entity';
+import { SeedModule } from './modules/seed/seed.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { Role } from './common/entities/role.entity';
       }),
       inject: [ConfigService],
     }),
+    SeedModule,
     UsersModule,
     AuthModule,
   ],

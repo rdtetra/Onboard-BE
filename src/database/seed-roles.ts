@@ -21,7 +21,6 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
         description: `Permission to ${permissionName.replace(/_/g, ' ').toLowerCase()}`,
       });
       await permissionRepository.save(permission);
-      console.log(`Created permission: ${permissionName}`);
     }
   }
 
@@ -40,13 +39,11 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
         permissions: allPermissionEntities,
       });
       await roleRepository.save(role);
-      console.log(`Created role: ${roleName} with all permissions`);
-    } else if (existingRole.permissions.length !== allPermissionEntities.length) {
+    } else if (
+      existingRole.permissions.length !== allPermissionEntities.length
+    ) {
       existingRole.permissions = allPermissionEntities;
       await roleRepository.save(existingRole);
-      console.log(`Updated role: ${roleName} with all permissions`);
-    } else {
-      console.log(`Role ${roleName} already exists with all permissions`);
     }
   }
 }
