@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from '../../common/entities/user.entity';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
@@ -27,6 +28,15 @@ export class UsersController {
     @Body() createUserDto: CreateUserDto,
   ): Promise<User> {
     return this.usersService.create(ctx, createUserDto);
+  }
+
+  @Post('invite')
+  @Allow(Permission.CREATE_USER)
+  invite(
+    @RequestContext() ctx: RequestContextType,
+    @Body() inviteUserDto: InviteUserDto,
+  ): Promise<User> {
+    return this.usersService.inviteUser(ctx, inviteUserDto);
   }
 
   @Get()

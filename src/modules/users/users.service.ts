@@ -6,10 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsRelations } from 'typeorm';
-import { hashPassword } from '../../utils/crypto.util';
+import { hashPassword, generateTempPassword } from '../../utils/crypto.util';
 import { User } from '../../common/entities/user.entity';
 import { Role } from '../../common/entities/role.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
@@ -30,21 +31,57 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
-    const tenantRole = await this.roleRepository.findOne({
-      where: { name: RoleName.TENANT },
+    const isFirstUser = (await this.userRepository.count()) === 0;
+    const roleName = isFirstUser ? RoleName.SUPER_ADMIN : RoleName.TENANT;
+
+    const role = await this.roleRepository.findOne({
+      where: { name: roleName },
     });
 
-    if (!tenantRole) {
-      throw new InternalServerErrorException('TENANT role not found. Please ensure roles are seeded.');
+    if (!role) {
+      throw new InternalServerErrorException(
+        `${roleName} role not found. Please ensure roles are seeded.`,
+      );
     }
 
     const hashedPassword = await hashPassword(createUserDto.password);
     const user = this.userRepository.create({
       ...createUserDto,
       password: hashedPassword,
-      role: tenantRole,
+      role,
+      ...(isFirstUser && { emailVerifiedAt: new Date() }),
     });
 
+    return this.userRepository.save(user);
+  }
+
+  async inviteUser(ctx: RequestContext, inviteUserDto: InviteUserDto): Promise<User> {
+    const existingUser = await this.findByEmail(ctx, inviteUserDto.email);
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const tenantRole = await this.roleRepository.findOne({
+      where: { name: RoleName.TENANT },
+    });
+    if (!tenantRole) {
+      throw new InternalServerErrorException(
+        'TENANT role not found. Please ensure roles are seeded.',
+      );
+    }
+
+    const tempPassword = generateTempPassword();
+    // TODO: send email to inviteUserDto.email with temp password and login link
+    console.log(`[Invite] Temp password for ${inviteUserDto.email}: ${tempPassword}`);
+
+    const hashedPassword = await hashPassword(tempPassword);
+    const user = this.userRepository.create({
+      email: inviteUserDto.email,
+      fullName: inviteUserDto.fullName,
+      password: hashedPassword,
+      role: tenantRole,
+      passwordChangeRequired: true,
+    });
     return this.userRepository.save(user);
   }
 
@@ -53,7 +90,7 @@ export class UsersService {
     relations?: FindOptionsRelations<User>,
   ): Promise<User[]> {
     return this.userRepository.find({
-      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt'],
+      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt', 'passwordChangeRequired', 'isActive'],
       relations,
     });
   }
@@ -65,7 +102,7 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
-      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt'],
+      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt', 'passwordChangeRequired', 'isActive'],
       relations,
     });
 
@@ -95,6 +132,9 @@ export class UsersService {
     }
 
     Object.assign(user, updateUserDto);
+    if (updateUserDto.password) {
+      user.passwordChangeRequired = false;
+    }
     return this.userRepository.save(user);
   }
 
