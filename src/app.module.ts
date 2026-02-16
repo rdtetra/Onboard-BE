@@ -43,8 +43,11 @@ import { SeedModule } from './modules/seed/seed.module';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'onboard'),
-            entities: [User, UsedToken, Permission, Role],
+        entities: [User, UsedToken, Permission, Role],
         synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
+        ssl: {
+          rejectUnauthorized: false,
+        },
       }),
       inject: [ConfigService],
     }),
