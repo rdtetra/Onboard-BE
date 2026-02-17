@@ -16,7 +16,9 @@ import { User } from './common/entities/user.entity';
 import { UsedToken } from './common/entities/used-token.entity';
 import { Permission } from './common/entities/permission.entity';
 import { Role } from './common/entities/role.entity';
+import { Bot } from './common/entities/bot.entity';
 import { SeedModule } from './modules/seed/seed.module';
+import { BotsModule } from './modules/bots/bots.module';
 
 @Module({
   imports: [
@@ -43,7 +45,7 @@ import { SeedModule } from './modules/seed/seed.module';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'onboard'),
-        entities: [User, UsedToken, Permission, Role],
+        entities: [User, UsedToken, Permission, Role, Bot],
         synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
         ssl: {
           rejectUnauthorized: false,
@@ -54,6 +56,7 @@ import { SeedModule } from './modules/seed/seed.module';
     SeedModule,
     UsersModule,
     AuthModule,
+    BotsModule,
   ],
   controllers: [AppController],
   providers: [
