@@ -46,6 +46,9 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Local uploads (e.g. knowledge base sources; switch to S3 later)
+/uploads
+
 # Runtime data
 pids
 *.pid
