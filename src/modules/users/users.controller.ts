@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -16,6 +17,7 @@ import { RequestContext } from '../../common/decorators/request-context.decorato
 import { Allow } from '../../common/decorators/allow.decorator';
 import { Permission } from '../../types/permissions';
 import type { RequestContext as RequestContextType } from '../../types/request';
+import type { PaginatedResult } from '../../types/pagination';
 
 @Controller('users')
 export class UsersController {
@@ -41,8 +43,12 @@ export class UsersController {
 
   @Get()
   @Allow(Permission.READ_USER)
-  findAll(@RequestContext() ctx: RequestContextType): Promise<User[]> {
-    return this.usersService.findAll(ctx);
+  findAll(
+    @RequestContext() ctx: RequestContextType,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<PaginatedResult<User>> {
+    return this.usersService.findAll(ctx, { page, limit });
   }
 
   @Get(':id')

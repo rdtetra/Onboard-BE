@@ -17,6 +17,7 @@ import { Allow } from '../../common/decorators/allow.decorator';
 import { Permission } from '../../types/permissions';
 import { BotType } from '../../types/bot';
 import type { RequestContext as RequestContextType } from '../../types/request';
+import type { PaginatedResult } from '../../types/pagination';
 
 @Controller('bots')
 export class BotsController {
@@ -37,8 +38,10 @@ export class BotsController {
     @RequestContext() ctx: RequestContextType,
     @Query('botType') botType?: BotType,
     @Query('search') search?: string,
-  ): Promise<Bot[]> {
-    return this.botsService.findAll(ctx, { botType, search });
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<PaginatedResult<Bot>> {
+    return this.botsService.findAll(ctx, { botType, search }, { page, limit });
   }
 
   @Get(':id')

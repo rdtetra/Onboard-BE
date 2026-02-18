@@ -11,11 +11,8 @@ import { UpdateKBSourceDto } from './dto/update-source.dto';
 import { SourceType, SourceStatus, RefreshSchedule } from '../../types/knowledge-base';
 import type { RequestContext } from '../../types/request';
 import { getSourceValueFromFile } from './multer-options';
-import {
-  parsePagination,
-  toPaginatedResult,
-  type PaginatedResult,
-} from '../../types/pagination';
+import type { PaginatedResult } from '../../types/pagination';
+import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
 
 @Injectable()
 export class SourcesService {

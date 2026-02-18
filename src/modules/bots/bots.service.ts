@@ -10,6 +10,8 @@ import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
 import { BotType, BotState } from '../../types/bot';
 import type { RequestContext } from '../../types/request';
+import type { PaginatedResult } from '../../types/pagination';
+import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
 
 @Injectable()
 export class BotsService {
@@ -61,16 +63,21 @@ export class BotsService {
   async findAll(
     ctx: RequestContext,
     filters?: { botType?: BotType; search?: string },
-  ): Promise<Bot[]> {
+    pagination?: { page?: string; limit?: string },
+  ): Promise<PaginatedResult<Bot>> {
     const where: FindOptionsWhere<Bot> = {};
     if (filters?.botType) where.botType = filters.botType;
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
     }
-    return this.botRepository.find({
+    const { page, limit, skip } = parsePagination(pagination ?? {});
+    const [data, total] = await this.botRepository.findAndCount({
       where,
       order: { createdAt: 'DESC' },
+      take: limit,
+      skip,
     });
+    return toPaginatedResult(data, total, page, limit);
   }
 
   async findOne(ctx: RequestContext, id: string): Promise<Bot> {

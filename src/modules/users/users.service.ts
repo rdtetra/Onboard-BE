@@ -14,6 +14,8 @@ import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
+import type { PaginatedResult } from '../../types/pagination';
+import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
 
 @Injectable()
 export class UsersService {
@@ -87,12 +89,17 @@ export class UsersService {
 
   async findAll(
     ctx: RequestContext,
+    query?: { page?: string; limit?: string },
     relations?: FindOptionsRelations<User>,
-  ): Promise<User[]> {
-    return this.userRepository.find({
+  ): Promise<PaginatedResult<User>> {
+    const { page, limit, skip } = parsePagination(query ?? {});
+    const [data, total] = await this.userRepository.findAndCount({
       select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt', 'passwordChangeRequired', 'isActive'],
       relations,
+      take: limit,
+      skip,
     });
+    return toPaginatedResult(data, total, page, limit);
   }
 
   async findOne(
