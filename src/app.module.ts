@@ -18,7 +18,10 @@ import { Permission } from './common/entities/permission.entity';
 import { Role } from './common/entities/role.entity';
 import { Bot } from './common/entities/bot.entity';
 import { KBSource } from './common/entities/kb-source.entity';
+import { AuditLog } from './common/entities/audit-log.entity';
 import { SeedModule } from './modules/seed/seed.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { BotsModule } from './modules/bots/bots.module';
 import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.module';
 
@@ -47,7 +50,7 @@ import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.mod
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'onboard'),
-        entities: [User, UsedToken, Permission, Role, Bot, KBSource],
+        entities: [User, UsedToken, Permission, Role, Bot, KBSource, AuditLog],
         synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
         ssl: {
           rejectUnauthorized: false,
@@ -60,6 +63,7 @@ import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.mod
     AuthModule,
     BotsModule,
     KnowledgeBaseModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [
@@ -79,6 +83,10 @@ import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.mod
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

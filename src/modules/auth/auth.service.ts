@@ -20,6 +20,7 @@ import { JwtPayload, AuthResponse, SessionResponse } from '../../types/auth';
 import { User } from '../../common/entities/user.entity';
 import { UsedToken } from '../../common/entities/used-token.entity';
 import type { RequestContext } from '../../types/request';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private auditService: AuditService,
     @InjectRepository(UsedToken)
     private usedTokenRepository: Repository<UsedToken>,
   ) {}
@@ -40,6 +42,11 @@ export class AuthService {
       email: user.email,
       sub: user.id,
     };
+    const authCtx: RequestContext = {
+      ...ctx,
+      user: { userId: user.id, email: user.email },
+    };
+    void this.auditService.log(authCtx, { action: 'REGISTER', resource: 'auth' }).catch(() => {});
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -68,6 +75,11 @@ export class AuthService {
       email: user.email,
       sub: user.id,
     };
+    const authCtx: RequestContext = {
+      ...ctx,
+      user: { userId: user.id, email: user.email },
+    };
+    void this.auditService.log(authCtx, { action: 'LOGIN', resource: 'auth' }).catch(() => {});
     return {
       access_token: this.jwtService.sign(payload),
       user: {
