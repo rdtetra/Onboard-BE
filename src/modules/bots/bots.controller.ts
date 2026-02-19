@@ -41,7 +41,7 @@ export class BotsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<PaginatedResult<Bot>> {
-    return this.botsService.findAll(ctx, { botType, search }, { page, limit });
+    return this.botsService.findAll(ctx, { page, limit }, { botType, search });
   }
 
   @Get(':id')

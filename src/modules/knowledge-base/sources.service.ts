@@ -84,16 +84,17 @@ export class SourcesService {
 
   async findAll(
     ctx: RequestContext,
-    query: { page?: string; limit?: string; search?: string; sourceType?: string },
+    pagination?: { page?: string; limit?: string },
+    filters?: { search?: string; sourceType?: string },
   ): Promise<PaginatedResult<KBSource>> {
-    if (query.sourceType != null && query.sourceType !== '' && !Object.values(SourceType).includes(query.sourceType as SourceType)) {
+    if (filters?.sourceType != null && filters.sourceType !== '' && !Object.values(SourceType).includes(filters.sourceType as SourceType)) {
       throw new BadRequestException(`sourceType must be one of: ${Object.values(SourceType).join(', ')}`);
     }
-    const { page, limit, skip } = parsePagination(query);
+    const { page, limit, skip } = parsePagination(pagination ?? {});
     const where: FindOptionsWhere<KBSource> = {};
-    if (query.sourceType) where.sourceType = query.sourceType as SourceType;
-    if (query.search?.trim()) {
-      where.name = ILike(`%${query.search.trim()}%`);
+    if (filters?.sourceType) where.sourceType = filters.sourceType as SourceType;
+    if (filters?.search?.trim()) {
+      where.name = ILike(`%${filters.search.trim()}%`);
     }
     const [data, total] = await this.kbSourceRepository.findAndCount({
       where,

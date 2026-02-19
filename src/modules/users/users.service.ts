@@ -89,10 +89,10 @@ export class UsersService {
 
   async findAll(
     ctx: RequestContext,
-    query?: { page?: string; limit?: string },
+    pagination?: { page?: string; limit?: string },
     relations?: FindOptionsRelations<User>,
   ): Promise<PaginatedResult<User>> {
-    const { page, limit, skip } = parsePagination(query ?? {});
+    const { page, limit, skip } = parsePagination(pagination ?? {});
     const [data, total] = await this.userRepository.findAndCount({
       select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt', 'passwordChangeRequired', 'isActive'],
       relations,

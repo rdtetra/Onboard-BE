@@ -62,15 +62,15 @@ export class BotsService {
 
   async findAll(
     ctx: RequestContext,
-    filters?: { botType?: BotType; search?: string },
     pagination?: { page?: string; limit?: string },
+    filters?: { botType?: BotType; search?: string },
   ): Promise<PaginatedResult<Bot>> {
+    const { page, limit, skip } = parsePagination(pagination ?? {});
     const where: FindOptionsWhere<Bot> = {};
     if (filters?.botType) where.botType = filters.botType;
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
     }
-    const { page, limit, skip } = parsePagination(pagination ?? {});
     const [data, total] = await this.botRepository.findAndCount({
       where,
       order: { createdAt: 'DESC' },
