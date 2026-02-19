@@ -8,7 +8,7 @@ import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
-import { BotType, BotState } from '../../types/bot';
+import { BotType, BotState, DisplayMode } from '../../types/bot';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
@@ -46,7 +46,9 @@ export class BotsService {
     const bot = this.botRepository.create({
       ...createBotDto,
       state: BotState.ACTIVE,
+      displayMode: createBotDto.displayMode ?? DisplayMode.AUTO_SHOW,
       description: createBotDto.description ?? null,
+      introMessage: createBotDto.introMessage ?? null,
       targetUrls: createBotDto.targetUrls ?? [],
       visibilityDuration:
         createBotDto.botType === BotType.URL_SPECIFIC
@@ -123,7 +125,9 @@ export class BotsService {
 
     if (updateBotDto.name !== undefined) payload.name = updateBotDto.name;
     if (updateBotDto.description !== undefined) payload.description = updateBotDto.description;
+    if (updateBotDto.introMessage !== undefined) payload.introMessage = updateBotDto.introMessage;
     if (updateBotDto.domains !== undefined) payload.domains = updateBotDto.domains;
+    if (updateBotDto.displayMode !== undefined) payload.displayMode = updateBotDto.displayMode;
 
     if (botType === BotType.URL_SPECIFIC) {
       if (updateBotDto.targetUrls !== undefined) payload.targetUrls = updateBotDto.targetUrls;

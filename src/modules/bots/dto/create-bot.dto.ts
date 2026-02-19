@@ -10,7 +10,7 @@ import {
   ArrayMinSize,
   Matches,
 } from 'class-validator';
-import { BotType, VisibilityDuration } from '../../../types/bot';
+import { BotType, VisibilityDuration, DisplayMode } from '../../../types/bot';
 
 const DOMAIN_REGEX = /^(localhost|([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
 const TARGET_URL_REGEX = /^\/[a-zA-Z0-9\-_.~/:?=&%]*$/;
@@ -29,6 +29,11 @@ export class CreateBotDto {
   @IsString()
   @MaxLength(5000)
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  introMessage?: string;
 
   @IsArray()
   @IsString({ each: true })
@@ -53,4 +58,8 @@ export class CreateBotDto {
   @IsBoolean()
   @ValidateIf((o) => o.botType === BotType.URL_SPECIFIC)
   oncePerSession?: boolean;
+
+  @IsOptional()
+  @IsEnum(DisplayMode)
+  displayMode?: DisplayMode;
 }

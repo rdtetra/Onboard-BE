@@ -1,6 +1,6 @@
 import { Entity, Column, DeleteDateColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { BotType, BotState, VisibilityDuration } from '../../types/bot';
+import { BotType, BotState, VisibilityDuration, DisplayMode } from '../../types/bot';
 
 @Entity('bots')
 export class Bot extends BaseEntity {
@@ -13,11 +13,17 @@ export class Bot extends BaseEntity {
   @Column({ type: 'enum', enum: BotState, default: BotState.ACTIVE })
   state: BotState;
 
+  @Column({ type: 'enum', enum: DisplayMode, name: 'display_mode', default: DisplayMode.AUTO_SHOW })
+  displayMode: DisplayMode;
+
   @Column({ type: 'varchar' })
   name: string;
 
   @Column({ type: 'text', nullable: true })
   description: string | null;
+
+  @Column({ type: 'text', name: 'intro_message', nullable: true })
+  introMessage: string | null;
 
   @Column('text', { array: true, default: [] })
   domains: string[];

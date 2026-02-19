@@ -15,3 +15,8 @@ export enum VisibilityDuration {
   SEVEN_DAYS = '7d',
   THIRTY_DAYS = '30d',
 }
+
+export enum DisplayMode {
+  AUTO_SHOW = 'AUTO_SHOW',
+  BUTTON_ONLY = 'BUTTON_ONLY',
+}
