@@ -3,23 +3,28 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ResponseFormat } from '../../types/response';
 
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor<T, ResponseFormat<T>> {
+export class ResponseInterceptor<T> implements NestInterceptor<T, ResponseFormat<T> | StreamableFile> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<ResponseFormat<T>> {
+  ): Observable<ResponseFormat<T> | StreamableFile> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
     const url = request.url;
 
     return next.handle().pipe(
       map((data) => {
+        if (data instanceof StreamableFile) {
+          return data;
+        }
+
         const responseBody: ResponseFormat<T> = {
           url,
           message: ['Success'],

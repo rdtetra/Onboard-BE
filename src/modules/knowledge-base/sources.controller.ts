@@ -11,6 +11,7 @@ import {
   UploadedFile,
   UseFilters,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SourcesService } from './sources.service';
@@ -70,6 +71,15 @@ export class SourcesController {
     @Query('sourceType') sourceType?: string,
   ): Promise<PaginatedResult<KBSource>> {
     return this.sourcesService.findAll(ctx, { page, limit }, { search, sourceType });
+  }
+
+  @Get(':id/download')
+  @Allow(Permission.READ_KB_SOURCE)
+  download(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<StreamableFile> {
+    return this.sourcesService.download(ctx, id);
   }
 
   @Get(':id')

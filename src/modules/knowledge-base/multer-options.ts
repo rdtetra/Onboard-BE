@@ -1,9 +1,9 @@
 import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { mkdirSync, existsSync } from 'fs';
+import { extname, resolve, relative } from 'path';
 import { SourceType } from '../../types/knowledge-base';
+import { ensureDir } from '../../utils/file.util';
 
-const UPLOAD_DIR = 'uploads/kb-sources';
+export const UPLOAD_DIR = 'uploads/kb-sources';
 
 const allowedMimeTypes: Record<string, SourceType> = {
   'application/pdf': SourceType.PDF,
@@ -12,9 +12,7 @@ const allowedMimeTypes: Record<string, SourceType> = {
 };
 
 function ensureUploadDir(): string {
-  if (!existsSync(UPLOAD_DIR)) {
-    mkdirSync(UPLOAD_DIR, { recursive: true });
-  }
+  ensureDir(UPLOAD_DIR);
   return UPLOAD_DIR;
 }
 
@@ -46,4 +44,14 @@ export const kbSourceUploadOptions = {
 /** Relative path for stored file (e.g. uploads/kb-sources/xxx.pdf) for use as sourceValue */
 export function getSourceValueFromFile(filename: string): string {
   return `${UPLOAD_DIR}/${filename}`;
+}
+
+/** Resolve sourceValue to absolute path for download; returns null if not a local path or outside UPLOAD_DIR */
+export function getAbsolutePathForDownload(sourceValue: string): string | null {
+  if (!sourceValue?.startsWith(UPLOAD_DIR + '/')) return null;
+  const absolute = resolve(process.cwd(), sourceValue);
+  const allowedDir = resolve(process.cwd(), UPLOAD_DIR);
+  const rel = relative(allowedDir, absolute);
+  if (rel.startsWith('..') || rel === '') return null;
+  return absolute;
 }

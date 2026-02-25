@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  StreamableFile,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike } from 'typeorm';
@@ -10,7 +11,8 @@ import { CreateKBSourceDto } from './dto/create-source.dto';
 import { UpdateKBSourceDto } from './dto/update-source.dto';
 import { SourceType, SourceStatus, RefreshSchedule } from '../../types/knowledge-base';
 import type { RequestContext } from '../../types/request';
-import { getSourceValueFromFile } from './multer-options';
+import { getSourceValueFromFile, getAbsolutePathForDownload } from './multer-options';
+import { fileExists, createFileReadStream } from '../../utils/file.util';
 import type { PaginatedResult } from '../../types/pagination';
 import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
 
@@ -20,6 +22,16 @@ export class SourcesService {
     @InjectRepository(KBSource)
     private readonly kbSourceRepository: Repository<KBSource>,
   ) {}
+
+  private getNextRefreshAt(schedule: RefreshSchedule, from: Date = new Date()): Date | null {
+    if (schedule === RefreshSchedule.MANUAL) return null;
+    const next = new Date(from);
+    if (schedule === RefreshSchedule.DAILY) next.setDate(next.getDate() + 1);
+    else if (schedule === RefreshSchedule.WEEKLY) next.setDate(next.getDate() + 7);
+    else if (schedule === RefreshSchedule.MONTHLY) next.setMonth(next.getMonth() + 1);
+    else return null;
+    return next;
+  }
 
   private validateCreateDto(dto: CreateKBSourceDto): void {
     if (dto.sourceType === SourceType.URL) {
@@ -46,14 +58,18 @@ export class SourcesService {
         : dto.sourceType === SourceType.TXT
           ? dto.content!
           : dto.fileKey!;
+    const refreshSchedule = dto.sourceType === SourceType.URL ? dto.refreshSchedule! : null;
+    const nextRefreshScheduledAt =
+      refreshSchedule != null ? this.getNextRefreshAt(refreshSchedule) : null;
     const source = this.kbSourceRepository.create({
       name: dto.name,
       sourceType: dto.sourceType,
       sourceValue: sourceValue.trim(),
       status: SourceStatus.READY,
-      refreshSchedule: dto.sourceType === SourceType.URL ? dto.refreshSchedule! : null,
+      refreshSchedule,
       linkedBots: 0,
       lastRefreshed: null,
+      nextRefreshScheduledAt,
     });
     return this.kbSourceRepository.save(source);
   }
@@ -79,6 +95,7 @@ export class SourcesService {
       refreshSchedule: null,
       linkedBots: 0,
       lastRefreshed: null,
+      nextRefreshScheduledAt: null,
     });
     return this.kbSourceRepository.save(source);
   }
@@ -112,6 +129,28 @@ export class SourcesService {
     return source;
   }
 
+  async download(ctx: RequestContext, id: string): Promise<StreamableFile> {
+    const source = await this.findOne(ctx, id);
+    if (source.sourceType !== SourceType.PDF && source.sourceType !== SourceType.DOCX) {
+      throw new BadRequestException('Only PDF and DOCX sources can be downloaded');
+    }
+    const absolutePath = getAbsolutePathForDownload(source.sourceValue);
+    if (!absolutePath || !fileExists(absolutePath)) {
+      throw new NotFoundException('File not found or not available for download');
+    }
+    const ext = source.sourceType === SourceType.PDF ? '.pdf' : '.docx';
+    const mimeType =
+      source.sourceType === SourceType.PDF
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const downloadName = `${source.name.replace(/[^\w\s.-]/g, '_')}${ext}`;
+    const stream = createFileReadStream(absolutePath);
+    return new StreamableFile(stream, {
+      type: mimeType,
+      disposition: `attachment; filename="${downloadName}"`,
+    });
+  }
+
   async update(ctx: RequestContext, id: string, dto: UpdateKBSourceDto): Promise<KBSource> {
     const source = await this.findOne(ctx, id);
     const payload = this.getUpdatePayload(source, dto);
@@ -129,7 +168,13 @@ export class SourcesService {
     if (dto.name !== undefined) payload.name = dto.name;
     if (existing.sourceType === SourceType.URL) {
       if (dto.url !== undefined) payload.sourceValue = dto.url.trim();
-      if (dto.refreshSchedule !== undefined) payload.refreshSchedule = dto.refreshSchedule;
+      if (dto.refreshSchedule !== undefined) {
+        payload.refreshSchedule = dto.refreshSchedule;
+        payload.nextRefreshScheduledAt =
+          dto.refreshSchedule === RefreshSchedule.MANUAL
+            ? null
+            : this.getNextRefreshAt(dto.refreshSchedule, existing.lastRefreshed ?? new Date());
+      }
     }
     if (existing.sourceType === SourceType.PDF || existing.sourceType === SourceType.DOCX) {
       if (dto.fileKey !== undefined) payload.sourceValue = dto.fileKey.trim();
