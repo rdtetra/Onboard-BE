@@ -13,6 +13,9 @@ export class KBSource extends BaseEntity {
   @Column({ type: 'text', name: 'source_value' })
   sourceValue: string;
 
+  @Column({ type: 'int', name: 'file_size_bytes', nullable: true })
+  fileSizeBytes: number | null;
+
   @Column({ type: 'enum', enum: SourceStatus, default: SourceStatus.READY })
   status: SourceStatus;
 

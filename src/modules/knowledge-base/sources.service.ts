@@ -74,6 +74,7 @@ export class SourcesService {
       name: name.trim(),
       sourceType,
       sourceValue,
+      fileSizeBytes: file.size ?? null,
       status: SourceStatus.READY,
       refreshSchedule: null,
       linkedBots: 0,
