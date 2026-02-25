@@ -91,6 +91,15 @@ export class SourcesController {
     return this.sourcesService.findOne(ctx, id);
   }
 
+  @Post(':id/refresh')
+  @Allow(Permission.UPDATE_KB_SOURCE)
+  refresh(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<KBSource> {
+    return this.sourcesService.refresh(ctx, id);
+  }
+
   @Patch(':id')
   @Allow(Permission.UPDATE_KB_SOURCE)
   update(

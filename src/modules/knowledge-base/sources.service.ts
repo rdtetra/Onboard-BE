@@ -158,6 +158,15 @@ export class SourcesService {
     return this.kbSourceRepository.save(source);
   }
 
+  async refresh(ctx: RequestContext, id: string): Promise<KBSource> {
+    const source = await this.findOne(ctx, id);
+    if (source.sourceType !== SourceType.URL) {
+      throw new BadRequestException('Refresh is only supported for URL sources');
+    }
+    source.lastRefreshed = new Date();
+    return this.kbSourceRepository.save(source);
+  }
+
   async remove(ctx: RequestContext, id: string): Promise<void> {
     const source = await this.findOne(ctx, id);
     await this.kbSourceRepository.softRemove(source);
