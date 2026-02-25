@@ -33,6 +33,9 @@ export class KBSource extends BaseEntity {
   @Column({ type: 'timestamp', name: 'last_refreshed', nullable: true })
   lastRefreshed: Date | null;
 
+  @Column({ type: 'timestamp', name: 'next_refresh_scheduled_at', nullable: true })
+  nextRefreshScheduledAt: Date | null;
+
   @DeleteDateColumn({ name: 'deleted_at' })
   deletedAt: Date | null;
 }
