@@ -1,10 +1,18 @@
-import { Entity, Column, DeleteDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, Column, DeleteDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { SourceType, SourceStatus, RefreshSchedule } from '../../types/knowledge-base';
 import { Bot } from './bot.entity';
+import { Collection } from './collection.entity';
 
 @Entity('kb_sources')
 export class KBSource extends BaseEntity {
+  @Column({ type: 'uuid', name: 'collection_id', nullable: true })
+  collectionId: string | null;
+
+  @ManyToOne(() => Collection, (c) => c.sources, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'collection_id' })
+  collection: Collection | null;
+
   @ManyToMany(() => Bot, (bot) => bot.kbSources)
   @JoinTable({
     name: 'kb_source_bots',

@@ -74,8 +74,8 @@ export class SourcesService {
       nextRefreshScheduledAt,
     });
     const saved = await this.kbSourceRepository.save(source);
-    const withBots = await this.kbSourceRepository.findOne({ where: { id: saved.id }, relations: ['bots'] });
-    return withBots ?? saved;
+    const withRelations = await this.kbSourceRepository.findOne({ where: { id: saved.id }, relations: ['bots', 'collection'] });
+    return withRelations ?? saved;
   }
 
   async createFromUpload(
@@ -102,8 +102,8 @@ export class SourcesService {
       nextRefreshScheduledAt: null,
     });
     const saved = await this.kbSourceRepository.save(source);
-    const withBots = await this.kbSourceRepository.findOne({ where: { id: saved.id }, relations: ['bots'] });
-    return withBots ?? saved;
+    const withRelations = await this.kbSourceRepository.findOne({ where: { id: saved.id }, relations: ['bots', 'collection'] });
+    return withRelations ?? saved;
   }
 
   async findAll(
@@ -125,13 +125,13 @@ export class SourcesService {
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
-      relations: ['bots'],
+      relations: ['bots', 'collection'],
     });
     return toPaginatedResult(data, total, page, limit);
   }
 
   async findOne(ctx: RequestContext, id: string): Promise<KBSource> {
-    const source = await this.kbSourceRepository.findOne({ where: { id }, relations: ['bots'] });
+    const source = await this.kbSourceRepository.findOne({ where: { id }, relations: ['bots', 'collection'] });
     if (!source) throw new NotFoundException(`Knowledge base source with ID ${id} not found`);
     return source;
   }
@@ -177,7 +177,7 @@ export class SourcesService {
   async linkBot(ctx: RequestContext, sourceId: string, botId: string): Promise<KBSource> {
     const source = await this.kbSourceRepository.findOne({
       where: { id: sourceId },
-      relations: ['bots'],
+      relations: ['bots', 'collection'],
     });
     if (!source) throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
 
@@ -191,7 +191,7 @@ export class SourcesService {
   async unlinkBot(ctx: RequestContext, sourceId: string, botId: string): Promise<KBSource> {
     const source = await this.kbSourceRepository.findOne({
       where: { id: sourceId },
-      relations: ['bots'],
+      relations: ['bots', 'collection'],
     });
     if (!source) throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
 
@@ -199,8 +199,27 @@ export class SourcesService {
     return this.kbSourceRepository.save(source);
   }
 
+  async setCollection(ctx: RequestContext, sourceId: string, collectionId: string | null): Promise<KBSource> {
+    const source = await this.kbSourceRepository.findOne({
+      where: { id: sourceId },
+      relations: ['bots', 'collection'],
+    });
+    if (!source) throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
+    source.collectionId = collectionId;
+    return this.kbSourceRepository.save(source);
+  }
+
+  async findByCollectionId(ctx: RequestContext, collectionId: string): Promise<KBSource[]> {
+    return this.kbSourceRepository.find({
+      where: { collectionId },
+      relations: ['bots', 'collection'],
+    });
+  }
+
   async remove(ctx: RequestContext, id: string): Promise<void> {
     const source = await this.findOne(ctx, id);
+    source.collectionId = null;
+    await this.kbSourceRepository.save(source);
     await this.kbSourceRepository.softRemove(source);
   }
 
