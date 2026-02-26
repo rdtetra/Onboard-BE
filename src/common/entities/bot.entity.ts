@@ -1,6 +1,7 @@
-import { Entity, Column, DeleteDateColumn } from 'typeorm';
+import { Entity, Column, DeleteDateColumn, ManyToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { BotType, BotState, VisibilityDuration, DisplayMode } from '../../types/bot';
+import { KBSource } from './kb-source.entity';
 
 @Entity('bots')
 export class Bot extends BaseEntity {
@@ -40,4 +41,7 @@ export class Bot extends BaseEntity {
 
   @Column({ default: false, name: 'once_per_session' })
   oncePerSession: boolean;
+
+  @ManyToMany(() => KBSource, (source) => source.bots)
+  kbSources: KBSource[];
 }

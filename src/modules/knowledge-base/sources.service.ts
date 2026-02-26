@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { CreateKBSourceDto } from './dto/create-source.dto';
+import { BotsService } from '../bots/bots.service';
 import { UpdateKBSourceDto } from './dto/update-source.dto';
 import { SourceType, SourceStatus, RefreshSchedule } from '../../types/knowledge-base';
 import type { RequestContext } from '../../types/request';
@@ -21,6 +22,7 @@ export class SourcesService {
   constructor(
     @InjectRepository(KBSource)
     private readonly kbSourceRepository: Repository<KBSource>,
+    private readonly botsService: BotsService,
   ) {}
 
   private getNextRefreshAt(schedule: RefreshSchedule, from: Date = new Date()): Date | null {
@@ -71,7 +73,9 @@ export class SourcesService {
       lastRefreshed: null,
       nextRefreshScheduledAt,
     });
-    return this.kbSourceRepository.save(source);
+    const saved = await this.kbSourceRepository.save(source);
+    const withBots = await this.kbSourceRepository.findOne({ where: { id: saved.id }, relations: ['bots'] });
+    return withBots ?? saved;
   }
 
   async createFromUpload(
@@ -97,7 +101,9 @@ export class SourcesService {
       lastRefreshed: null,
       nextRefreshScheduledAt: null,
     });
-    return this.kbSourceRepository.save(source);
+    const saved = await this.kbSourceRepository.save(source);
+    const withBots = await this.kbSourceRepository.findOne({ where: { id: saved.id }, relations: ['bots'] });
+    return withBots ?? saved;
   }
 
   async findAll(
@@ -119,12 +125,13 @@ export class SourcesService {
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
+      relations: ['bots'],
     });
     return toPaginatedResult(data, total, page, limit);
   }
 
   async findOne(ctx: RequestContext, id: string): Promise<KBSource> {
-    const source = await this.kbSourceRepository.findOne({ where: { id } });
+    const source = await this.kbSourceRepository.findOne({ where: { id }, relations: ['bots'] });
     if (!source) throw new NotFoundException(`Knowledge base source with ID ${id} not found`);
     return source;
   }
@@ -164,6 +171,31 @@ export class SourcesService {
       throw new BadRequestException('Refresh is only supported for URL sources');
     }
     source.lastRefreshed = new Date();
+    return this.kbSourceRepository.save(source);
+  }
+
+  async linkBot(ctx: RequestContext, sourceId: string, botId: string): Promise<KBSource> {
+    const source = await this.kbSourceRepository.findOne({
+      where: { id: sourceId },
+      relations: ['bots'],
+    });
+    if (!source) throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
+
+    const bot = await this.botsService.findOne(ctx, botId);
+    const existingIds = new Set((source.bots ?? []).map((b) => b.id));
+    if (existingIds.has(bot.id)) return source;
+    source.bots = [...(source.bots ?? []), bot];
+    return this.kbSourceRepository.save(source);
+  }
+
+  async unlinkBot(ctx: RequestContext, sourceId: string, botId: string): Promise<KBSource> {
+    const source = await this.kbSourceRepository.findOne({
+      where: { id: sourceId },
+      relations: ['bots'],
+    });
+    if (!source) throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
+
+    source.bots = (source.bots ?? []).filter((b) => b.id !== botId);
     return this.kbSourceRepository.save(source);
   }
 

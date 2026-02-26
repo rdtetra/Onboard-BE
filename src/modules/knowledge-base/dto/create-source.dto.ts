@@ -1,7 +1,6 @@
 import {
   IsEnum,
   IsString,
-  IsOptional,
   IsUrl,
   MaxLength,
   ValidateIf,

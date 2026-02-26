@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, ILike } from 'typeorm';
+import { Repository, FindOptionsWhere, ILike, In } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
@@ -88,6 +88,11 @@ export class BotsService {
       throw new NotFoundException(`Bot with ID ${id} not found`);
     }
     return bot;
+  }
+
+  async findByIds(ids: string[]): Promise<Bot[]> {
+    if (ids.length === 0) return [];
+    return this.botRepository.find({ where: { id: In(ids) } });
   }
 
   async update(ctx: RequestContext, id: string, updateBotDto: UpdateBotDto): Promise<Bot> {

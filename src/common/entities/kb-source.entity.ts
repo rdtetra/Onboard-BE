@@ -1,9 +1,18 @@
-import { Entity, Column, DeleteDateColumn } from 'typeorm';
+import { Entity, Column, DeleteDateColumn, ManyToMany, JoinTable } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { SourceType, SourceStatus, RefreshSchedule } from '../../types/knowledge-base';
+import { Bot } from './bot.entity';
 
 @Entity('kb_sources')
 export class KBSource extends BaseEntity {
+  @ManyToMany(() => Bot, (bot) => bot.kbSources)
+  @JoinTable({
+    name: 'kb_source_bots',
+    joinColumn: { name: 'kb_source_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'bot_id', referencedColumnName: 'id' },
+  })
+  bots: Bot[];
+
   @Column({ type: 'varchar' })
   name: string;
 

@@ -48,7 +48,7 @@ export class SourcesController {
     @RequestContext() ctx: RequestContextType,
     @Body('name') name: string,
     @Body('sourceType') sourceType: SourceType,
-    @UploadedFile() file: Express.Multer.File | undefined,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<KBSource> {
     if (!file) {
       throw new BadRequestException('file is required');
@@ -71,6 +71,26 @@ export class SourcesController {
     @Query('sourceType') sourceType?: string,
   ): Promise<PaginatedResult<KBSource>> {
     return this.sourcesService.findAll(ctx, { page, limit }, { search, sourceType });
+  }
+
+  @Post(':id/bots/:botId')
+  @Allow(Permission.UPDATE_KB_SOURCE)
+  linkBot(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+    @Param('botId') botId: string,
+  ): Promise<KBSource> {
+    return this.sourcesService.linkBot(ctx, id, botId);
+  }
+
+  @Delete(':id/bots/:botId')
+  @Allow(Permission.UPDATE_KB_SOURCE)
+  unlinkBot(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+    @Param('botId') botId: string,
+  ): Promise<KBSource> {
+    return this.sourcesService.unlinkBot(ctx, id, botId);
   }
 
   @Get(':id/download')
