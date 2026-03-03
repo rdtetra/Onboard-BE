@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike, In } from 'typeorm';
@@ -42,9 +43,11 @@ export class BotsService {
   }
 
   async create(ctx: RequestContext, createBotDto: CreateBotDto): Promise<Bot> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     this.validateBotDto(createBotDto);
     const bot = this.botRepository.create({
       ...createBotDto,
+      userId: ctx.user.userId,
       state: BotState.ACTIVE,
       displayMode: createBotDto.displayMode ?? DisplayMode.AUTO_SHOW,
       description: createBotDto.description ?? null,
@@ -65,10 +68,13 @@ export class BotsService {
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { botType?: BotType; search?: string },
+    filters?: { botType?: BotType; search?: string; userId?: string },
   ): Promise<PaginatedResult<Bot>> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     const { page, limit, skip } = parsePagination(pagination ?? {});
-    const where: FindOptionsWhere<Bot> = {};
+    const where: FindOptionsWhere<Bot> = {
+      userId: filters?.userId ?? ctx.user.userId,
+    };
     if (filters?.botType) where.botType = filters.botType;
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
@@ -83,16 +89,22 @@ export class BotsService {
   }
 
   async findOne(ctx: RequestContext, id: string): Promise<Bot> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     const bot = await this.botRepository.findOne({ where: { id } });
     if (!bot) {
+      throw new NotFoundException(`Bot with ID ${id} not found`);
+    }
+    if (bot.userId !== ctx.user.userId) {
       throw new NotFoundException(`Bot with ID ${id} not found`);
     }
     return bot;
   }
 
-  async findByIds(ids: string[]): Promise<Bot[]> {
+  async findByIds(ids: string[], userId?: string): Promise<Bot[]> {
     if (ids.length === 0) return [];
-    return this.botRepository.find({ where: { id: In(ids) } });
+    const where: FindOptionsWhere<Bot> = { id: In(ids) };
+    if (userId) where.userId = userId;
+    return this.botRepository.find({ where });
   }
 
   async update(ctx: RequestContext, id: string, updateBotDto: UpdateBotDto): Promise<Bot> {

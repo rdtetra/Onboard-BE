@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  UnauthorizedException,
   StreamableFile,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -53,6 +54,7 @@ export class SourcesService {
   }
 
   async create(ctx: RequestContext, dto: CreateKBSourceDto): Promise<KBSource> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     this.validateCreateDto(dto);
     const sourceValue =
       dto.sourceType === SourceType.URL
@@ -65,6 +67,7 @@ export class SourcesService {
       refreshSchedule != null ? this.getNextRefreshAt(refreshSchedule) : null;
     const source = this.kbSourceRepository.create({
       name: dto.name,
+      userId: ctx.user.userId,
       sourceType: dto.sourceType,
       sourceValue: sourceValue.trim(),
       status: SourceStatus.READY,
@@ -84,6 +87,7 @@ export class SourcesService {
     sourceType: SourceType.PDF | SourceType.DOCX,
     file: Express.Multer.File,
   ): Promise<KBSource> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     if (!name?.trim()) throw new BadRequestException('name is required');
     if (sourceType !== SourceType.PDF && sourceType !== SourceType.DOCX) {
       throw new BadRequestException('sourceType must be PDF or DOCX for file upload');
@@ -92,6 +96,7 @@ export class SourcesService {
     const sourceValue = getSourceValueFromFile(file.filename);
     const source = this.kbSourceRepository.create({
       name: name.trim(),
+      userId: ctx.user.userId,
       sourceType,
       sourceValue,
       fileSizeBytes: file.size ?? null,
@@ -109,13 +114,16 @@ export class SourcesService {
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { search?: string; sourceType?: string },
+    filters?: { search?: string; sourceType?: string; userId?: string },
   ): Promise<PaginatedResult<KBSource>> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     if (filters?.sourceType != null && filters.sourceType !== '' && !Object.values(SourceType).includes(filters.sourceType as SourceType)) {
       throw new BadRequestException(`sourceType must be one of: ${Object.values(SourceType).join(', ')}`);
     }
     const { page, limit, skip } = parsePagination(pagination ?? {});
-    const where: FindOptionsWhere<KBSource> = {};
+    const where: FindOptionsWhere<KBSource> = {
+      userId: filters?.userId ?? ctx.user.userId,
+    };
     if (filters?.sourceType) where.sourceType = filters.sourceType as SourceType;
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
@@ -131,8 +139,12 @@ export class SourcesService {
   }
 
   async findOne(ctx: RequestContext, id: string): Promise<KBSource> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     const source = await this.kbSourceRepository.findOne({ where: { id }, relations: ['bots', 'collection'] });
     if (!source) throw new NotFoundException(`Knowledge base source with ID ${id} not found`);
+    if (source.userId !== ctx.user.userId) {
+      throw new NotFoundException(`Knowledge base source with ID ${id} not found`);
+    }
     return source;
   }
 

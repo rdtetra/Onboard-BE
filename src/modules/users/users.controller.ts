@@ -47,8 +47,10 @@ export class UsersController {
     @RequestContext() ctx: RequestContextType,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
   ): Promise<PaginatedResult<User>> {
-    return this.usersService.findAll(ctx, { page, limit });
+    return this.usersService.findAll(ctx, { page, limit }, { search, status });
   }
 
   @Get(':id')

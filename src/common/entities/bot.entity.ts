@@ -1,10 +1,18 @@
-import { Entity, Column, DeleteDateColumn, ManyToMany } from 'typeorm';
+import { Entity, Column, DeleteDateColumn, ManyToOne, JoinColumn, ManyToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { BotType, BotState, VisibilityDuration, DisplayMode } from '../../types/bot';
+import { User } from './user.entity';
 import { KBSource } from './kb-source.entity';
 
 @Entity('bots')
 export class Bot extends BaseEntity {
+  @Column({ type: 'uuid', name: 'user_id', nullable: true })
+  userId: string | null;
+
+  @ManyToOne(() => User, (u) => u.bots, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'user_id' })
+  user: User | null;
+
   @DeleteDateColumn({ name: 'deleted_at' })
   deletedAt: Date | null;
 

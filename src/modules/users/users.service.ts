@@ -24,7 +24,7 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
-  ) {}
+  ) { }
 
   async create(ctx: RequestContext, createUserDto: CreateUserDto): Promise<User> {
     const existingUser = await this.findByEmail(ctx, createUserDto.email);
@@ -90,16 +90,58 @@ export class UsersService {
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
+    filters?: { search?: string; status?: string },
     relations?: FindOptionsRelations<User>,
   ): Promise<PaginatedResult<User>> {
     const { page, limit, skip } = parsePagination(pagination ?? {});
-    const [data, total] = await this.userRepository.findAndCount({
-      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt', 'passwordChangeRequired', 'isActive'],
-      relations,
-      take: limit,
-      skip,
-    });
+    /**
+     * We use TypeORM QueryBuilder for user list (findAll) instead of repository.find() + separate
+     * finds for relation counts so the DB does the counting in one round-trip with minimal data
+     * transfer (user columns + two count columns), rather than loading all bot/kb_source rows and
+     * counting in the application.
+     */
+    const qb = this.userRepository
+      .createQueryBuilder('user')
+      .select([
+        'user.id',
+        'user.email',
+        'user.fullName',
+        'user.createdAt',
+        'user.updatedAt',
+        'user.emailVerifiedAt',
+        'user.passwordChangeRequired',
+        'user.isActive',
+      ])
+      .loadRelationCountAndMap('user.botCount', 'user.bots')
+      .loadRelationCountAndMap('user.kbSourceCount', 'user.kbSources')
+      .orderBy('user.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+    if (filters?.search?.trim()) {
+      const term = `%${filters.search.trim()}%`;
+      qb.andWhere('(user.email ILIKE :search OR user.fullName ILIKE :search)', { search: term });
+    }
+    if (filters?.status === 'active') {
+      qb.andWhere('user.isActive = :isActive', { isActive: true });
+    } else if (filters?.status === 'inactive') {
+      qb.andWhere('user.isActive = :isActive', { isActive: false });
+    }
+    if (relations && Array.isArray(relations) && relations.length > 0) {
+      const rels = relations as string[];
+      if (rels.includes('role')) qb.leftJoinAndSelect('user.role', 'role');
+    }
+    const [data, total] = await qb.getManyAndCount();
     return toPaginatedResult(data, total, page, limit);
+  }
+
+  /** Load user entity only (for update/remove). */
+  private async getOne(id: string, relations?: FindOptionsRelations<User>): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: (relations as string[]) ?? ['role'],
+    });
+    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
+    return user;
   }
 
   async findOne(
@@ -107,16 +149,12 @@ export class UsersService {
     id: string,
     relations?: FindOptionsRelations<User>,
   ): Promise<User> {
+    const defaultRelations = ['role', 'bots', 'kbSources'];
     const user = await this.userRepository.findOne({
       where: { id },
-      select: ['id', 'email', 'fullName', 'createdAt', 'updatedAt', 'emailVerifiedAt', 'passwordChangeRequired', 'isActive'],
-      relations,
+      relations: (relations as string[]) ?? defaultRelations,
     });
-
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-
+    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
     return user;
   }
 
@@ -132,7 +170,7 @@ export class UsersService {
   }
 
   async update(ctx: RequestContext, id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const user = await this.findOne(ctx, id);
+    const user = await this.getOne(id);
 
     if (updateUserDto.password) {
       updateUserDto.password = await hashPassword(updateUserDto.password);
@@ -146,7 +184,7 @@ export class UsersService {
   }
 
   async remove(ctx: RequestContext, id: string): Promise<void> {
-    const user = await this.findOne(ctx, id);
+    const user = await this.getOne(id);
     await this.userRepository.remove(user);
   }
 }

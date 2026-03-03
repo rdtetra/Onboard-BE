@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Collection } from '../../common/entities/collection.entity';
@@ -18,9 +18,11 @@ export class CollectionsService {
   ) {}
 
   async create(ctx: RequestContext, dto: CreateCollectionDto): Promise<Collection> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     const collection = this.collectionRepository.create({
       name: dto.name.trim(),
       description: dto.description?.trim() ?? null,
+      userId: ctx.user.userId,
     });
     return this.collectionRepository.save(collection);
   }
@@ -29,8 +31,10 @@ export class CollectionsService {
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
   ): Promise<PaginatedResult<Collection>> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     const { page, limit, skip } = parsePagination(pagination ?? {});
     const [data, total] = await this.collectionRepository.findAndCount({
+      where: { userId: ctx.user.userId },
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
@@ -40,11 +44,15 @@ export class CollectionsService {
   }
 
   async findOne(ctx: RequestContext, id: string): Promise<Collection> {
+    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     const collection = await this.collectionRepository.findOne({
       where: { id },
       relations: ['sources'],
     });
     if (!collection) throw new NotFoundException(`Collection with ID ${id} not found`);
+    if (collection.userId !== ctx.user.userId) {
+      throw new NotFoundException(`Collection with ID ${id} not found`);
+    }
     return collection;
   }
 
@@ -56,7 +64,11 @@ export class CollectionsService {
   }
 
   async addSource(ctx: RequestContext, collectionId: string, sourceId: string): Promise<Collection> {
-    await this.findOne(ctx, collectionId);
+    const collection = await this.findOne(ctx, collectionId);
+    const source = await this.sourcesService.findOne(ctx, sourceId);
+    if (source.userId !== collection.userId) {
+      throw new NotFoundException('Source does not belong to the same tenant as the collection');
+    }
     await this.sourcesService.setCollection(ctx, sourceId, collectionId);
     return this.findOne(ctx, collectionId);
   }
