@@ -49,7 +49,8 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
-    const isFirstUser = (await this.userRepository.count()) === 0;
+    const userCount = await this.userRepository.count();
+    const isFirstUser = userCount === 0;
     const roleName = isFirstUser ? RoleName.SUPER_ADMIN : RoleName.TENANT;
 
     const role = await this.roleRepository.findOne({
@@ -63,6 +64,7 @@ export class UsersService {
     }
 
     const hashedPassword = await hashPassword(createUserDto.password);
+
     const user = this.userRepository.create({
       ...createUserDto,
       password: hashedPassword,
@@ -71,16 +73,19 @@ export class UsersService {
     });
 
     const saved = await this.userRepository.save(user);
+
     if (!isFirstUser) {
       await this.organizationsService.createForUser(
         saved.id,
         `${saved.fullName || saved.email}'s Organization`,
       );
     }
+    
     const updated = await this.userRepository.findOne({
       where: { id: saved.id },
       relations: ['role', 'organization'],
     });
+    
     return updated ?? saved;
   }
 

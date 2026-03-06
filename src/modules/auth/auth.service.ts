@@ -43,18 +43,22 @@ export class AuthService {
     registerDto: RegisterDto,
   ): Promise<AuthResponse> {
     const user = await this.usersService.create(ctx, registerDto);
+
     const payload: JwtPayload = {
       email: user.email,
       sub: user.id,
     };
+
     const authCtx: RequestContext = {
       ...ctx,
       user: { userId: user.id, email: user.email },
     };
+
     void this.auditService
       .log(authCtx, { action: 'REGISTER', resource: 'auth' })
       .catch(() => {});
-    return {
+    
+      return {
       access_token: this.jwtService.sign(payload),
       user: {
         id: user.id,
@@ -80,6 +84,7 @@ export class AuthService {
       loginDto.password,
       user.password,
     );
+
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -88,14 +93,17 @@ export class AuthService {
       email: user.email,
       sub: user.id,
     };
+
     const authCtx: RequestContext = {
       ...ctx,
       user: { userId: user.id, email: user.email },
     };
+    
     void this.auditService
       .log(authCtx, { action: 'LOGIN', resource: 'auth' })
       .catch(() => {});
-    return {
+    
+      return {
       access_token: this.jwtService.sign(payload),
       user: {
         id: user.id,
@@ -104,19 +112,6 @@ export class AuthService {
         passwordChangeRequired: user.passwordChangeRequired,
       },
     };
-  }
-
-  async validateUser(
-    ctx: RequestContext,
-    email: string,
-    password: string,
-  ): Promise<Omit<User, 'password'> | null> {
-    const user = await this.usersService.findByEmail(ctx, email);
-    if (user && (await comparePassword(password, user.password))) {
-      const { password: _, ...result } = user;
-      return result;
-    }
-    return null;
   }
 
   async forgotPassword(
@@ -135,6 +130,7 @@ export class AuthService {
     }
 
     const COOLDOWN_MS = 15 * 60 * 1000; // 15 minutes
+
     if (
       user.lastPasswordResetEmailAt &&
       Date.now() - user.lastPasswordResetEmailAt.getTime() < COOLDOWN_MS
@@ -155,6 +151,7 @@ export class AuthService {
       email: user.email,
       sub: user.id,
     };
+    
     const resetToken = this.jwtService.sign(resetPayload, {
       secret: resetSecret,
       expiresIn: '30m',
@@ -304,20 +301,24 @@ export class AuthService {
     if (!userId) {
       throw new UnauthorizedException('Authentication required');
     }
+
     const user = await this.usersService.findOne(ctx, userId, {});
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
     const skipCurrentCheck = user.passwordChangeRequired === true;
+    
     if (!skipCurrentCheck) {
       if (!changePasswordDto.currentPassword) {
         throw new BadRequestException('Current password is required');
       }
+
       const valid = await comparePassword(
         changePasswordDto.currentPassword,
         user.password,
       );
+
       if (!valid) {
         throw new UnauthorizedException('Current password is incorrect');
       }
