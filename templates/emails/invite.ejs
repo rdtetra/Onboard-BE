@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>You're invited to Onboard</title>
+</head>
+<body style="font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 560px; margin: 0 auto; padding: 24px;">
+  <h1 style="font-size: 1.5rem; margin-bottom: 16px;">You're invited to Onboard</h1>
+
+  <p>Hello <%= name %>!</p>
+
+  <p>You've been invited to join an organization on Onboard. Use the credentials below to sign in. You'll be asked to change your password after your first login.</p>
+
+  <p style="margin: 24px 0;">
+    <strong>Email:</strong> <%= email %><br>
+    <strong>Temporary password:</strong> <code style="background: #f4f4f4; padding: 4px 8px; border-radius: 4px;"><%= tempPassword %></code>
+  </p>
+
+  <% if (loginUrl) { %>
+    <p>
+      <a href="<%= loginUrl %>" style="display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 10px 20px; border-radius: 6px;">Sign in to Onboard</a>
+    </p>
+  <% } %>
+
+  <p style="margin-top: 32px; font-size: 0.875rem; color: #666;">
+    If you didn't expect this invitation, you can safely ignore this email.
+  </p>
+</body>
+</html>
