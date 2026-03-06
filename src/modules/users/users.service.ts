@@ -127,6 +127,7 @@ export class UsersService {
       role: tenantRole,
       organizationId: null,
       passwordChangeRequired: true,
+      emailVerifiedAt: new Date(),
     });
     const saved = await this.userRepository.save(user);
 
@@ -178,6 +179,7 @@ export class UsersService {
       role: tenantRole,
       organizationId: ctx.user.organizationId,
       passwordChangeRequired: true,
+      emailVerifiedAt: new Date(),
     });
     const saved = await this.userRepository.save(user);
 
