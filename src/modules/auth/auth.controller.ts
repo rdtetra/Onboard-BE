@@ -14,6 +14,12 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
+  @Get('superadmin-exists')
+  superadminExists(): Promise<{ superadminExists: boolean }> {
+    return this.authService.superadminExists();
+  }
+
+  @Public()
   @Post('register')
   register(
     @RequestContext() ctx: RequestContextType,

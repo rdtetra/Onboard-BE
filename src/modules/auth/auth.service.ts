@@ -59,6 +59,11 @@ export class AuthService {
     };
   }
 
+  async superadminExists(): Promise<{ superadminExists: boolean }> {
+    const exists = await this.usersService.hasSuperAdmin();
+    return { superadminExists: exists };
+  }
+
   async login(ctx: RequestContext, loginDto: LoginDto): Promise<AuthResponse> {
     const user = await this.usersService.findByEmail(ctx, loginDto.email);
     if (!user) {
