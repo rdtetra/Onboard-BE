@@ -2,10 +2,10 @@ import { Entity, Column, Index } from 'typeorm';
 import { BaseEntity } from './base.entity';
 
 @Entity('audit_logs')
-@Index(['tenantId', 'createdAt'])
+@Index(['organizationId', 'createdAt'])
 export class AuditLog extends BaseEntity {
-  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
-  tenantId: string | null;
+  @Column({ name: 'organization_id', type: 'uuid', nullable: true })
+  organizationId: string | null;
 
   @Column({ name: 'user_id', type: 'uuid', nullable: true })
   userId: string | null;

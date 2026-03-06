@@ -550,7 +550,7 @@ Base path: `/collections`. Collection has `name` and optional `description`; can
 - When a **tenant** (non–first user) **registers**, an organization is created automatically; that user is set as the org’s owner and receives role **TENANT**. The first user gets role **SUPER_ADMIN** and has no organization.
 - **Invited users** join the inviter’s organization and receive role **TENANT**.
 - **Roles:** `SUPER_ADMIN` (platform-wide), `TENANT` (org member; org owner is a tenant who owns an organization). Permissions are assigned per role; guards enforce `@Allow(Permission.XXX)`.
-- **Data scope:** Bots, KB sources, and collections belong to an organization. All list/get/create/update/delete are scoped by the current user’s `organizationId`. **SUPER_ADMIN** can bypass and see all. Audit logs use `organizationId` (or `userId` if no org) as tenant.
+- **Data scope:** Bots, KB sources, and collections belong to an organization. All list/get/create/update/delete are scoped by the current user's `organizationId`. **SUPER_ADMIN** can bypass and see all. Audit logs store `organizationId` (which org the log concerns); list is scoped by org.
 
 ---
 
@@ -574,7 +574,7 @@ Base path: `/collections`. Collection has `name` and optional `description`; can
 
 ## Audit Logs
 
-**GET** `/audit-logs` — **Permission:** `READ_AUDIT_LOG`. Query params: `page`, `limit`, `action`, `resource`, `userId`. Returns paginated results. Logs are scoped by tenant (`organizationId` or `userId`); each user sees only their organization’s logs (SUPER_ADMIN may see all).
+**GET** `/audit-logs` — **Permission:** `READ_AUDIT_LOG`. Query params: `page`, `limit`, `action`, `resource`, `userId`, `organizationId` (optional; SUPER_ADMIN only). Returns paginated results. Each log includes `organizationId`. Logs are scoped by organization (`organizationId` or `userId`); each user sees only their organization’s logs (SUPER_ADMIN may see all).
 
 ---
 

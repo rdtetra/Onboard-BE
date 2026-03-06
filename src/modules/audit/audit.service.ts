@@ -8,6 +8,7 @@ import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
+import { RoleName } from '../../types/roles';
 
 export interface AuditLogPayload {
   action: string;
@@ -24,10 +25,10 @@ export class AuditService {
   ) {}
 
   async log(ctx: RequestContext, payload: AuditLogPayload): Promise<AuditLog> {
-    const tenantId = ctx.user?.organizationId ?? ctx.user?.userId ?? null;
+    const organizationId = ctx.user?.organizationId ?? null;
     const userId = ctx.user?.userId ?? null;
     const entry = this.auditLogRepository.create({
-      tenantId,
+      organizationId,
       userId,
       action: payload.action,
       resource: payload.resource,
@@ -42,14 +43,27 @@ export class AuditService {
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { action?: string; resource?: string; userId?: string },
+    filters?: {
+      action?: string;
+      resource?: string;
+      userId?: string;
+      organizationId?: string;
+    },
   ): Promise<PaginatedResult<AuditLog>> {
-    const tenantId = ctx.user?.organizationId ?? ctx.user?.userId;
     const { page, limit, skip } = parsePagination(pagination ?? {});
-    if (!tenantId) {
+    const isSuperAdmin = ctx.user?.roleName === RoleName.SUPER_ADMIN;
+    const userOrgId = ctx.user?.organizationId ?? null;
+
+    if (!isSuperAdmin && !userOrgId) {
       return toPaginatedResult([], 0, page, limit);
     }
-    const where: FindOptionsWhere<AuditLog> = { tenantId };
+
+    const where: FindOptionsWhere<AuditLog> = {};
+    if (isSuperAdmin && filters?.organizationId?.trim()) {
+      where.organizationId = filters.organizationId.trim();
+    } else if (!isSuperAdmin && userOrgId) {
+      where.organizationId = userOrgId;
+    }
     if (filters?.action?.trim()) where.action = filters.action.trim();
     if (filters?.resource?.trim()) where.resource = filters.resource.trim();
     if (filters?.userId?.trim()) where.userId = filters.userId.trim();
