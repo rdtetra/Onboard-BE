@@ -1,9 +1,9 @@
 import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
-import type { Bot } from './bot.entity';
-import type { KBSource } from './kb-source.entity';
-import type { Collection } from './collection.entity';
+import { Bot } from './bot.entity';
+import { KBSource } from './kb-source.entity';
+import { Collection } from './collection.entity';
 
 @Entity('organizations')
 export class Organization extends BaseEntity {
@@ -20,12 +20,12 @@ export class Organization extends BaseEntity {
   @OneToMany(() => User, (u) => u.organization)
   users: User[];
 
-  @OneToMany('Bot', 'organization')
+  @OneToMany(() => Bot, (bot) => bot.organization)
   bots: Bot[];
 
-  @OneToMany('KBSource', 'organization')
+  @OneToMany(() => KBSource, (kb) => kb.organization)
   kbSources: KBSource[];
 
-  @OneToMany('Collection', 'organization')
+  @OneToMany(() => Collection, (c) => c.organization)
   collections: Collection[];
 }

@@ -4,6 +4,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { AuthResponse, SessionResponse } from '../../types/auth';
@@ -54,6 +55,14 @@ export class AuthController {
     @Body() resetPasswordDto: ResetPasswordDto,
   ): Promise<{ message: string }> {
     return this.authService.resetPassword(ctx, token, resetPasswordDto);
+  }
+
+  @Post('change-password')
+  changePassword(
+    @RequestContext() ctx: RequestContextType,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.changePassword(ctx, changePasswordDto);
   }
 
   @Public()

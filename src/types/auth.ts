@@ -16,6 +16,7 @@ export type AuthResponse = {
     id: string;
     email: string;
     fullName: string | null;
+    passwordChangeRequired: boolean;
   };
 };
 
@@ -25,5 +26,6 @@ export type SessionResponse = {
     email: string;
     fullName: string | null;
     roleName: RoleName;
+    passwordChangeRequired: boolean;
   };
 };

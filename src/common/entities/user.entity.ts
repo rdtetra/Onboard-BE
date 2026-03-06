@@ -23,6 +23,13 @@ export class User extends BaseEntity {
   @Column({ default: true, name: 'is_active' })
   isActive: boolean;
 
+  @Column({
+    nullable: true,
+    name: 'last_password_reset_email_at',
+    type: 'timestamp',
+  })
+  lastPasswordResetEmailAt: Date | null;
+
   @Column({ type: 'uuid', name: 'organization_id', nullable: true })
   organizationId: string | null;
 

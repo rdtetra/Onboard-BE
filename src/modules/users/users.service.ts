@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsRelations } from 'typeorm';
+import { Repository, FindOptionsRelations, FindOptionsWhere, ILike } from 'typeorm';
 import { hashPassword, generateTempPassword } from '../../utils/crypto.util';
 import { User } from '../../common/entities/user.entity';
 import { Role } from '../../common/entities/role.entity';
@@ -20,7 +20,11 @@ import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
+import { getUserListScope } from '../../utils/scope.util';
 import { OrganizationsService } from '../organizations/organizations.service';
+import { EmailService } from '../email/email.service';
+import { EmailTemplatesService } from '../email/email-templates.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UsersService {
@@ -30,6 +34,9 @@ export class UsersService {
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
     private readonly organizationsService: OrganizationsService,
+    private readonly emailService: EmailService,
+    private readonly emailTemplatesService: EmailTemplatesService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(
@@ -77,15 +84,26 @@ export class UsersService {
     return updated ?? saved;
   }
 
+  /**
+   * Single invite entry point: delegates to super-admin or org-admin flow based on caller role.
+   */
   async inviteUser(
     ctx: RequestContext,
     inviteUserDto: InviteUserDto,
   ): Promise<User> {
-    if (!ctx.user?.organizationId) {
-      throw new BadRequestException(
-        'You must belong to an organization to invite users',
-      );
+    if (ctx.user?.roleName === RoleName.SUPER_ADMIN) {
+      return this.inviteBySuperAdmin(ctx, inviteUserDto);
     }
+    return this.inviteByOrgAdmin(ctx, inviteUserDto);
+  }
+
+  /**
+   * Super admin invites a new user: they get a new organization (random name) and ADMIN (owner) role.
+   */
+  async inviteBySuperAdmin(
+    ctx: RequestContext,
+    inviteUserDto: InviteUserDto,
+  ): Promise<User> {
     const existingUser = await this.findByEmail(ctx, inviteUserDto.email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
@@ -101,11 +119,57 @@ export class UsersService {
     }
 
     const tempPassword = generateTempPassword();
-    // TODO: send email to inviteUserDto.email with temp password and login link
-    console.log(
-      `[Invite] Temp password for ${inviteUserDto.email}: ${tempPassword}`,
-    );
+    const hashedPassword = await hashPassword(tempPassword);
+    const user = this.userRepository.create({
+      email: inviteUserDto.email,
+      fullName: inviteUserDto.fullName,
+      password: hashedPassword,
+      role: tenantRole,
+      organizationId: null,
+      passwordChangeRequired: true,
+    });
+    const saved = await this.userRepository.save(user);
 
+    const randomOrgName = `Organization ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    await this.organizationsService.createForUser(saved.id, randomOrgName);
+
+    await this.sendInviteEmail(inviteUserDto, tempPassword);
+
+    const updated = await this.userRepository.findOne({
+      where: { id: saved.id },
+      relations: ['role', 'organization'],
+    });
+    return updated ?? saved;
+  }
+
+  /**
+   * Org admin invites a new user: they join the inviter's organization with TENANT role.
+   */
+  async inviteByOrgAdmin(
+    ctx: RequestContext,
+    inviteUserDto: InviteUserDto,
+  ): Promise<User> {
+    if (!ctx.user?.organizationId) {
+      throw new BadRequestException(
+        'You must belong to an organization to invite users',
+      );
+    }
+
+    const existingUser = await this.findByEmail(ctx, inviteUserDto.email);
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const tenantRole = await this.roleRepository.findOne({
+      where: { name: RoleName.TENANT },
+    });
+    if (!tenantRole) {
+      throw new InternalServerErrorException(
+        'TENANT role not found. Please ensure roles are seeded.',
+      );
+    }
+
+    const tempPassword = generateTempPassword();
     const hashedPassword = await hashPassword(tempPassword);
     const user = this.userRepository.create({
       email: inviteUserDto.email,
@@ -115,22 +179,43 @@ export class UsersService {
       organizationId: ctx.user.organizationId,
       passwordChangeRequired: true,
     });
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+
+    await this.sendInviteEmail(inviteUserDto, tempPassword);
+
+    return saved;
+  }
+
+  private async sendInviteEmail(
+    inviteUserDto: InviteUserDto,
+    tempPassword: string,
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>('APP_URL', '');
+    const loginUrl = appUrl ? `${appUrl.replace(/\/$/, '')}/login` : null;
+
+    const html = await this.emailTemplatesService.renderFile('emails/invite.ejs', {
+      name: inviteUserDto.fullName || inviteUserDto.email,
+      email: inviteUserDto.email,
+      tempPassword,
+      loginUrl,
+    });
+
+    await this.emailService.sendMail({
+      to: inviteUserDto.email,
+      subject: "You're invited to Onboard",
+      html,
+      text: `You're invited to Onboard. Sign in with email: ${inviteUserDto.email}, temporary password: ${tempPassword}.${loginUrl ? ` Login: ${loginUrl}` : ''}`,
+    });
   }
 
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { search?: string; status?: string; organizationId?: string },
-    relations?: FindOptionsRelations<User>,
+    filters?: { search?: string; status?: string },
+    _relations?: FindOptionsRelations<User>,
   ): Promise<PaginatedResult<User>> {
     const { page, limit, skip } = parsePagination(pagination ?? {});
-    /**
-     * We use TypeORM QueryBuilder for user list (findAll) instead of repository.find() + separate
-     * finds for relation counts so the DB does the counting in one round-trip with minimal data
-     * transfer (user columns + two count columns), rather than loading all bot/kb_source rows and
-     * counting in the application.
-     */
+
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select([
@@ -144,45 +229,50 @@ export class UsersService {
         'user.passwordChangeRequired',
         'user.isActive',
       ])
-      .leftJoin('user.organization', 'org')
-      .loadRelationCountAndMap('user.botCount', 'user.organization.bots')
-      .loadRelationCountAndMap(
-        'user.kbSourceCount',
-        'user.organization.kbSources',
-      )
       .orderBy('user.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
+
+    const scope = getUserListScope(ctx);
+    if (scope) {
+      qb.andWhere(scope.clause, scope.params);
+    }
+
     if (filters?.search?.trim()) {
       const term = `%${filters.search.trim()}%`;
-      qb.andWhere('(user.email ILIKE :search OR user.fullName ILIKE :search)', {
-        search: term,
-      });
+      qb.andWhere(
+        '(user.email ILIKE :search OR user.full_name ILIKE :search)',
+        { search: term },
+      );
     }
     if (filters?.status === 'active') {
-      qb.andWhere('user.isActive = :isActive', { isActive: true });
+      qb.andWhere('user.is_active = :isActive', { isActive: true });
     } else if (filters?.status === 'inactive') {
-      qb.andWhere('user.isActive = :isActive', { isActive: false });
+      qb.andWhere('user.is_active = :isActive', { isActive: false });
     }
-    if (ctx.user?.organizationId) {
-      qb.andWhere('user.organizationId = :organizationId', {
-        organizationId: ctx.user.organizationId,
-      });
-    } else if (filters?.organizationId) {
-      qb.andWhere('user.organizationId = :organizationId', {
-        organizationId: filters.organizationId,
-      });
+
+    const countQb = this.userRepository.createQueryBuilder('user');
+    if (scope) {
+      countQb.andWhere(scope.clause, scope.params);
     }
-    if (relations && Array.isArray(relations) && relations.length > 0) {
-      const rels = relations as string[];
-      if (rels.includes('role')) {
-        qb.leftJoinAndSelect('user.role', 'role');
-      }
-      if (rels.includes('organization')) {
-        qb.leftJoinAndSelect('user.organization', 'organization');
-      }
+    if (filters?.search?.trim()) {
+      const term = `%${filters.search.trim()}%`;
+      countQb.andWhere(
+        '(user.email ILIKE :search OR user.full_name ILIKE :search)',
+        { search: term },
+      );
     }
-    const [data, total] = await qb.getManyAndCount();
+    if (filters?.status === 'active') {
+      countQb.andWhere('user.is_active = :isActive', { isActive: true });
+    } else if (filters?.status === 'inactive') {
+      countQb.andWhere('user.is_active = :isActive', { isActive: false });
+    }
+
+    const [data, total] = await Promise.all([
+      qb.getMany(),
+      countQb.getCount(),
+    ]);
+
     return toPaginatedResult(data, total, page, limit);
   }
 
@@ -256,5 +346,23 @@ export class UsersService {
   async remove(ctx: RequestContext, id: string): Promise<void> {
     const user = await this.getOne(id);
     await this.userRepository.remove(user);
+  }
+
+  /** Mark that a password reset email was sent (for rate limiting). */
+  async markPasswordResetEmailSent(
+    _ctx: RequestContext,
+    userId: string,
+  ): Promise<void> {
+    await this.userRepository.update(userId, {
+      lastPasswordResetEmailAt: new Date(),
+    });
+  }
+
+  /** Public check: whether any SUPER_ADMIN user exists (for initial setup flow). */
+  async hasSuperAdmin(): Promise<boolean> {
+    const count = await this.userRepository.count({
+      where: { role: { name: RoleName.SUPER_ADMIN } },
+    });
+    return count > 0;
   }
 }

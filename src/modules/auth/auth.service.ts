@@ -16,11 +16,14 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtPayload, AuthResponse, SessionResponse } from '../../types/auth';
 import { User } from '../../common/entities/user.entity';
 import { UsedToken } from '../../common/entities/used-token.entity';
 import type { RequestContext } from '../../types/request';
 import { AuditService } from '../audit/audit.service';
+import { EmailService } from '../email/email.service';
+import { EmailTemplatesService } from '../email/email-templates.service';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +32,8 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private auditService: AuditService,
+    private emailService: EmailService,
+    private emailTemplatesService: EmailTemplatesService,
     @InjectRepository(UsedToken)
     private usedTokenRepository: Repository<UsedToken>,
   ) {}
@@ -55,6 +60,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
+        passwordChangeRequired: user.passwordChangeRequired,
       },
     };
   }
@@ -95,6 +101,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
+        passwordChangeRequired: user.passwordChangeRequired,
       },
     };
   }
@@ -127,6 +134,16 @@ export class AuthService {
       };
     }
 
+    const COOLDOWN_MS = 15 * 60 * 1000; // 15 minutes
+    if (
+      user.lastPasswordResetEmailAt &&
+      Date.now() - user.lastPasswordResetEmailAt.getTime() < COOLDOWN_MS
+    ) {
+      return {
+        message: 'If the email exists, a password reset link has been sent.',
+      };
+    }
+
     const resetSecret = this.configService.get<string>('JWT_RESET_SECRET');
     if (!resetSecret) {
       throw new InternalServerErrorException(
@@ -143,7 +160,29 @@ export class AuthService {
       expiresIn: '30m',
     });
 
-    // TODO: send email with reset link
+    const appUrl = this.configService.get<string>('APP_URL', '');
+    const resetUrl = appUrl
+      ? `${appUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(resetToken)}`
+      : null;
+
+    const html = await this.emailTemplatesService.renderFile(
+      'emails/reset-password.ejs',
+      {
+        name: user.fullName || user.email,
+        resetUrl: resetUrl || '[Reset link not configured - set APP_URL]',
+      },
+    );
+
+    await this.emailService.sendMail({
+      to: user.email,
+      subject: 'Reset your Onboard password',
+      html,
+      text: resetUrl
+        ? `Reset your password: ${resetUrl}. This link expires in 30 minutes.`
+        : 'Reset your password. This link expires in 30 minutes. Set APP_URL to include the link in this email.',
+    });
+
+    await this.usersService.markPasswordResetEmailSent(ctx, user.id);
 
     return {
       message: 'If the email exists, a password reset link has been sent.',
@@ -252,8 +291,47 @@ export class AuthService {
         email: user.email,
         fullName: user.fullName ?? null,
         roleName: user.role.name,
+        passwordChangeRequired: user.passwordChangeRequired,
       },
     };
+  }
+
+  async changePassword(
+    ctx: RequestContext,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    const userId = ctx.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    const user = await this.usersService.findOne(ctx, userId, {});
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const skipCurrentCheck = user.passwordChangeRequired === true;
+    if (!skipCurrentCheck) {
+      if (!changePasswordDto.currentPassword) {
+        throw new BadRequestException('Current password is required');
+      }
+      const valid = await comparePassword(
+        changePasswordDto.currentPassword,
+        user.password,
+      );
+      if (!valid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+    }
+
+    await this.usersService.update(ctx, userId, {
+      password: changePasswordDto.newPassword,
+    });
+
+    void this.auditService
+      .log(ctx, { action: 'CHANGE_PASSWORD', resource: 'auth' })
+      .catch(() => {});
+
+    return { message: 'Password has been changed successfully' };
   }
 
   async logout(

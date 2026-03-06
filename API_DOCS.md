@@ -191,6 +191,48 @@ All responses follow this format:
 }
 ```
 
+### Change Password
+**POST** `/auth/change-password`
+
+**Public:** No (Requires Authentication)
+
+Set or change the authenticated user’s password.
+
+**Two flows:**
+
+1. **After invite (password change required)**  
+   When the user has `passwordChangeRequired: true` (e.g. just logged in with a temporary password), send only `newPassword`. Current password is not required.
+
+2. **Normal change**  
+   When the user does not have `passwordChangeRequired`, send both `currentPassword` and `newPassword`. Current password is verified before updating.
+
+**Request Body:**
+```json
+{
+  "currentPassword": "CurrentOrTempPassword1!",
+  "newPassword": "NewSecurePassword123!"
+}
+```
+
+- `currentPassword`: Optional. Required when the user does **not** have `passwordChangeRequired`. Omit when the user has `passwordChangeRequired` (e.g. after invite).
+- `newPassword`: Required. Must meet the app’s password rules (e.g. min 8 chars, 1 number, 1 special character).
+
+**Response:** `200 OK`
+```json
+{
+  "url": "/auth/change-password",
+  "message": ["Password has been changed successfully"],
+  "success": true,
+  "statusCode": 200,
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "data": {
+    "message": "Password has been changed successfully"
+  }
+}
+```
+
+On success, the user’s `passwordChangeRequired` flag is cleared. Use the same access token; no new token is returned.
+
 ---
 
 ## User Endpoints
