@@ -56,6 +56,7 @@ export class BotsService {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
+
     if (!ctx.user.organizationId) {
       throw new BadRequestException(
         'You must belong to an organization to create bots',
@@ -63,6 +64,7 @@ export class BotsService {
     }
 
     this.validateBotDto(createBotDto);
+
     const bot = this.botRepository.create({
       ...createBotDto,
       organizationId: ctx.user.organizationId,
@@ -80,13 +82,14 @@ export class BotsService {
           ? (createBotDto.oncePerSession ?? false)
           : false,
     });
+
     return this.botRepository.save(bot);
   }
 
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { botType?: BotType; search?: string; organizationId?: string },
+    filters?: { botType?: BotType; search?: string },
   ): Promise<PaginatedResult<Bot>> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
@@ -94,8 +97,9 @@ export class BotsService {
 
     const orgId =
       ctx.user.roleName === RoleName.SUPER_ADMIN
-        ? (filters?.organizationId ?? ctx.user.organizationId)
+        ? undefined
         : ctx.user.organizationId;
+
     if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
       throw new BadRequestException(
         'Organization context required to list bots',
@@ -103,22 +107,28 @@ export class BotsService {
     }
 
     const { page, limit, skip } = parsePagination(pagination ?? {});
+
     const where: FindOptionsWhere<Bot> = {};
+    
     if (orgId) {
       where.organizationId = orgId;
     }
+    
     if (filters?.botType) {
       where.botType = filters.botType;
     }
+    
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
     }
+    
     const [data, total] = await this.botRepository.findAndCount({
       where,
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
     });
+    
     return toPaginatedResult(data, total, page, limit);
   }
 
@@ -128,26 +138,35 @@ export class BotsService {
     }
 
     const bot = await this.botRepository.findOne({ where: { id } });
+
     if (!bot) {
       throw new NotFoundException(`Bot with ID ${id} not found`);
     }
+
     if (
       ctx.user.roleName !== RoleName.SUPER_ADMIN &&
       bot.organizationId !== ctx.user.organizationId
     ) {
       throw new NotFoundException(`Bot with ID ${id} not found`);
     }
+
     return bot;
   }
 
-  async findByIds(ids: string[], organizationId?: string): Promise<Bot[]> {
+  async findByIds(ctx: RequestContext, ids: string[]): Promise<Bot[]> {
     if (ids.length === 0) {
       return [];
     }
 
+    const orgId =
+      ctx.user?.roleName === RoleName.SUPER_ADMIN
+        ? undefined
+        : ctx.user?.organizationId;
+
     const where: FindOptionsWhere<Bot> = { id: In(ids) };
-    if (organizationId) {
-      where.organizationId = organizationId;
+    
+    if (orgId) {
+      where.organizationId = orgId;
     }
 
     return this.botRepository.find({ where });
