@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, ILike, In } from 'typeorm';
+import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
@@ -151,25 +151,6 @@ export class BotsService {
     }
 
     return bot;
-  }
-
-  async findByIds(ctx: RequestContext, ids: string[]): Promise<Bot[]> {
-    if (ids.length === 0) {
-      return [];
-    }
-
-    const orgId =
-      ctx.user?.roleName === RoleName.SUPER_ADMIN
-        ? undefined
-        : ctx.user?.organizationId;
-
-    const where: FindOptionsWhere<Bot> = { id: In(ids) };
-    
-    if (orgId) {
-      where.organizationId = orgId;
-    }
-
-    return this.botRepository.find({ where });
   }
 
   async update(
