@@ -10,6 +10,7 @@ import { Bot } from '../../common/entities/bot.entity';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
 import { BotType, BotState, DisplayMode } from '../../types/bot';
+import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
@@ -44,10 +45,12 @@ export class BotsService {
 
   async create(ctx: RequestContext, createBotDto: CreateBotDto): Promise<Bot> {
     if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
+    if (!ctx.user.organizationId) throw new BadRequestException('You must belong to an organization to create bots');
     this.validateBotDto(createBotDto);
     const bot = this.botRepository.create({
       ...createBotDto,
-      userId: ctx.user.userId,
+      organizationId: ctx.user.organizationId,
+      createdById: ctx.user.userId,
       state: BotState.ACTIVE,
       displayMode: createBotDto.displayMode ?? DisplayMode.AUTO_SHOW,
       description: createBotDto.description ?? null,
@@ -68,13 +71,18 @@ export class BotsService {
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { botType?: BotType; search?: string; userId?: string },
+    filters?: { botType?: BotType; search?: string; organizationId?: string },
   ): Promise<PaginatedResult<Bot>> {
     if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
+    const orgId = ctx.user.roleName === RoleName.SUPER_ADMIN
+      ? (filters?.organizationId ?? ctx.user.organizationId)
+      : ctx.user.organizationId;
+    if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
+      throw new BadRequestException('Organization context required to list bots');
+    }
     const { page, limit, skip } = parsePagination(pagination ?? {});
-    const where: FindOptionsWhere<Bot> = {
-      userId: filters?.userId ?? ctx.user.userId,
-    };
+    const where: FindOptionsWhere<Bot> = {};
+    if (orgId) where.organizationId = orgId;
     if (filters?.botType) where.botType = filters.botType;
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
@@ -94,16 +102,16 @@ export class BotsService {
     if (!bot) {
       throw new NotFoundException(`Bot with ID ${id} not found`);
     }
-    if (bot.userId !== ctx.user.userId) {
+    if (ctx.user.roleName !== RoleName.SUPER_ADMIN && bot.organizationId !== ctx.user.organizationId) {
       throw new NotFoundException(`Bot with ID ${id} not found`);
     }
     return bot;
   }
 
-  async findByIds(ids: string[], userId?: string): Promise<Bot[]> {
+  async findByIds(ids: string[], organizationId?: string): Promise<Bot[]> {
     if (ids.length === 0) return [];
     const where: FindOptionsWhere<Bot> = { id: In(ids) };
-    if (userId) where.userId = userId;
+    if (organizationId) where.organizationId = organizationId;
     return this.botRepository.find({ where });
   }
 

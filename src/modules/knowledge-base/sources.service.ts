@@ -12,6 +12,7 @@ import { CreateKBSourceDto } from './dto/create-source.dto';
 import { BotsService } from '../bots/bots.service';
 import { UpdateKBSourceDto } from './dto/update-source.dto';
 import { SourceType, SourceStatus, RefreshSchedule } from '../../types/knowledge-base';
+import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import { getSourceValueFromFile, getAbsolutePathForDownload } from './multer-options';
 import { fileExists, createFileReadStream } from '../../utils/file.util';
@@ -55,6 +56,7 @@ export class SourcesService {
 
   async create(ctx: RequestContext, dto: CreateKBSourceDto): Promise<KBSource> {
     if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
+    if (!ctx.user.organizationId) throw new BadRequestException('You must belong to an organization to create KB sources');
     this.validateCreateDto(dto);
     const sourceValue =
       dto.sourceType === SourceType.URL
@@ -67,7 +69,8 @@ export class SourcesService {
       refreshSchedule != null ? this.getNextRefreshAt(refreshSchedule) : null;
     const source = this.kbSourceRepository.create({
       name: dto.name,
-      userId: ctx.user.userId,
+      organizationId: ctx.user.organizationId,
+      createdById: ctx.user.userId,
       sourceType: dto.sourceType,
       sourceValue: sourceValue.trim(),
       status: SourceStatus.READY,
@@ -88,6 +91,7 @@ export class SourcesService {
     file: Express.Multer.File,
   ): Promise<KBSource> {
     if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
+    if (!ctx.user.organizationId) throw new BadRequestException('You must belong to an organization to create KB sources');
     if (!name?.trim()) throw new BadRequestException('name is required');
     if (sourceType !== SourceType.PDF && sourceType !== SourceType.DOCX) {
       throw new BadRequestException('sourceType must be PDF or DOCX for file upload');
@@ -96,7 +100,8 @@ export class SourcesService {
     const sourceValue = getSourceValueFromFile(file.filename);
     const source = this.kbSourceRepository.create({
       name: name.trim(),
-      userId: ctx.user.userId,
+      organizationId: ctx.user.organizationId,
+      createdById: ctx.user.userId,
       sourceType,
       sourceValue,
       fileSizeBytes: file.size ?? null,
@@ -114,16 +119,21 @@ export class SourcesService {
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { search?: string; sourceType?: string; userId?: string },
+    filters?: { search?: string; sourceType?: string; organizationId?: string },
   ): Promise<PaginatedResult<KBSource>> {
     if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
+    const orgId = ctx.user.roleName === RoleName.SUPER_ADMIN
+      ? (filters?.organizationId ?? ctx.user.organizationId)
+      : ctx.user.organizationId;
+    if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
+      throw new BadRequestException('Organization context required to list KB sources');
+    }
     if (filters?.sourceType != null && filters.sourceType !== '' && !Object.values(SourceType).includes(filters.sourceType as SourceType)) {
       throw new BadRequestException(`sourceType must be one of: ${Object.values(SourceType).join(', ')}`);
     }
     const { page, limit, skip } = parsePagination(pagination ?? {});
-    const where: FindOptionsWhere<KBSource> = {
-      userId: filters?.userId ?? ctx.user.userId,
-    };
+    const where: FindOptionsWhere<KBSource> = {};
+    if (orgId) where.organizationId = orgId;
     if (filters?.sourceType) where.sourceType = filters.sourceType as SourceType;
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
@@ -142,7 +152,7 @@ export class SourcesService {
     if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
     const source = await this.kbSourceRepository.findOne({ where: { id }, relations: ['bots', 'collection'] });
     if (!source) throw new NotFoundException(`Knowledge base source with ID ${id} not found`);
-    if (source.userId !== ctx.user.userId) {
+    if (ctx.user.roleName !== RoleName.SUPER_ADMIN && source.organizationId !== ctx.user.organizationId) {
       throw new NotFoundException(`Knowledge base source with ID ${id} not found`);
     }
     return source;
@@ -192,8 +202,14 @@ export class SourcesService {
       relations: ['bots', 'collection'],
     });
     if (!source) throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
+    if (ctx.user?.roleName !== RoleName.SUPER_ADMIN && source.organizationId !== ctx.user?.organizationId) {
+      throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
+    }
 
     const bot = await this.botsService.findOne(ctx, botId);
+    if (source.organizationId !== bot.organizationId) {
+      throw new BadRequestException('Bot and source must belong to the same organization');
+    }
     const existingIds = new Set((source.bots ?? []).map((b) => b.id));
     if (existingIds.has(bot.id)) return source;
     source.bots = [...(source.bots ?? []), bot];
@@ -206,6 +222,9 @@ export class SourcesService {
       relations: ['bots', 'collection'],
     });
     if (!source) throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
+    if (ctx.user?.roleName !== RoleName.SUPER_ADMIN && source.organizationId !== ctx.user?.organizationId) {
+      throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
+    }
 
     source.bots = (source.bots ?? []).filter((b) => b.id !== botId);
     return this.kbSourceRepository.save(source);
@@ -217,6 +236,9 @@ export class SourcesService {
       relations: ['bots', 'collection'],
     });
     if (!source) throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
+    if (ctx.user?.roleName !== RoleName.SUPER_ADMIN && source.organizationId !== ctx.user?.organizationId) {
+      throw new NotFoundException(`Knowledge base source with ID ${sourceId} not found`);
+    }
     source.collectionId = collectionId;
     return this.kbSourceRepository.save(source);
   }

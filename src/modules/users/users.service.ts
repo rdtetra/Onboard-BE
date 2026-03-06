@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsRelations } from 'typeorm';
@@ -16,6 +17,7 @@ import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
+import { OrganizationsService } from '../organizations/organizations.service';
 
 @Injectable()
 export class UsersService {
@@ -24,7 +26,8 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
-  ) { }
+    private readonly organizationsService: OrganizationsService,
+  ) {}
 
   async create(ctx: RequestContext, createUserDto: CreateUserDto): Promise<User> {
     const existingUser = await this.findByEmail(ctx, createUserDto.email);
@@ -54,10 +57,24 @@ export class UsersService {
       ...(isFirstUser && { emailVerifiedAt: new Date() }),
     });
 
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    if (!isFirstUser) {
+      await this.organizationsService.createForUser(
+        saved.id,
+        `${saved.fullName || saved.email}'s Organization`,
+      );
+    }
+    const updated = await this.userRepository.findOne({
+      where: { id: saved.id },
+      relations: ['role', 'organization'],
+    });
+    return updated ?? saved;
   }
 
   async inviteUser(ctx: RequestContext, inviteUserDto: InviteUserDto): Promise<User> {
+    if (!ctx.user?.organizationId) {
+      throw new BadRequestException('You must belong to an organization to invite users');
+    }
     const existingUser = await this.findByEmail(ctx, inviteUserDto.email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
@@ -82,6 +99,7 @@ export class UsersService {
       fullName: inviteUserDto.fullName,
       password: hashedPassword,
       role: tenantRole,
+      organizationId: ctx.user.organizationId,
       passwordChangeRequired: true,
     });
     return this.userRepository.save(user);
@@ -90,7 +108,7 @@ export class UsersService {
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { search?: string; status?: string },
+    filters?: { search?: string; status?: string; organizationId?: string },
     relations?: FindOptionsRelations<User>,
   ): Promise<PaginatedResult<User>> {
     const { page, limit, skip } = parsePagination(pagination ?? {});
@@ -106,14 +124,16 @@ export class UsersService {
         'user.id',
         'user.email',
         'user.fullName',
+        'user.organizationId',
         'user.createdAt',
         'user.updatedAt',
         'user.emailVerifiedAt',
         'user.passwordChangeRequired',
         'user.isActive',
       ])
-      .loadRelationCountAndMap('user.botCount', 'user.bots')
-      .loadRelationCountAndMap('user.kbSourceCount', 'user.kbSources')
+      .leftJoin('user.organization', 'org')
+      .loadRelationCountAndMap('user.botCount', 'user.organization.bots')
+      .loadRelationCountAndMap('user.kbSourceCount', 'user.organization.kbSources')
       .orderBy('user.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
@@ -126,9 +146,15 @@ export class UsersService {
     } else if (filters?.status === 'inactive') {
       qb.andWhere('user.isActive = :isActive', { isActive: false });
     }
+    if (ctx.user?.organizationId) {
+      qb.andWhere('user.organizationId = :organizationId', { organizationId: ctx.user.organizationId });
+    } else if (filters?.organizationId) {
+      qb.andWhere('user.organizationId = :organizationId', { organizationId: filters.organizationId });
+    }
     if (relations && Array.isArray(relations) && relations.length > 0) {
       const rels = relations as string[];
       if (rels.includes('role')) qb.leftJoinAndSelect('user.role', 'role');
+      if (rels.includes('organization')) qb.leftJoinAndSelect('user.organization', 'organization');
     }
     const [data, total] = await qb.getManyAndCount();
     return toPaginatedResult(data, total, page, limit);
@@ -149,10 +175,10 @@ export class UsersService {
     id: string,
     relations?: FindOptionsRelations<User>,
   ): Promise<User> {
-    const defaultRelations = ['role', 'bots', 'kbSources'];
+    const defaultRelations: FindOptionsRelations<User> = { role: { permissions: true }, organization: true };
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: (relations as string[]) ?? defaultRelations,
+      relations: relations ?? defaultRelations,
     });
     if (!user) throw new NotFoundException(`User with ID ${id} not found`);
     return user;
