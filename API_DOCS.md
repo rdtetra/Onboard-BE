@@ -6,14 +6,47 @@ All endpoints except public auth endpoints require a Bearer token in the Authori
 Authorization: Bearer <access_token>
 ```
 
+## Impersonation (Super Admin)
+
+Super admins can obtain a token that represents another user (tenant), then use that token for all API calls to act as that user.
+
+**POST** `/auth/impersonate`
+
+**Public:** No (requires super admin Bearer token)
+
+**Request Body:**
+```json
+{
+  "userId": "target-user-uuid"
+}
+```
+
+**Response:** Same shape as login:
+```json
+{
+  "url": "/auth/impersonate",
+  "message": ["Success"],
+  "success": true,
+  "statusCode": 200,
+  "timestamp": "...",
+  "data": {
+    "access_token": "eyJ...",
+    "user": {
+      "id": "target-user-uuid",
+      "email": "tenant@example.com",
+      "fullName": "Tenant One"
+    }
+  }
+}
+```
+
+The `access_token` is a JWT for the **target user** (same format as login). The payload includes an optional `impersonatedBy` claim (super admin's user id) so the frontend can show e.g. "Viewing as Tenant One" and a "Stop impersonating" action. Only users with role `SUPER_ADMIN` can call this endpoint; others receive `403 Forbidden`. The target user must exist and be active. To stop impersonating, the frontend switches back to the original super admin token (store it before calling impersonate).
+
 ## Permissions-Based Authorization
 Endpoints can require specific permissions using the `@Allow()` decorator. Users must have all specified permissions to access the endpoint. If a user lacks required permissions, they will receive a `403 Forbidden` response.
 
-**Available Permissions:**
-- `CREATE_USER` - Create new users
-- `UPDATE_USER` - Update existing users
-- `DELETE_USER` - Delete users
-- `READ_USER` - Read user data
+**Available Permissions:**  
+`CREATE_USER`, `READ_USER`, `UPDATE_USER`, `DELETE_USER` | `CREATE_BOT`, `READ_BOT`, `UPDATE_BOT`, `DELETE_BOT` | `CREATE_KB_SOURCE`, `READ_KB_SOURCE`, `UPDATE_KB_SOURCE`, `DELETE_KB_SOURCE` | `CREATE_COLLECTION`, `READ_COLLECTION`, `UPDATE_COLLECTION`, `DELETE_COLLECTION` | `READ_AUDIT_LOG`
 
 Permissions are assigned to users and included in the JWT token. The system automatically checks permissions on protected endpoints.
 
@@ -63,24 +96,7 @@ All responses follow this format:
 }
 ```
 
-**Response:**
-```json
-{
-  "url": "/auth/register",
-  "message": ["User registered successfully"],
-  "success": true,
-  "statusCode": 200,
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "data": {
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": "uuid",
-      "email": "user@example.com",
-      "fullName": "John Doe"
-    }
-  }
-}
-```
+**Response:** `200 OK` — `data` contains `access_token` and `user`. First user gets role `SUPER_ADMIN`; every subsequent user gets an organization created for them automatically, is set as that org's owner, and receives role `ADMIN`. Organization is internal (not exposed to clients).
 
 ---
 
@@ -186,30 +202,21 @@ All responses follow this format:
 
 **Required Permissions:** `READ_USER`
 
+**Query params:**
+
+| Param    | Type   | Description |
+|----------|--------|-------------|
+| `page`   | string | Page number (1-based). Default: 1 |
+| `limit`  | string | Page size. Default: 20, max: 100 |
+| `search` | string | Filter by email or full name (partial, case-insensitive) |
+| `status` | string | Filter: `active` or `inactive` (by `isActive`) |
+
 **Headers:**
 ```
 Authorization: Bearer <access_token>
 ```
 
-**Response:**
-```json
-{
-  "url": "/users",
-  "message": ["Users retrieved successfully"],
-  "success": true,
-  "statusCode": 200,
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "data": [
-    {
-      "id": "uuid",
-      "email": "user@example.com",
-      "fullName": "John Doe",
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z"
-    }
-  ]
-}
-```
+**Response:** `200 OK` — `data` is paginated: `{ data: User[], total, page, limit, totalPages }`. Each user includes `botCount` and `kbSourceCount` (counts for their organization).
 
 ---
 
@@ -226,23 +233,30 @@ Authorization: Bearer <access_token>
 **URL Parameters:**
 - `id` (required): User UUID
 
-**Response:**
+**Response:** `200 OK` — single user in `data` (includes `role`, `organization` when loaded).
+
+**Errors:** `404` if user not found.
+
+---
+
+### Invite User
+**POST** `/users/invite`
+
+**Public:** No (Requires Authentication)
+
+**Required Permissions:** `CREATE_USER` (and caller must belong to an organization)
+
+**Request Body:**
 ```json
 {
-  "url": "/users/uuid",
-  "message": ["User retrieved successfully"],
-  "success": true,
-  "statusCode": 200,
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "data": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "fullName": "John Doe",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  }
+  "email": "newuser@example.com",
+  "fullName": "New User"
 }
 ```
+
+**Response:** `201` — created user in `data`. User is added to the inviter's organization with role `TENANT` and a temporary password (e.g. sent by email).
+
+**Errors:** `409` if email already exists. `400` if caller has no organization.
 
 ---
 
@@ -359,6 +373,145 @@ Authorization: Bearer <access_token>
 
 ---
 
+## Bots API
+
+Base path: `/bots`. All operations are scoped to the current user's organization (SUPER_ADMIN can see all).
+
+### List bots
+**GET** `/bots` — **Permission:** `READ_BOT`
+
+**Query params:** `page`, `limit` (default 20, max 100), `botType` (`GENERAL` | `URL_SPECIFIC`), `search` (name, partial case-insensitive).
+
+**Response:** `200 OK` — `data` is paginated: `{ data: Bot[], total, page, limit, totalPages }`.
+
+### Get one bot
+**GET** `/bots/:id` — **Permission:** `READ_BOT`. **Errors:** `404` if not found.
+
+### Create bot
+**POST** `/bots` — **Permission:** `CREATE_BOT`. Caller must belong to an organization.
+
+**GENERAL:** `{ "botType": "GENERAL", "name": "...", "description": "...", "domains": ["example.com"] }`  
+**URL_SPECIFIC:** `{ "botType": "URL_SPECIFIC", "name": "...", "domains": ["shop.example.com"], "targetUrls": ["/checkout"], "visibilityDuration": "7d", "oncePerSession": true }`
+
+| Field               | Rules |
+|---------------------|-------|
+| botType             | `GENERAL` or `URL_SPECIFIC` |
+| name                | Max 200 |
+| domains             | GENERAL: ≥1; URL_SPECIFIC: exactly 1 |
+| targetUrls           | URL_SPECIFIC only, ≥1 paths starting with `/` |
+| visibilityDuration  | Optional: `1d`, `2d`, `7d`, `30d` |
+| displayMode          | Optional: `AUTO_SHOW` or `BUTTON_ONLY` |
+
+**Response:** `201` — created bot in `data`.
+
+### Update bot
+**PATCH** `/bots/:id` — **Permission:** `UPDATE_BOT`. Body: subset of create fields. `botType` cannot be changed.
+
+### Archive / Disable bot
+**PATCH** `/bots/:id/archive` — sets state to `ARCHIVED`.  
+**PATCH** `/bots/:id/disable` — sets state to `DISABLED`.  
+**Permission:** `UPDATE_BOT`.
+
+### Delete bot
+**DELETE** `/bots/:id` — **Permission:** `DELETE_BOT`. Soft-delete. **Errors:** `404` if not found.
+
+**Bot enums:** BotType `GENERAL` | `URL_SPECIFIC`; BotState `ACTIVE` | `DISABLED` | `ARCHIVED`; VisibilityDuration `1d` | `2d` | `7d` | `30d`; DisplayMode `AUTO_SHOW` | `BUTTON_ONLY`.
+
+---
+
+## Knowledge Base Sources API
+
+Base path: `/knowledge-base/sources`. Sources can exist independently; each can be linked to multiple bots and belong to at most one collection. List/get return `linkedBots` (count) and `collection` (object or null). All operations scoped by organization.
+
+### List sources
+**GET** `/knowledge-base/sources` — **Permission:** `READ_KB_SOURCE`
+
+**Query params:** `page`, `limit` (default 20, max 100), `search` (name), `sourceType` (`URL` | `PDF` | `DOCX` | `TXT`).
+
+**Response:** `200 OK` — paginated; each source includes `linkedBots` (number) and `collection`.
+
+### Get one source
+**GET** `/knowledge-base/sources/:id` — **Permission:** `READ_KB_SOURCE`. **Errors:** `404` if not found.
+
+### Download source file
+**GET** `/knowledge-base/sources/:id/download` — **Permission:** `READ_KB_SOURCE`. Returns binary (PDF/DOCX). **Errors:** `400` if not PDF/DOCX; `404` if not found.
+
+### Create source (JSON)
+**POST** `/knowledge-base/sources` — **Permission:** `CREATE_KB_SOURCE`. Caller must belong to an organization.
+
+**URL:** `{ "sourceType": "URL", "name": "...", "url": "https://...", "refreshSchedule": "WEEKLY" }`  
+**TXT:** `{ "sourceType": "TXT", "name": "...", "content": "..." }`  
+**PDF/DOCX:** `{ "sourceType": "PDF", "name": "...", "fileKey": "uploads/..." }`
+
+| Field           | Rules |
+|-----------------|-------|
+| sourceType      | `URL`, `PDF`, `DOCX`, `TXT` |
+| name            | Max 200 |
+| url             | If URL; max 2048 |
+| refreshSchedule | If URL: `MANUAL`, `DAILY`, `WEEKLY`, `MONTHLY` |
+| content         | If TXT; max 50000 |
+| fileKey         | If PDF/DOCX; max 2048 |
+
+**Response:** `201` — created source in `data`.
+
+### Upload source (file)
+**POST** `/knowledge-base/sources/upload` — **Permission:** `CREATE_KB_SOURCE`  
+**Content-Type:** `multipart/form-data`. Fields: `name`, `sourceType` (`PDF` | `DOCX`), `file` (max 20 MB). **Response:** `201`.
+
+### Update source
+**PATCH** `/knowledge-base/sources/:id` — **Permission:** `UPDATE_KB_SOURCE`. Body: subset of fields; `sourceType` cannot be changed. Use Collections API to add/remove from collection.
+
+### Refresh source (URL only)
+**POST** `/knowledge-base/sources/:id/refresh` — **Permission:** `UPDATE_KB_SOURCE`. Forces refresh (updates `lastRefreshed`). **Errors:** `400` if not URL.
+
+### Link / Unlink bot
+**POST** `/knowledge-base/sources/:id/bots/:botId` — link bot to source.  
+**DELETE** `/knowledge-base/sources/:id/bots/:botId` — unlink. **Permission:** `UPDATE_KB_SOURCE`. **Errors:** `404` if source or bot not found.
+
+### Delete source
+**DELETE** `/knowledge-base/sources/:id` — **Permission:** `DELETE_KB_SOURCE`. Unlinks from collection, then soft-deletes.
+
+**Enums:** SourceType `URL` | `PDF` | `DOCX` | `TXT`; SourceStatus `READY` | `PROCESSING` | `FAILED`; RefreshSchedule `MANUAL` | `DAILY` | `WEEKLY` | `MONTHLY`.
+
+---
+
+## Collections API
+
+Base path: `/collections`. Collection has `name` and optional `description`; can contain multiple KB sources. Each source belongs to at most one collection. Collections are hard-deleted; deleting a collection unlinks its sources. Scoped by organization.
+
+### List collections
+**GET** `/collections` — **Permission:** `READ_COLLECTION`  
+**Query params:** `page`, `limit` (default 20, max 100). **Response:** `200 OK` — paginated; each collection includes `sources` array.
+
+### Get one collection
+**GET** `/collections/:id` — **Permission:** `READ_COLLECTION`. **Errors:** `404` if not found.
+
+### Create collection
+**POST** `/collections` — **Permission:** `CREATE_COLLECTION`. Caller must belong to an organization.  
+**Body:** `{ "name": "...", "description": "..." }`. Name max 200; description max 2000 optional. **Response:** `201`.
+
+### Update collection
+**PATCH** `/collections/:id` — **Permission:** `UPDATE_COLLECTION`. Body: `name`, `description` (optional).
+
+### Delete collection
+**DELETE** `/collections/:id` — **Permission:** `DELETE_COLLECTION`. Unlinks all sources, then permanently deletes collection.
+
+### Add / Remove source
+**POST** `/collections/:id/sources/:sourceId` — add source to collection (moves from another collection if needed).  
+**DELETE** `/collections/:id/sources/:sourceId` — remove source from collection. **Permission:** `UPDATE_COLLECTION`. **Errors:** `404` if collection/source not found or source not in collection.
+
+---
+
+## Multi-tenant and roles
+
+- **Organization** is internal: not exposed to clients. There are no public endpoints to create or read organizations.
+- When a **tenant** (non–first user) **registers**, an organization is created automatically; that user is set as the org’s owner and receives role **ADMIN**. The first user gets role **SUPER_ADMIN** and has no organization.
+- **Invited users** join the inviter’s organization and receive role **TENANT**.
+- **Roles:** `SUPER_ADMIN` (platform-wide), `ADMIN` (org owner/admin), `TENANT` (org member). Permissions are assigned per role; guards enforce `@Allow(Permission.XXX)`.
+- **Data scope:** Bots, KB sources, and collections belong to an organization. All list/get/create/update/delete are scoped by the current user’s `organizationId`. **SUPER_ADMIN** can bypass and see all (e.g. user list filtered by `organizationId`). Audit logs use `organizationId` (or `userId` if no org) as tenant.
+
+---
+
 ## Validation Rules
 
 ### Password
@@ -374,6 +527,12 @@ Authorization: Bearer <access_token>
 - Maximum 200 characters
 - Required for registration
 - Optional for user creation/update
+
+---
+
+## Audit Logs
+
+**GET** `/audit-logs` — **Permission:** `READ_AUDIT_LOG`. Query params: `page`, `limit`, `action`, `resource`, `userId`. Returns paginated results. Logs are scoped by tenant (`organizationId` or `userId`); each user sees only their organization’s logs (SUPER_ADMIN may see all).
 
 ---
 
@@ -452,3 +611,34 @@ Authorization: Bearer <access_token>
 All endpoints are rate limited:
 - **Default:** 10 requests per 60 seconds per IP address
 - **Configurable:** Via `THROTTLE_TTL` and `THROTTLE_LIMIT` environment variables
+
+---
+
+## Shared
+
+### Paginated response shape
+
+When an endpoint returns a paginated list, `data` has the form:
+
+```json
+{
+  "data": [ ... ],
+  "total": 42,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 5
+}
+```
+
+### ApiResponse type
+
+```ts
+interface ApiResponse<T> {
+  url: string;
+  message: string[];
+  success: boolean;
+  statusCode: number;
+  timestamp: string;
+  data?: T;
+}
+```
