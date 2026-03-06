@@ -13,7 +13,10 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 function getResourceFromPath(path: string): string {
   const segments = path.split('/').filter(Boolean);
-  if (segments.length === 0) return 'unknown';
+
+  if (segments.length === 0) {
+    return 'unknown';
+  }
   if (segments[0] === 'knowledge-base' && segments[1]) {
     return `knowledge-base/${segments[1]}`;
   }

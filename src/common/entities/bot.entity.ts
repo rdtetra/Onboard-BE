@@ -1,6 +1,18 @@
-import { Entity, Column, DeleteDateColumn, ManyToOne, JoinColumn, ManyToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  DeleteDateColumn,
+  ManyToOne,
+  JoinColumn,
+  ManyToMany,
+} from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { BotType, BotState, VisibilityDuration, DisplayMode } from '../../types/bot';
+import {
+  BotType,
+  BotState,
+  VisibilityDuration,
+  DisplayMode,
+} from '../../types/bot';
 import { Organization } from './organization.entity';
 import { User } from './user.entity';
 import { KBSource } from './kb-source.entity';
@@ -30,7 +42,12 @@ export class Bot extends BaseEntity {
   @Column({ type: 'enum', enum: BotState, default: BotState.ACTIVE })
   state: BotState;
 
-  @Column({ type: 'enum', enum: DisplayMode, name: 'display_mode', default: DisplayMode.AUTO_SHOW })
+  @Column({
+    type: 'enum',
+    enum: DisplayMode,
+    name: 'display_mode',
+    default: DisplayMode.AUTO_SHOW,
+  })
   displayMode: DisplayMode;
 
   @Column({ type: 'varchar' })

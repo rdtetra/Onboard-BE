@@ -70,7 +70,11 @@ export class SourcesController {
     @Query('search') search?: string,
     @Query('sourceType') sourceType?: string,
   ): Promise<PaginatedResult<KBSource>> {
-    return this.sourcesService.findAll(ctx, { page, limit }, { search, sourceType });
+    return this.sourcesService.findAll(
+      ctx,
+      { page, limit },
+      { search, sourceType },
+    );
   }
 
   @Post(':id/bots/:botId')

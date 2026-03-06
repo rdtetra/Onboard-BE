@@ -16,7 +16,10 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
-import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
+import {
+  parsePagination,
+  toPaginatedResult,
+} from '../../utils/pagination.util';
 import { OrganizationsService } from '../organizations/organizations.service';
 
 @Injectable()
@@ -29,7 +32,10 @@ export class UsersService {
     private readonly organizationsService: OrganizationsService,
   ) {}
 
-  async create(ctx: RequestContext, createUserDto: CreateUserDto): Promise<User> {
+  async create(
+    ctx: RequestContext,
+    createUserDto: CreateUserDto,
+  ): Promise<User> {
     const existingUser = await this.findByEmail(ctx, createUserDto.email);
 
     if (existingUser) {
@@ -71,9 +77,14 @@ export class UsersService {
     return updated ?? saved;
   }
 
-  async inviteUser(ctx: RequestContext, inviteUserDto: InviteUserDto): Promise<User> {
+  async inviteUser(
+    ctx: RequestContext,
+    inviteUserDto: InviteUserDto,
+  ): Promise<User> {
     if (!ctx.user?.organizationId) {
-      throw new BadRequestException('You must belong to an organization to invite users');
+      throw new BadRequestException(
+        'You must belong to an organization to invite users',
+      );
     }
     const existingUser = await this.findByEmail(ctx, inviteUserDto.email);
     if (existingUser) {
@@ -91,7 +102,9 @@ export class UsersService {
 
     const tempPassword = generateTempPassword();
     // TODO: send email to inviteUserDto.email with temp password and login link
-    console.log(`[Invite] Temp password for ${inviteUserDto.email}: ${tempPassword}`);
+    console.log(
+      `[Invite] Temp password for ${inviteUserDto.email}: ${tempPassword}`,
+    );
 
     const hashedPassword = await hashPassword(tempPassword);
     const user = this.userRepository.create({
@@ -133,13 +146,18 @@ export class UsersService {
       ])
       .leftJoin('user.organization', 'org')
       .loadRelationCountAndMap('user.botCount', 'user.organization.bots')
-      .loadRelationCountAndMap('user.kbSourceCount', 'user.organization.kbSources')
+      .loadRelationCountAndMap(
+        'user.kbSourceCount',
+        'user.organization.kbSources',
+      )
       .orderBy('user.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
     if (filters?.search?.trim()) {
       const term = `%${filters.search.trim()}%`;
-      qb.andWhere('(user.email ILIKE :search OR user.fullName ILIKE :search)', { search: term });
+      qb.andWhere('(user.email ILIKE :search OR user.fullName ILIKE :search)', {
+        search: term,
+      });
     }
     if (filters?.status === 'active') {
       qb.andWhere('user.isActive = :isActive', { isActive: true });
@@ -147,26 +165,41 @@ export class UsersService {
       qb.andWhere('user.isActive = :isActive', { isActive: false });
     }
     if (ctx.user?.organizationId) {
-      qb.andWhere('user.organizationId = :organizationId', { organizationId: ctx.user.organizationId });
+      qb.andWhere('user.organizationId = :organizationId', {
+        organizationId: ctx.user.organizationId,
+      });
     } else if (filters?.organizationId) {
-      qb.andWhere('user.organizationId = :organizationId', { organizationId: filters.organizationId });
+      qb.andWhere('user.organizationId = :organizationId', {
+        organizationId: filters.organizationId,
+      });
     }
     if (relations && Array.isArray(relations) && relations.length > 0) {
       const rels = relations as string[];
-      if (rels.includes('role')) qb.leftJoinAndSelect('user.role', 'role');
-      if (rels.includes('organization')) qb.leftJoinAndSelect('user.organization', 'organization');
+      if (rels.includes('role')) {
+        qb.leftJoinAndSelect('user.role', 'role');
+      }
+      if (rels.includes('organization')) {
+        qb.leftJoinAndSelect('user.organization', 'organization');
+      }
     }
     const [data, total] = await qb.getManyAndCount();
     return toPaginatedResult(data, total, page, limit);
   }
 
   /** Load user entity only (for update/remove). */
-  private async getOne(id: string, relations?: FindOptionsRelations<User>): Promise<User> {
+  private async getOne(
+    id: string,
+    relations?: FindOptionsRelations<User>,
+  ): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
       relations: (relations as string[]) ?? ['role'],
     });
-    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
     return user;
   }
 
@@ -175,12 +208,19 @@ export class UsersService {
     id: string,
     relations?: FindOptionsRelations<User>,
   ): Promise<User> {
-    const defaultRelations: FindOptionsRelations<User> = { role: { permissions: true }, organization: true };
+    const defaultRelations: FindOptionsRelations<User> = {
+      role: { permissions: true },
+      organization: true,
+    };
     const user = await this.userRepository.findOne({
       where: { id },
       relations: relations ?? defaultRelations,
     });
-    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
     return user;
   }
 
@@ -195,7 +235,11 @@ export class UsersService {
     });
   }
 
-  async update(ctx: RequestContext, id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(
+    ctx: RequestContext,
+    id: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User> {
     const user = await this.getOne(id);
 
     if (updateUserDto.password) {

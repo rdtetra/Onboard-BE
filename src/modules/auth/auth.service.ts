@@ -46,7 +46,9 @@ export class AuthService {
       ...ctx,
       user: { userId: user.id, email: user.email },
     };
-    void this.auditService.log(authCtx, { action: 'REGISTER', resource: 'auth' }).catch(() => {});
+    void this.auditService
+      .log(authCtx, { action: 'REGISTER', resource: 'auth' })
+      .catch(() => {});
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -79,7 +81,9 @@ export class AuthService {
       ...ctx,
       user: { userId: user.id, email: user.email },
     };
-    void this.auditService.log(authCtx, { action: 'LOGIN', resource: 'auth' }).catch(() => {});
+    void this.auditService
+      .log(authCtx, { action: 'LOGIN', resource: 'auth' })
+      .catch(() => {});
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -228,7 +232,7 @@ export class AuthService {
     }
 
     const payload = this.verifyAccessToken(token, secret);
-    
+
     const user = await this.usersService.findOne(ctx, payload.sub, {
       role: true,
     });

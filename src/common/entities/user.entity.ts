@@ -26,7 +26,10 @@ export class User extends BaseEntity {
   @Column({ type: 'uuid', name: 'organization_id', nullable: true })
   organizationId: string | null;
 
-  @ManyToOne(() => Organization, (org) => org.users, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => Organization, (org) => org.users, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'organization_id' })
   organization: Organization | null;
 

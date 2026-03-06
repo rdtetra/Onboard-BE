@@ -28,6 +28,7 @@ import { BotsModule } from './modules/bots/bots.module';
 import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.module';
 import { CollectionsModule } from './modules/collections/collections.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { EmailModule } from './modules/email/email.module';
 
 @Module({
   imports: [
@@ -48,7 +49,8 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        const sslEnabled = configService.get<string>('DB_SSL', 'false') === 'true';
+        const sslEnabled =
+          configService.get<string>('DB_SSL', 'false') === 'true';
         return {
           type: 'postgres',
           host: configService.get<string>('DB_HOST', 'localhost'),
@@ -56,11 +58,25 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
           username: configService.get<string>('DB_USERNAME', 'postgres'),
           password: configService.get<string>('DB_PASSWORD', 'postgres'),
           database: configService.get<string>('DB_NAME', 'onboard'),
-          entities: [User, UsedToken, Permission, Role, Bot, KBSource, Collection, Organization, AuditLog],
+          entities: [
+            User,
+            UsedToken,
+            Permission,
+            Role,
+            Bot,
+            KBSource,
+            Collection,
+            Organization,
+            AuditLog,
+          ],
           synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
           ...(sslEnabled && {
             ssl: {
-              rejectUnauthorized: configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED', 'false') === 'true',
+              rejectUnauthorized:
+                configService.get<string>(
+                  'DB_SSL_REJECT_UNAUTHORIZED',
+                  'false',
+                ) === 'true',
             },
           }),
         };
@@ -75,22 +91,23 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
     CollectionsModule,
     OrganizationsModule,
     AuditModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-        {
-          provide: APP_GUARD,
-          useClass: JwtAuthGuard,
-        },
-        {
-          provide: APP_GUARD,
-          useClass: PermissionsGuard,
-        },
-        {
-          provide: APP_GUARD,
-          useClass: ThrottlerGuard,
-        },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestInterceptor,

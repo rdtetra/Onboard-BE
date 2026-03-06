@@ -12,7 +12,8 @@ import {
 } from 'class-validator';
 import { BotType, VisibilityDuration, DisplayMode } from '../../../types/bot';
 
-const DOMAIN_REGEX = /^(localhost|([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
+const DOMAIN_REGEX =
+  /^(localhost|([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
 const TARGET_URL_REGEX = /^\/[a-zA-Z0-9\-_.~/:?=&%]*$/;
 
 export class CreateBotDto {
@@ -37,16 +38,25 @@ export class CreateBotDto {
 
   @IsArray()
   @IsString({ each: true })
-  @Matches(DOMAIN_REGEX, { each: true, message: 'Each domain must be a valid hostname (e.g. example.com or localhost)' })
+  @Matches(DOMAIN_REGEX, {
+    each: true,
+    message:
+      'Each domain must be a valid hostname (e.g. example.com or localhost)',
+  })
   @IsNotEmpty()
   domains: string[];
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @Matches(TARGET_URL_REGEX, { each: true, message: 'Each target URL must be a path starting with /' })
+  @Matches(TARGET_URL_REGEX, {
+    each: true,
+    message: 'Each target URL must be a path starting with /',
+  })
   @ValidateIf((o) => o.botType === BotType.URL_SPECIFIC)
-  @ArrayMinSize(1, { message: 'URL-specific bot must have at least one target URL' })
+  @ArrayMinSize(1, {
+    message: 'URL-specific bot must have at least one target URL',
+  })
   targetUrls?: string[];
 
   @IsOptional()

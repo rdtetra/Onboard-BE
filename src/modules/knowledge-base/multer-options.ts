@@ -22,7 +22,9 @@ export const kbSourceUploadOptions = {
       cb(null, ensureUploadDir());
     },
     filename: (_req, file, cb) => {
-      const ext = extname(file.originalname) || (file.mimetype === 'application/pdf' ? '.pdf' : '.docx');
+      const ext =
+        extname(file.originalname) ||
+        (file.mimetype === 'application/pdf' ? '.pdf' : '.docx');
       const base = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       cb(null, `${base}${ext}`);
     },
@@ -48,10 +50,17 @@ export function getSourceValueFromFile(filename: string): string {
 
 /** Resolve sourceValue to absolute path for download; returns null if not a local path or outside UPLOAD_DIR */
 export function getAbsolutePathForDownload(sourceValue: string): string | null {
-  if (!sourceValue?.startsWith(UPLOAD_DIR + '/')) return null;
+  if (!sourceValue?.startsWith(UPLOAD_DIR + '/')) {
+    return null;
+  }
+
   const absolute = resolve(process.cwd(), sourceValue);
   const allowedDir = resolve(process.cwd(), UPLOAD_DIR);
   const rel = relative(allowedDir, absolute);
-  if (rel.startsWith('..') || rel === '') return null;
+
+  if (rel.startsWith('..') || rel === '') {
+    return null;
+  }
+
   return absolute;
 }

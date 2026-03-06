@@ -14,7 +14,10 @@ export class RequestInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest();
     const url = request.url;
     const method = request.method;
-    const ip = request.ip || request.connection?.remoteAddress || request.socket?.remoteAddress;
+    const ip =
+      request.ip ||
+      request.connection?.remoteAddress ||
+      request.socket?.remoteAddress;
     const userAgent = request.get('user-agent') || undefined;
     const timestamp = new Date().toISOString();
     const requestId = uuidv4();

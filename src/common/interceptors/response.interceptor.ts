@@ -10,7 +10,10 @@ import { map } from 'rxjs/operators';
 import { ResponseFormat } from '../../types/response';
 
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor<T, ResponseFormat<T> | StreamableFile> {
+export class ResponseInterceptor<T> implements NestInterceptor<
+  T,
+  ResponseFormat<T> | StreamableFile
+> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,

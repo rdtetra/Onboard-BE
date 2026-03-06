@@ -13,7 +13,10 @@ import { BotType, BotState, DisplayMode } from '../../types/bot';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
-import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
+import {
+  parsePagination,
+  toPaginatedResult,
+} from '../../utils/pagination.util';
 
 @Injectable()
 export class BotsService {
@@ -29,23 +32,36 @@ export class BotsService {
 
     if (botType === BotType.GENERAL) {
       if (domains != null && domains.length < 1) {
-        throw new BadRequestException('General bot must have at least one domain');
+        throw new BadRequestException(
+          'General bot must have at least one domain',
+        );
       }
     }
 
     if (botType === BotType.URL_SPECIFIC) {
       if (domains != null && domains.length !== 1) {
-        throw new BadRequestException('URL-specific bot must have exactly one domain');
+        throw new BadRequestException(
+          'URL-specific bot must have exactly one domain',
+        );
       }
       if (targetUrls != null && targetUrls.length < 1) {
-        throw new BadRequestException('URL-specific bot must have at least one target URL');
+        throw new BadRequestException(
+          'URL-specific bot must have at least one target URL',
+        );
       }
     }
   }
 
   async create(ctx: RequestContext, createBotDto: CreateBotDto): Promise<Bot> {
-    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
-    if (!ctx.user.organizationId) throw new BadRequestException('You must belong to an organization to create bots');
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    if (!ctx.user.organizationId) {
+      throw new BadRequestException(
+        'You must belong to an organization to create bots',
+      );
+    }
+
     this.validateBotDto(createBotDto);
     const bot = this.botRepository.create({
       ...createBotDto,
@@ -58,11 +74,11 @@ export class BotsService {
       targetUrls: createBotDto.targetUrls ?? [],
       visibilityDuration:
         createBotDto.botType === BotType.URL_SPECIFIC
-          ? createBotDto.visibilityDuration ?? null
+          ? (createBotDto.visibilityDuration ?? null)
           : null,
       oncePerSession:
         createBotDto.botType === BotType.URL_SPECIFIC
-          ? createBotDto.oncePerSession ?? false
+          ? (createBotDto.oncePerSession ?? false)
           : false,
     });
     return this.botRepository.save(bot);
@@ -73,17 +89,28 @@ export class BotsService {
     pagination?: { page?: string; limit?: string },
     filters?: { botType?: BotType; search?: string; organizationId?: string },
   ): Promise<PaginatedResult<Bot>> {
-    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
-    const orgId = ctx.user.roleName === RoleName.SUPER_ADMIN
-      ? (filters?.organizationId ?? ctx.user.organizationId)
-      : ctx.user.organizationId;
-    if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
-      throw new BadRequestException('Organization context required to list bots');
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
     }
+
+    const orgId =
+      ctx.user.roleName === RoleName.SUPER_ADMIN
+        ? (filters?.organizationId ?? ctx.user.organizationId)
+        : ctx.user.organizationId;
+    if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
+      throw new BadRequestException(
+        'Organization context required to list bots',
+      );
+    }
+
     const { page, limit, skip } = parsePagination(pagination ?? {});
     const where: FindOptionsWhere<Bot> = {};
-    if (orgId) where.organizationId = orgId;
-    if (filters?.botType) where.botType = filters.botType;
+    if (orgId) {
+      where.organizationId = orgId;
+    }
+    if (filters?.botType) {
+      where.botType = filters.botType;
+    }
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
     }
@@ -97,25 +124,41 @@ export class BotsService {
   }
 
   async findOne(ctx: RequestContext, id: string): Promise<Bot> {
-    if (!ctx.user?.userId) throw new UnauthorizedException('Authentication required');
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
     const bot = await this.botRepository.findOne({ where: { id } });
     if (!bot) {
       throw new NotFoundException(`Bot with ID ${id} not found`);
     }
-    if (ctx.user.roleName !== RoleName.SUPER_ADMIN && bot.organizationId !== ctx.user.organizationId) {
+    if (
+      ctx.user.roleName !== RoleName.SUPER_ADMIN &&
+      bot.organizationId !== ctx.user.organizationId
+    ) {
       throw new NotFoundException(`Bot with ID ${id} not found`);
     }
     return bot;
   }
 
   async findByIds(ids: string[], organizationId?: string): Promise<Bot[]> {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {
+      return [];
+    }
+
     const where: FindOptionsWhere<Bot> = { id: In(ids) };
-    if (organizationId) where.organizationId = organizationId;
+    if (organizationId) {
+      where.organizationId = organizationId;
+    }
+
     return this.botRepository.find({ where });
   }
 
-  async update(ctx: RequestContext, id: string, updateBotDto: UpdateBotDto): Promise<Bot> {
+  async update(
+    ctx: RequestContext,
+    id: string,
+    updateBotDto: UpdateBotDto,
+  ): Promise<Bot> {
     const bot = await this.findOne(ctx, id);
     const merged = { ...bot, ...updateBotDto, botType: bot.botType };
     this.validateBotDto(merged as CreateBotDto);
@@ -148,16 +191,32 @@ export class BotsService {
     const { botType } = existingBot;
     const payload: Partial<Bot> = {};
 
-    if (updateBotDto.name !== undefined) payload.name = updateBotDto.name;
-    if (updateBotDto.description !== undefined) payload.description = updateBotDto.description;
-    if (updateBotDto.introMessage !== undefined) payload.introMessage = updateBotDto.introMessage;
-    if (updateBotDto.domains !== undefined) payload.domains = updateBotDto.domains;
-    if (updateBotDto.displayMode !== undefined) payload.displayMode = updateBotDto.displayMode;
+    if (updateBotDto.name !== undefined) {
+      payload.name = updateBotDto.name;
+    }
+    if (updateBotDto.description !== undefined) {
+      payload.description = updateBotDto.description;
+    }
+    if (updateBotDto.introMessage !== undefined) {
+      payload.introMessage = updateBotDto.introMessage;
+    }
+    if (updateBotDto.domains !== undefined) {
+      payload.domains = updateBotDto.domains;
+    }
+    if (updateBotDto.displayMode !== undefined) {
+      payload.displayMode = updateBotDto.displayMode;
+    }
 
     if (botType === BotType.URL_SPECIFIC) {
-      if (updateBotDto.targetUrls !== undefined) payload.targetUrls = updateBotDto.targetUrls;
-      if (updateBotDto.visibilityDuration !== undefined) payload.visibilityDuration = updateBotDto.visibilityDuration;
-      if (updateBotDto.oncePerSession !== undefined) payload.oncePerSession = updateBotDto.oncePerSession;
+      if (updateBotDto.targetUrls !== undefined) {
+        payload.targetUrls = updateBotDto.targetUrls;
+      }
+      if (updateBotDto.visibilityDuration !== undefined) {
+        payload.visibilityDuration = updateBotDto.visibilityDuration;
+      }
+      if (updateBotDto.oncePerSession !== undefined) {
+        payload.oncePerSession = updateBotDto.oncePerSession;
+      }
     }
 
     return payload;

@@ -4,7 +4,10 @@ import { Repository, FindOptionsWhere } from 'typeorm';
 import { AuditLog } from '../../common/entities/audit-log.entity';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
-import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
+import {
+  parsePagination,
+  toPaginatedResult,
+} from '../../utils/pagination.util';
 
 export interface AuditLogPayload {
   action: string;
@@ -20,10 +23,7 @@ export class AuditService {
     private readonly auditLogRepository: Repository<AuditLog>,
   ) {}
 
-  async log(
-    ctx: RequestContext,
-    payload: AuditLogPayload,
-  ): Promise<AuditLog> {
+  async log(ctx: RequestContext, payload: AuditLogPayload): Promise<AuditLog> {
     const tenantId = ctx.user?.organizationId ?? ctx.user?.userId ?? null;
     const userId = ctx.user?.userId ?? null;
     const entry = this.auditLogRepository.create({

@@ -24,7 +24,9 @@ export class CreateKBSourceDto {
   @IsEnum(RefreshSchedule)
   refreshSchedule?: RefreshSchedule;
 
-  @ValidateIf((o) => o.sourceType === SourceType.PDF || o.sourceType === SourceType.DOCX)
+  @ValidateIf(
+    (o) => o.sourceType === SourceType.PDF || o.sourceType === SourceType.DOCX,
+  )
   @IsString()
   @MaxLength(2048)
   fileKey?: string;

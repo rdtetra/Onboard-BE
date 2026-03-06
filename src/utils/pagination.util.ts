@@ -5,7 +5,10 @@ export function parsePagination(query: { page?: string; limit?: string }): {
   limit: number;
   skip: number;
 } {
-  const page = Math.max(1, parseInt(query.page ?? '', 10) || PAGINATION.defaultPage);
+  const page = Math.max(
+    1,
+    parseInt(query.page ?? '', 10) || PAGINATION.defaultPage,
+  );
   const rawLimit = parseInt(query.limit ?? '', 10) || PAGINATION.defaultLimit;
   const limit = Math.min(Math.max(1, rawLimit), PAGINATION.maxLimit);
   const skip = (page - 1) * limit;

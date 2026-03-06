@@ -24,12 +24,18 @@ export class OrganizationsService {
   /**
    * Create an organization for a user and set them as owner (ADMIN). Used when a new tenant signs up.
    */
-  async createForUser(userId: string, name: string = 'My Organization'): Promise<Organization> {
+  async createForUser(
+    userId: string,
+    name: string = 'My Organization',
+  ): Promise<Organization> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['role'],
     });
-    if (!user) throw new NotFoundException('User not found');
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
     if (user.organizationId) {
       return this.organizationRepository.findOne({
         where: { id: user.organizationId },
@@ -39,7 +45,10 @@ export class OrganizationsService {
     const adminRole = await this.roleRepository.findOne({
       where: { name: RoleName.ADMIN },
     });
-    if (!adminRole) throw new NotFoundException('ADMIN role not found. Run seed.');
+
+    if (!adminRole) {
+      throw new NotFoundException('ADMIN role not found. Run seed.');
+    }
 
     const org = this.organizationRepository.create({
       name: name.trim(),

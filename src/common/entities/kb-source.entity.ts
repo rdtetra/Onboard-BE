@@ -1,6 +1,18 @@
-import { Entity, Column, DeleteDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
+import {
+  Entity,
+  Column,
+  DeleteDateColumn,
+  ManyToOne,
+  JoinColumn,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { SourceType, SourceStatus, RefreshSchedule } from '../../types/knowledge-base';
+import {
+  SourceType,
+  SourceStatus,
+  RefreshSchedule,
+} from '../../types/knowledge-base';
 import { Organization } from './organization.entity';
 import { User } from './user.entity';
 import { Bot } from './bot.entity';
@@ -25,7 +37,10 @@ export class KBSource extends BaseEntity {
   @Column({ type: 'uuid', name: 'collection_id', nullable: true })
   collectionId: string | null;
 
-  @ManyToOne(() => Collection, (c) => c.sources, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => Collection, (c) => c.sources, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'collection_id' })
   collection: Collection | null;
 
@@ -66,7 +81,11 @@ export class KBSource extends BaseEntity {
   @Column({ type: 'timestamp', name: 'last_refreshed', nullable: true })
   lastRefreshed: Date | null;
 
-  @Column({ type: 'timestamp', name: 'next_refresh_scheduled_at', nullable: true })
+  @Column({
+    type: 'timestamp',
+    name: 'next_refresh_scheduled_at',
+    nullable: true,
+  })
   nextRefreshScheduledAt: Date | null;
 
   @DeleteDateColumn({ name: 'deleted_at' })

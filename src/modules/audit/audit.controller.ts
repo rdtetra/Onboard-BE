@@ -21,6 +21,10 @@ export class AuditController {
     @Query('resource') resource?: string,
     @Query('userId') userId?: string,
   ): Promise<PaginatedResult<AuditLog>> {
-    return this.auditService.findAll(ctx, { page, limit }, { action, resource, userId });
+    return this.auditService.findAll(
+      ctx,
+      { page, limit },
+      { action, resource, userId },
+    );
   }
 }
