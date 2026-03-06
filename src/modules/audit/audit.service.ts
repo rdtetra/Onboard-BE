@@ -24,7 +24,7 @@ export class AuditService {
     ctx: RequestContext,
     payload: AuditLogPayload,
   ): Promise<AuditLog> {
-    const tenantId = ctx.user?.userId ?? null;
+    const tenantId = ctx.user?.organizationId ?? ctx.user?.userId ?? null;
     const userId = ctx.user?.userId ?? null;
     const entry = this.auditLogRepository.create({
       tenantId,
@@ -44,7 +44,7 @@ export class AuditService {
     pagination?: { page?: string; limit?: string },
     filters?: { action?: string; resource?: string; userId?: string },
   ): Promise<PaginatedResult<AuditLog>> {
-    const tenantId = ctx.user?.userId;
+    const tenantId = ctx.user?.organizationId ?? ctx.user?.userId;
     const { page, limit, skip } = parsePagination(pagination ?? {});
     if (!tenantId) {
       return toPaginatedResult([], 0, page, limit);

@@ -19,6 +19,7 @@ import { Role } from './common/entities/role.entity';
 import { Bot } from './common/entities/bot.entity';
 import { KBSource } from './common/entities/kb-source.entity';
 import { Collection } from './common/entities/collection.entity';
+import { Organization } from './common/entities/organization.entity';
 import { AuditLog } from './common/entities/audit-log.entity';
 import { SeedModule } from './modules/seed/seed.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -26,6 +27,7 @@ import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { BotsModule } from './modules/bots/bots.module';
 import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.module';
 import { CollectionsModule } from './modules/collections/collections.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
 
 @Module({
   imports: [
@@ -54,7 +56,7 @@ import { CollectionsModule } from './modules/collections/collections.module';
           username: configService.get<string>('DB_USERNAME', 'postgres'),
           password: configService.get<string>('DB_PASSWORD', 'postgres'),
           database: configService.get<string>('DB_NAME', 'onboard'),
-          entities: [User, UsedToken, Permission, Role, Bot, KBSource, Collection, AuditLog],
+          entities: [User, UsedToken, Permission, Role, Bot, KBSource, Collection, Organization, AuditLog],
           synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
           ...(sslEnabled && {
             ssl: {
@@ -71,6 +73,7 @@ import { CollectionsModule } from './modules/collections/collections.module';
     BotsModule,
     KnowledgeBaseModule,
     CollectionsModule,
+    OrganizationsModule,
     AuditModule,
   ],
   controllers: [AppController],

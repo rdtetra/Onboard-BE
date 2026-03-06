@@ -1,18 +1,26 @@
 import { Entity, Column, DeleteDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { SourceType, SourceStatus, RefreshSchedule } from '../../types/knowledge-base';
+import { Organization } from './organization.entity';
 import { User } from './user.entity';
 import { Bot } from './bot.entity';
 import { Collection } from './collection.entity';
 
 @Entity('kb_sources')
 export class KBSource extends BaseEntity {
-  @Column({ type: 'uuid', name: 'user_id', nullable: true })
-  userId: string | null;
+  @Column({ type: 'uuid', name: 'organization_id', nullable: true })
+  organizationId: string | null;
 
-  @ManyToOne(() => User, (u) => u.kbSources, { onDelete: 'CASCADE', nullable: true })
-  @JoinColumn({ name: 'user_id' })
-  user: User | null;
+  @ManyToOne(() => Organization, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization | null;
+
+  @Column({ type: 'uuid', name: 'created_by_id', nullable: true })
+  createdById: string | null;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'created_by_id' })
+  createdBy: User | null;
 
   @Column({ type: 'uuid', name: 'collection_id', nullable: true })
   collectionId: string | null;

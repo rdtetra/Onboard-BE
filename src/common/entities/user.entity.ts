@@ -1,9 +1,7 @@
-import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Role } from './role.entity';
-import type { Bot } from './bot.entity';
-import type { KBSource } from './kb-source.entity';
-import type { Collection } from './collection.entity';
+import { Organization } from './organization.entity';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -25,18 +23,16 @@ export class User extends BaseEntity {
   @Column({ default: true, name: 'is_active' })
   isActive: boolean;
 
+  @Column({ type: 'uuid', name: 'organization_id', nullable: true })
+  organizationId: string | null;
+
+  @ManyToOne(() => Organization, (org) => org.users, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization | null;
+
   @ManyToOne(() => Role, (role) => role.users)
   @JoinColumn({ name: 'role_id' })
   role: Role;
-
-  @OneToMany('Bot', 'user')
-  bots: Bot[];
-
-  @OneToMany('KBSource', 'user')
-  kbSources: KBSource[];
-
-  @OneToMany('Collection', 'user')
-  collections: Collection[];
 
   /** Set when loading user list with relation counts (e.g. findAll). */
   botCount?: number;

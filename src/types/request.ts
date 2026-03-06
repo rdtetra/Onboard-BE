@@ -1,6 +1,10 @@
+import type { RoleName } from './roles';
+
 export type RequestUser = {
   userId: string;
   email: string;
+  organizationId?: string | null;
+  roleName?: RoleName;
 };
 
 export type RequestContext = {

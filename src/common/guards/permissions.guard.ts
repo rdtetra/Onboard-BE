@@ -44,14 +44,19 @@ export class PermissionsGuard implements CanActivate {
     };
 
     const user = await this.usersService.findOne(minimalContext, jwtUser.userId, {
-      role: {
-        permissions: true,
-      },
+      role: { permissions: true },
+      organization: true,
     });
 
     if (!user || !user.role || !user.role.permissions || !Array.isArray(user.role.permissions)) {
       throw new ForbiddenException('Insufficient permissions');
     }
+
+    request.user = {
+      ...request.user,
+      organizationId: user.organizationId ?? undefined,
+      roleName: user.role?.name,
+    };
 
     const userPermissions = user.role.permissions.map((permission) => permission.name);
     const hasAllPermissions = requiredPermissions.every((permission) =>
