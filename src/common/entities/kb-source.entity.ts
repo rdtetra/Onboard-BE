@@ -14,7 +14,6 @@ import {
   RefreshSchedule,
 } from '../../types/knowledge-base';
 import { Organization } from './organization.entity';
-import { User } from './user.entity';
 import { Bot } from './bot.entity';
 import { Collection } from './collection.entity';
 
@@ -26,13 +25,6 @@ export class KBSource extends BaseEntity {
   @ManyToOne(() => Organization, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'organization_id' })
   organization: Organization | null;
-
-  @Column({ type: 'uuid', name: 'created_by_id', nullable: true })
-  createdById: string | null;
-
-  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'created_by_id' })
-  createdBy: User | null;
 
   @Column({ type: 'uuid', name: 'collection_id', nullable: true })
   collectionId: string | null;

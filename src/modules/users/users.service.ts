@@ -85,7 +85,7 @@ export class UsersService {
   }
 
   /**
-   * Single invite entry point: delegates to super-admin or org-admin flow based on caller role.
+   * Single invite entry point: delegates to super-admin or org-owner flow based on caller role.
    */
   async inviteUser(
     ctx: RequestContext,
@@ -98,7 +98,7 @@ export class UsersService {
   }
 
   /**
-   * Super admin invites a new user: they get a new organization (random name) and ADMIN (owner) role.
+   * Super admin invites a new user: they get a new organization (random name) and are set as owner (TENANT).
    */
   async inviteBySuperAdmin(
     ctx: RequestContext,
@@ -143,7 +143,7 @@ export class UsersService {
   }
 
   /**
-   * Org admin invites a new user: they join the inviter's organization with TENANT role.
+   * Org owner invites a new user: they join the inviter's organization with TENANT role.
    */
   async inviteByOrgAdmin(
     ctx: RequestContext,

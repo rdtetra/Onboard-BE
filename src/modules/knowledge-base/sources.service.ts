@@ -113,7 +113,6 @@ export class SourcesService {
     const source = this.kbSourceRepository.create({
       name: dto.name,
       organizationId: ctx.user.organizationId,
-      createdById: ctx.user.userId,
       sourceType: dto.sourceType,
       sourceValue: sourceValue.trim(),
       status: SourceStatus.READY,
@@ -160,7 +159,6 @@ export class SourcesService {
     const source = this.kbSourceRepository.create({
       name: name.trim(),
       organizationId: ctx.user.organizationId,
-      createdById: ctx.user.userId,
       sourceType,
       sourceValue,
       fileSizeBytes: file.size ?? null,

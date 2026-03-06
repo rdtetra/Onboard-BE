@@ -96,7 +96,7 @@ All responses follow this format:
 }
 ```
 
-**Response:** `200 OK` — `data` contains `access_token` and `user`. First user gets role `SUPER_ADMIN`; every subsequent user gets an organization created for them automatically, is set as that org's owner, and receives role `ADMIN`. Organization is internal (not exposed to clients).
+**Response:** `200 OK` — `data` contains `access_token` and `user`. First user gets role `SUPER_ADMIN`; every subsequent user gets an organization created for them automatically, is set as that org's owner, and receives role `TENANT`. Organization is internal (not exposed to clients).
 
 ---
 
@@ -547,10 +547,10 @@ Base path: `/collections`. Collection has `name` and optional `description`; can
 ## Multi-tenant and roles
 
 - **Organization** is internal: not exposed to clients. There are no public endpoints to create or read organizations.
-- When a **tenant** (non–first user) **registers**, an organization is created automatically; that user is set as the org’s owner and receives role **ADMIN**. The first user gets role **SUPER_ADMIN** and has no organization.
+- When a **tenant** (non–first user) **registers**, an organization is created automatically; that user is set as the org’s owner and receives role **TENANT**. The first user gets role **SUPER_ADMIN** and has no organization.
 - **Invited users** join the inviter’s organization and receive role **TENANT**.
-- **Roles:** `SUPER_ADMIN` (platform-wide), `ADMIN` (org owner/admin), `TENANT` (org member). Permissions are assigned per role; guards enforce `@Allow(Permission.XXX)`.
-- **Data scope:** Bots, KB sources, and collections belong to an organization. All list/get/create/update/delete are scoped by the current user’s `organizationId`. **SUPER_ADMIN** can bypass and see all (e.g. user list filtered by `organizationId`). Audit logs use `organizationId` (or `userId` if no org) as tenant.
+- **Roles:** `SUPER_ADMIN` (platform-wide), `TENANT` (org member; org owner is a tenant who owns an organization). Permissions are assigned per role; guards enforce `@Allow(Permission.XXX)`.
+- **Data scope:** Bots, KB sources, and collections belong to an organization. All list/get/create/update/delete are scoped by the current user’s `organizationId`. **SUPER_ADMIN** can bypass and see all. Audit logs use `organizationId` (or `userId` if no org) as tenant.
 
 ---
 

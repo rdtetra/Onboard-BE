@@ -66,7 +66,6 @@ export class BotsService {
     const bot = this.botRepository.create({
       ...createBotDto,
       organizationId: ctx.user.organizationId,
-      createdById: ctx.user.userId,
       state: BotState.ACTIVE,
       displayMode: createBotDto.displayMode ?? DisplayMode.AUTO_SHOW,
       description: createBotDto.description ?? null,

@@ -22,7 +22,7 @@ export class OrganizationsService {
   ) {}
 
   /**
-   * Create an organization for a user and set them as owner (ADMIN). Used when a new tenant signs up.
+   * Create an organization for a user and set them as owner. Used when a new tenant signs up or when super admin invites.
    */
   async createForUser(
     userId: string,
@@ -42,12 +42,12 @@ export class OrganizationsService {
         relations: ['owner'],
       }) as Promise<Organization>;
     }
-    const adminRole = await this.roleRepository.findOne({
-      where: { name: RoleName.ADMIN },
+    const tenantRole = await this.roleRepository.findOne({
+      where: { name: RoleName.TENANT },
     });
 
-    if (!adminRole) {
-      throw new NotFoundException('ADMIN role not found. Run seed.');
+    if (!tenantRole) {
+      throw new NotFoundException('TENANT role not found. Run seed.');
     }
 
     const org = this.organizationRepository.create({
@@ -56,7 +56,7 @@ export class OrganizationsService {
     });
     const saved = await this.organizationRepository.save(org);
     user.organizationId = saved.id;
-    user.role = adminRole;
+    user.role = tenantRole;
     await this.userRepository.save(user);
     return this.organizationRepository.findOne({
       where: { id: saved.id },

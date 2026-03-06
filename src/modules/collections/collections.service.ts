@@ -43,7 +43,6 @@ export class CollectionsService {
       name: dto.name.trim(),
       description: dto.description?.trim() ?? null,
       organizationId: ctx.user.organizationId,
-      createdById: ctx.user.userId,
     });
     return this.collectionRepository.save(collection);
   }

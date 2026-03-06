@@ -9,8 +9,8 @@ export type ScopeClause = {
 /**
  * Scope for the users list only.
  * - SUPER_ADMIN: no restriction (sees all).
- * - ADMIN: only users in their organization (user.organization_id = :organizationId).
- * - TENANT: only their own user (user.id = :userId).
+ * - TENANT with organization: users in same organization.
+ * - TENANT without organization: only their own user.
  *
  * Use with QueryBuilder: if (scope) qb.andWhere(scope.clause, scope.params).
  */
@@ -22,15 +22,13 @@ export function getUserListScope(ctx: RequestContext): ScopeClause | null {
   switch (ctx.user.roleName) {
     case RoleName.SUPER_ADMIN:
       return null;
-    case RoleName.ADMIN:
-      if (!ctx.user.organizationId) {
-        return null;
-      }
-      return {
-        clause: 'user.organization_id = :organizationId',
-        params: { organizationId: ctx.user.organizationId },
-      };
     case RoleName.TENANT:
+      if (ctx.user.organizationId) {
+        return {
+          clause: 'user.organization_id = :organizationId',
+          params: { organizationId: ctx.user.organizationId },
+        };
+      }
       return {
         clause: 'user.id = :userId',
         params: { userId: ctx.user.userId },
