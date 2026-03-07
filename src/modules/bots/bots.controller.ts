@@ -71,6 +71,15 @@ export class BotsController {
     return this.botsService.disable(ctx, id);
   }
 
+  @Patch(':id/enable')
+  @Allow(Permission.UPDATE_BOT)
+  enable(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<Bot> {
+    return this.botsService.enable(ctx, id);
+  }
+
   @Patch(':id')
   @Allow(Permission.UPDATE_BOT)
   update(

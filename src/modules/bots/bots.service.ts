@@ -159,6 +159,12 @@ export class BotsService {
     return this.botRepository.save(bot);
   }
 
+  async enable(ctx: RequestContext, id: string): Promise<Bot> {
+    const bot = await this.findOne(ctx, id);
+    bot.state = BotState.ACTIVE;
+    return this.botRepository.save(bot);
+  }
+
   private getUpdatePayloadForType(
     existingBot: Bot,
     updateBotDto: Partial<CreateBotDto>,

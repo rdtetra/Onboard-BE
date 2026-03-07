@@ -452,9 +452,10 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 ### Update bot
 **PATCH** `/bots/:id` — **Permission:** `UPDATE_BOT`. Body: subset of create fields. `botType` cannot be changed.
 
-### Archive / Disable bot
+### Archive / Disable / Enable bot
 **PATCH** `/bots/:id/archive` — sets state to `ARCHIVED`.  
 **PATCH** `/bots/:id/disable` — sets state to `DISABLED`.  
+**PATCH** `/bots/:id/enable` — sets state to `ACTIVE`.  
 **Permission:** `UPDATE_BOT`.
 
 ### Delete bot
