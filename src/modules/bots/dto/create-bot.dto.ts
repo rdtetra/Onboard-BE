@@ -8,15 +8,11 @@ import {
   ValidateIf,
   IsNotEmpty,
   ArrayMinSize,
+  ArrayMaxSize,
   Matches,
   IsDateString,
 } from 'class-validator';
-import {
-  BotType,
-  VisibilityDuration,
-  Behavior,
-  BotPriority,
-} from '../../../types/bot';
+import { BotType, Behavior, BotPriority } from '../../../types/bot';
 
 const DOMAIN_REGEX =
   /^(localhost|([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
@@ -32,10 +28,10 @@ export class CreateBotDto {
   @MaxLength(200)
   name: string;
 
-  @IsOptional()
   @IsString()
+  @IsNotEmpty({ message: 'description is required' })
   @MaxLength(5000)
-  description?: string;
+  description: string;
 
   @IsOptional()
   @IsString()
@@ -50,48 +46,44 @@ export class CreateBotDto {
       'Each domain must be a valid hostname (e.g. example.com or localhost)',
   })
   @IsNotEmpty()
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
+  @ArrayMaxSize(1, { message: 'Project bot must have exactly one domain' })
   domains: string[];
 
-  @IsOptional()
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
   @IsArray()
   @IsString({ each: true })
   @Matches(TARGET_URL_REGEX, {
     each: true,
     message: 'Each target URL must be a path starting with /',
   })
-  @ValidateIf((o) => o.botType === BotType.PROJECT)
   @ArrayMinSize(1, {
-    message: 'Project bot must have at least one target URL',
+    message: 'targetUrls is required for project bots (at least one path)',
   })
   targetUrls?: string[];
-
-  @IsOptional()
-  @IsEnum(VisibilityDuration)
-  @ValidateIf((o) => o.botType === BotType.PROJECT)
-  visibilityDuration?: VisibilityDuration;
 
   @IsOptional()
   @IsBoolean()
   @ValidateIf((o) => o.botType === BotType.PROJECT)
   oncePerSession?: boolean;
 
-  @IsOptional()
-  @IsEnum(Behavior)
   @ValidateIf((o) => o.botType === BotType.PROJECT)
+  @IsEnum(Behavior)
+  @IsNotEmpty({ message: 'behavior is required for project bots' })
   behavior?: Behavior;
 
-  @IsOptional()
-  @IsEnum(BotPriority)
   @ValidateIf((o) => o.botType === BotType.PROJECT)
+  @IsEnum(BotPriority)
+  @IsNotEmpty({ message: 'priority is required for project bots' })
   priority?: BotPriority;
 
-  @IsOptional()
-  @IsDateString()
   @ValidateIf((o) => o.botType === BotType.PROJECT)
+  @IsDateString()
+  @IsNotEmpty({ message: 'visibilityStartDate is required for project bots' })
   visibilityStartDate?: string;
 
-  @IsOptional()
-  @IsDateString()
   @ValidateIf((o) => o.botType === BotType.PROJECT)
+  @IsDateString()
+  @IsNotEmpty({ message: 'visibilityEndDate is required for project bots' })
   visibilityEndDate?: string;
 }

@@ -433,7 +433,7 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 **POST** `/bots` — **Permission:** `CREATE_BOT`. Caller must belong to an organization.
 
 **GENERAL:** `{ "botType": "GENERAL", "name": "...", "description": "...", "domains": ["example.com"] }`  
-**PROJECT:** `{ "botType": "PROJECT", "name": "...", "domains": ["shop.example.com"], "targetUrls": ["/checkout"], "visibilityDuration": "7d", "oncePerSession": true }`
+**PROJECT:** `{ "botType": "PROJECT", "name": "...", "description": "...", "domains": ["shop.example.com"], "targetUrls": ["/checkout"], "behavior": "AUTO_SHOW", "priority": "MEDIUM", "visibilityStartDate": "2026-01-01", "visibilityEndDate": "2026-12-31", "oncePerSession": false }`
 
 | Field               | Rules |
 |---------------------|-------|
@@ -441,8 +441,11 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 | name                | Max 200 |
 | domains             | GENERAL: ≥1; PROJECT: exactly 1 |
 | targetUrls           | PROJECT only, ≥1 paths starting with `/` |
-| visibilityDuration  | Optional (PROJECT): `1d`, `2d`, `7d`, `30d` |
-| behavior            | Optional (PROJECT): `AUTO_SHOW` or `BUTTON_ONLY` |
+| behavior            | PROJECT only, required: `AUTO_SHOW` or `BUTTON_ONLY` |
+| priority            | PROJECT only, required: `HIGHEST`, `HIGH`, `MEDIUM`, `LOW` |
+| visibilityStartDate | PROJECT only, required, ISO date string |
+| visibilityEndDate   | PROJECT only, required, ISO date string |
+| oncePerSession      | PROJECT only, optional, default false |
 
 **Response:** `201` — created bot in `data`.
 
@@ -457,7 +460,7 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 ### Delete bot
 **DELETE** `/bots/:id` — **Permission:** `DELETE_BOT`. Soft-delete. **Errors:** `404` if not found.
 
-**Bot enums:** BotType `GENERAL` | `PROJECT`; BotState `ACTIVE` | `DISABLED` | `ARCHIVED`; VisibilityDuration `1d` | `2d` | `7d` | `30d`; Behavior `AUTO_SHOW` | `BUTTON_ONLY`; BotPriority `HIGHEST` | `HIGH` | `MEDIUM` | `LOW`.
+**Bot enums:** BotType `GENERAL` | `PROJECT`; BotState `ACTIVE` | `DISABLED` | `ARCHIVED`; Behavior `AUTO_SHOW` | `BUTTON_ONLY`; BotPriority `HIGHEST` | `HIGH` | `MEDIUM` | `LOW`.
 
 ---
 

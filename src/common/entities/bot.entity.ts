@@ -10,7 +10,6 @@ import { BaseEntity } from './base.entity';
 import {
   BotType,
   BotState,
-  VisibilityDuration,
   Behavior,
   BotPriority,
 } from '../../types/bot';
@@ -64,13 +63,6 @@ export class Bot extends BaseEntity {
 
   @Column('text', { array: true, name: 'target_urls', default: [] })
   targetUrls: string[];
-
-  @Column({
-    type: 'varchar',
-    name: 'visibility_duration',
-    nullable: true,
-  })
-  visibilityDuration: VisibilityDuration | null;
 
   @Column({ default: false, name: 'once_per_session' })
   oncePerSession: boolean;
