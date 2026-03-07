@@ -39,16 +39,16 @@ export class Bot extends BaseEntity {
     type: 'enum',
     enum: Behavior,
     name: 'display_mode',
-    default: Behavior.AUTO_SHOW,
+    nullable: true,
   })
-  behavior: Behavior;
+  behavior: Behavior | null;
 
   @Column({
     type: 'enum',
     enum: BotPriority,
-    default: BotPriority.MEDIUM,
+    nullable: true,
   })
-  priority: BotPriority;
+  priority: BotPriority | null;
 
   @Column({ type: 'varchar' })
   name: string;

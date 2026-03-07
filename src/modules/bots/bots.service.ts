@@ -72,10 +72,10 @@ export class BotsService {
       state: BotState.ACTIVE,
       behavior: isProjectBot
         ? (createBotDto.behavior ?? Behavior.AUTO_SHOW)
-        : Behavior.AUTO_SHOW,
+        : null,
       priority: isProjectBot
         ? (createBotDto.priority ?? BotPriority.MEDIUM)
-        : BotPriority.MEDIUM,
+        : null,
       description: createBotDto.description ?? null,
       introMessage: createBotDto.introMessage ?? null,
       targetUrls: isProjectBot ? (createBotDto.targetUrls ?? []) : [],
