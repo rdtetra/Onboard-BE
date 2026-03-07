@@ -9,7 +9,7 @@ import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
-import { BotType, BotState, DisplayMode } from '../../types/bot';
+import { BotType, BotState, Behavior, BotPriority } from '../../types/bot';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
@@ -25,7 +25,7 @@ export class BotsService {
     private readonly botRepository: Repository<Bot>,
   ) {}
 
-  private validateBotDto(dto: CreateBotDto | UpdateBotDto): void {
+  private validateBotDto(dto: CreateBotDto): void {
     const botType = dto.botType;
     const domains = dto.domains;
     const targetUrls = dto.targetUrls;
@@ -38,15 +38,15 @@ export class BotsService {
       }
     }
 
-    if (botType === BotType.URL_SPECIFIC) {
+    if (botType === BotType.PROJECT) {
       if (domains != null && domains.length !== 1) {
         throw new BadRequestException(
-          'URL-specific bot must have exactly one domain',
+          'Project bot must have exactly one domain',
         );
       }
       if (targetUrls != null && targetUrls.length < 1) {
         throw new BadRequestException(
-          'URL-specific bot must have at least one target URL',
+          'Project bot must have at least one target URL',
         );
       }
     }
@@ -65,22 +65,34 @@ export class BotsService {
 
     this.validateBotDto(createBotDto);
 
+    const isProjectBot = createBotDto.botType === BotType.PROJECT;
     const bot = this.botRepository.create({
       ...createBotDto,
       organizationId: ctx.user.organizationId,
       state: BotState.ACTIVE,
-      displayMode: createBotDto.displayMode ?? DisplayMode.AUTO_SHOW,
+      behavior: isProjectBot
+        ? (createBotDto.behavior ?? Behavior.AUTO_SHOW)
+        : Behavior.AUTO_SHOW,
+      priority: isProjectBot
+        ? (createBotDto.priority ?? BotPriority.MEDIUM)
+        : BotPriority.MEDIUM,
       description: createBotDto.description ?? null,
       introMessage: createBotDto.introMessage ?? null,
-      targetUrls: createBotDto.targetUrls ?? [],
-      visibilityDuration:
-        createBotDto.botType === BotType.URL_SPECIFIC
-          ? (createBotDto.visibilityDuration ?? null)
+      targetUrls: isProjectBot ? (createBotDto.targetUrls ?? []) : [],
+      visibilityDuration: isProjectBot
+        ? (createBotDto.visibilityDuration ?? null)
+        : null,
+      oncePerSession: isProjectBot
+        ? (createBotDto.oncePerSession ?? false)
+        : false,
+      visibilityStartDate:
+        isProjectBot && createBotDto.visibilityStartDate
+          ? new Date(createBotDto.visibilityStartDate)
           : null,
-      oncePerSession:
-        createBotDto.botType === BotType.URL_SPECIFIC
-          ? (createBotDto.oncePerSession ?? false)
-          : false,
+      visibilityEndDate:
+        isProjectBot && createBotDto.visibilityEndDate
+          ? new Date(createBotDto.visibilityEndDate)
+          : null,
     });
 
     return this.botRepository.save(bot);
@@ -185,7 +197,7 @@ export class BotsService {
 
   private getUpdatePayloadForType(
     existingBot: Bot,
-    updateBotDto: UpdateBotDto,
+    updateBotDto: Partial<CreateBotDto>,
   ): Partial<Bot> {
     const { botType } = existingBot;
     const payload: Partial<Bot> = {};
@@ -202,11 +214,8 @@ export class BotsService {
     if (updateBotDto.domains !== undefined) {
       payload.domains = updateBotDto.domains;
     }
-    if (updateBotDto.displayMode !== undefined) {
-      payload.displayMode = updateBotDto.displayMode;
-    }
 
-    if (botType === BotType.URL_SPECIFIC) {
+    if (botType === BotType.PROJECT) {
       if (updateBotDto.targetUrls !== undefined) {
         payload.targetUrls = updateBotDto.targetUrls;
       }
@@ -215,6 +224,22 @@ export class BotsService {
       }
       if (updateBotDto.oncePerSession !== undefined) {
         payload.oncePerSession = updateBotDto.oncePerSession;
+      }
+      if (updateBotDto.behavior !== undefined) {
+        payload.behavior = updateBotDto.behavior;
+      }
+      if (updateBotDto.priority !== undefined) {
+        payload.priority = updateBotDto.priority;
+      }
+      if (updateBotDto.visibilityStartDate !== undefined) {
+        payload.visibilityStartDate = updateBotDto.visibilityStartDate
+          ? new Date(updateBotDto.visibilityStartDate)
+          : null;
+      }
+      if (updateBotDto.visibilityEndDate !== undefined) {
+        payload.visibilityEndDate = updateBotDto.visibilityEndDate
+          ? new Date(updateBotDto.visibilityEndDate)
+          : null;
       }
     }
 

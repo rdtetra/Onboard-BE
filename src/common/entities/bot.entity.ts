@@ -11,7 +11,8 @@ import {
   BotType,
   BotState,
   VisibilityDuration,
-  DisplayMode,
+  Behavior,
+  BotPriority,
 } from '../../types/bot';
 import { Organization } from './organization.entity';
 import { KBSource } from './kb-source.entity';
@@ -36,11 +37,18 @@ export class Bot extends BaseEntity {
 
   @Column({
     type: 'enum',
-    enum: DisplayMode,
+    enum: Behavior,
     name: 'display_mode',
-    default: DisplayMode.AUTO_SHOW,
+    default: Behavior.AUTO_SHOW,
   })
-  displayMode: DisplayMode;
+  behavior: Behavior;
+
+  @Column({
+    type: 'enum',
+    enum: BotPriority,
+    default: BotPriority.MEDIUM,
+  })
+  priority: BotPriority;
 
   @Column({ type: 'varchar' })
   name: string;
@@ -66,6 +74,20 @@ export class Bot extends BaseEntity {
 
   @Column({ default: false, name: 'once_per_session' })
   oncePerSession: boolean;
+
+  @Column({
+    type: 'timestamp',
+    name: 'visibility_start_date',
+    nullable: true,
+  })
+  visibilityStartDate: Date | null;
+
+  @Column({
+    type: 'timestamp',
+    name: 'visibility_end_date',
+    nullable: true,
+  })
+  visibilityEndDate: Date | null;
 
   @ManyToMany(() => KBSource, (source) => source.bots)
   kbSources: KBSource[];

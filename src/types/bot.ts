@@ -1,6 +1,6 @@
 export enum BotType {
   GENERAL = 'GENERAL',
-  URL_SPECIFIC = 'URL_SPECIFIC',
+  PROJECT = 'PROJECT',
 }
 
 export enum BotState {
@@ -16,7 +16,14 @@ export enum VisibilityDuration {
   THIRTY_DAYS = '30d',
 }
 
-export enum DisplayMode {
+export enum Behavior {
   AUTO_SHOW = 'AUTO_SHOW',
   BUTTON_ONLY = 'BUTTON_ONLY',
+}
+
+export enum BotPriority {
+  HIGHEST = 'HIGHEST',
+  HIGH = 'HIGH',
+  MEDIUM = 'MEDIUM',
+  LOW = 'LOW',
 }

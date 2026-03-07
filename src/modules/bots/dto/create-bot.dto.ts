@@ -9,8 +9,14 @@ import {
   IsNotEmpty,
   ArrayMinSize,
   Matches,
+  IsDateString,
 } from 'class-validator';
-import { BotType, VisibilityDuration, DisplayMode } from '../../../types/bot';
+import {
+  BotType,
+  VisibilityDuration,
+  Behavior,
+  BotPriority,
+} from '../../../types/bot';
 
 const DOMAIN_REGEX =
   /^(localhost|([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
@@ -53,23 +59,39 @@ export class CreateBotDto {
     each: true,
     message: 'Each target URL must be a path starting with /',
   })
-  @ValidateIf((o) => o.botType === BotType.URL_SPECIFIC)
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
   @ArrayMinSize(1, {
-    message: 'URL-specific bot must have at least one target URL',
+    message: 'Project bot must have at least one target URL',
   })
   targetUrls?: string[];
 
   @IsOptional()
   @IsEnum(VisibilityDuration)
-  @ValidateIf((o) => o.botType === BotType.URL_SPECIFIC)
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
   visibilityDuration?: VisibilityDuration;
 
   @IsOptional()
   @IsBoolean()
-  @ValidateIf((o) => o.botType === BotType.URL_SPECIFIC)
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
   oncePerSession?: boolean;
 
   @IsOptional()
-  @IsEnum(DisplayMode)
-  displayMode?: DisplayMode;
+  @IsEnum(Behavior)
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
+  behavior?: Behavior;
+
+  @IsOptional()
+  @IsEnum(BotPriority)
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
+  priority?: BotPriority;
+
+  @IsOptional()
+  @IsDateString()
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
+  visibilityStartDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
+  visibilityEndDate?: string;
 }

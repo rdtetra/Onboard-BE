@@ -422,7 +422,7 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 ### List bots
 **GET** `/bots` — **Permission:** `READ_BOT`
 
-**Query params:** `page`, `limit` (default 20, max 100), `botType` (`GENERAL` | `URL_SPECIFIC`), `search` (name, partial case-insensitive).
+**Query params:** `page`, `limit` (default 20, max 100), `botType` (`GENERAL` | `PROJECT`), `search` (name, partial case-insensitive).
 
 **Response:** `200 OK` — `data` is paginated: `{ data: Bot[], total, page, limit, totalPages }`.
 
@@ -433,16 +433,16 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 **POST** `/bots` — **Permission:** `CREATE_BOT`. Caller must belong to an organization.
 
 **GENERAL:** `{ "botType": "GENERAL", "name": "...", "description": "...", "domains": ["example.com"] }`  
-**URL_SPECIFIC:** `{ "botType": "URL_SPECIFIC", "name": "...", "domains": ["shop.example.com"], "targetUrls": ["/checkout"], "visibilityDuration": "7d", "oncePerSession": true }`
+**PROJECT:** `{ "botType": "PROJECT", "name": "...", "domains": ["shop.example.com"], "targetUrls": ["/checkout"], "visibilityDuration": "7d", "oncePerSession": true }`
 
 | Field               | Rules |
 |---------------------|-------|
-| botType             | `GENERAL` or `URL_SPECIFIC` |
+| botType             | `GENERAL` or `PROJECT` |
 | name                | Max 200 |
-| domains             | GENERAL: ≥1; URL_SPECIFIC: exactly 1 |
-| targetUrls           | URL_SPECIFIC only, ≥1 paths starting with `/` |
-| visibilityDuration  | Optional: `1d`, `2d`, `7d`, `30d` |
-| displayMode          | Optional: `AUTO_SHOW` or `BUTTON_ONLY` |
+| domains             | GENERAL: ≥1; PROJECT: exactly 1 |
+| targetUrls           | PROJECT only, ≥1 paths starting with `/` |
+| visibilityDuration  | Optional (PROJECT): `1d`, `2d`, `7d`, `30d` |
+| behavior            | Optional (PROJECT): `AUTO_SHOW` or `BUTTON_ONLY` |
 
 **Response:** `201` — created bot in `data`.
 
@@ -457,7 +457,7 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 ### Delete bot
 **DELETE** `/bots/:id` — **Permission:** `DELETE_BOT`. Soft-delete. **Errors:** `404` if not found.
 
-**Bot enums:** BotType `GENERAL` | `URL_SPECIFIC`; BotState `ACTIVE` | `DISABLED` | `ARCHIVED`; VisibilityDuration `1d` | `2d` | `7d` | `30d`; DisplayMode `AUTO_SHOW` | `BUTTON_ONLY`.
+**Bot enums:** BotType `GENERAL` | `PROJECT`; BotState `ACTIVE` | `DISABLED` | `ARCHIVED`; VisibilityDuration `1d` | `2d` | `7d` | `30d`; Behavior `AUTO_SHOW` | `BUTTON_ONLY`; BotPriority `HIGHEST` | `HIGH` | `MEDIUM` | `LOW`.
 
 ---
 
