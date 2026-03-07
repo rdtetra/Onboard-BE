@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { CreateKBSourceDto } from './dto/create-source.dto';
+import { BotKbLinkService } from '../bot-kb-link/bot-kb-link.service';
 import { BotsService } from '../bots/bots.service';
 import { UpdateKBSourceDto } from './dto/update-source.dto';
 import {
@@ -34,6 +35,7 @@ export class SourcesService {
   constructor(
     @InjectRepository(KBSource)
     private readonly kbSourceRepository: Repository<KBSource>,
+    private readonly botKbLinkService: BotKbLinkService,
     private readonly botsService: BotsService,
   ) {}
 
@@ -59,36 +61,6 @@ export class SourcesService {
     return next;
   }
 
-  private validateCreateDto(dto: CreateKBSourceDto): void {
-    if (dto.sourceType === SourceType.URL) {
-      if (!dto.url?.trim()) {
-        throw new BadRequestException('URL is required for URL source type');
-      }
-      if (dto.refreshSchedule === undefined || dto.refreshSchedule === null) {
-        throw new BadRequestException(
-          'refreshSchedule is required for URL source type',
-        );
-      }
-    }
-    if (
-      dto.sourceType === SourceType.PDF ||
-      dto.sourceType === SourceType.DOCX
-    ) {
-      if (!dto.fileKey?.trim()) {
-        throw new BadRequestException(
-          'fileKey is required for file source type',
-        );
-      }
-    }
-    if (dto.sourceType === SourceType.TXT) {
-      if (dto.content === undefined || dto.content === null) {
-        throw new BadRequestException(
-          'content is required for TXT source type',
-        );
-      }
-    }
-  }
-
   async create(ctx: RequestContext, dto: CreateKBSourceDto): Promise<KBSource> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
@@ -99,7 +71,6 @@ export class SourcesService {
       );
     }
 
-    this.validateCreateDto(dto);
     const sourceValue =
       dto.sourceType === SourceType.URL
         ? dto.url!
@@ -121,12 +92,7 @@ export class SourcesService {
       lastRefreshed: null,
       nextRefreshScheduledAt,
     });
-    const saved = await this.kbSourceRepository.save(source);
-    const withRelations = await this.kbSourceRepository.findOne({
-      where: { id: saved.id },
-      relations: ['bots', 'collection'],
-    });
-    return withRelations ?? saved;
+    return this.kbSourceRepository.save(source);
   }
 
   async createFromUpload(
@@ -168,12 +134,7 @@ export class SourcesService {
       lastRefreshed: null,
       nextRefreshScheduledAt: null,
     });
-    const saved = await this.kbSourceRepository.save(source);
-    const withRelations = await this.kbSourceRepository.findOne({
-      where: { id: saved.id },
-      relations: ['bots', 'collection'],
-    });
-    return withRelations ?? saved;
+    return this.kbSourceRepository.save(source);
   }
 
   async findAll(
@@ -220,19 +181,22 @@ export class SourcesService {
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
-      relations: ['bots', 'collection'],
     });
     return toPaginatedResult(data, total, page, limit);
   }
 
-  async findOne(ctx: RequestContext, id: string): Promise<KBSource> {
+  async findOne(
+    ctx: RequestContext,
+    id: string,
+    options?: { relations?: (keyof KBSource)[] },
+  ): Promise<KBSource> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
 
     const source = await this.kbSourceRepository.findOne({
       where: { id },
-      relations: ['bots', 'collection'],
+      relations: options?.relations,
     });
 
     if (!source) {
@@ -307,38 +271,14 @@ export class SourcesService {
     sourceId: string,
     botId: string,
   ): Promise<KBSource> {
-    const source = await this.kbSourceRepository.findOne({
-      where: { id: sourceId },
-      relations: ['bots', 'collection'],
-    });
-
-    if (!source) {
-      throw new NotFoundException(
-        `Knowledge base source with ID ${sourceId} not found`,
-      );
-    }
-    if (
-      ctx.user?.roleName !== RoleName.SUPER_ADMIN &&
-      source.organizationId !== ctx.user?.organizationId
-    ) {
-      throw new NotFoundException(
-        `Knowledge base source with ID ${sourceId} not found`,
-      );
-    }
-
+    const source = await this.findOne(ctx, sourceId);
     const bot = await this.botsService.findOne(ctx, botId);
     if (source.organizationId !== bot.organizationId) {
       throw new BadRequestException(
         'Bot and source must belong to the same organization',
       );
     }
-
-    const existingIds = new Set((source.bots ?? []).map((b) => b.id));
-    if (existingIds.has(bot.id)) {
-      return source;
-    }
-    source.bots = [...(source.bots ?? []), bot];
-    return this.kbSourceRepository.save(source);
+    return this.botKbLinkService.link(source, bot);
   }
 
   async unlinkBot(
@@ -346,27 +286,11 @@ export class SourcesService {
     sourceId: string,
     botId: string,
   ): Promise<KBSource> {
-    const source = await this.kbSourceRepository.findOne({
-      where: { id: sourceId },
-      relations: ['bots', 'collection'],
+    const source = await this.findOne(ctx, sourceId, {
+      relations: ['bots'],
     });
-
-    if (!source) {
-      throw new NotFoundException(
-        `Knowledge base source with ID ${sourceId} not found`,
-      );
-    }
-    if (
-      ctx.user?.roleName !== RoleName.SUPER_ADMIN &&
-      source.organizationId !== ctx.user?.organizationId
-    ) {
-      throw new NotFoundException(
-        `Knowledge base source with ID ${sourceId} not found`,
-      );
-    }
-
-    source.bots = (source.bots ?? []).filter((b) => b.id !== botId);
-    return this.kbSourceRepository.save(source);
+    await this.botsService.findOne(ctx, botId);
+    return this.botKbLinkService.unlink(source, botId);
   }
 
   async setCollection(
@@ -374,25 +298,7 @@ export class SourcesService {
     sourceId: string,
     collectionId: string | null,
   ): Promise<KBSource> {
-    const source = await this.kbSourceRepository.findOne({
-      where: { id: sourceId },
-      relations: ['bots', 'collection'],
-    });
-
-    if (!source) {
-      throw new NotFoundException(
-        `Knowledge base source with ID ${sourceId} not found`,
-      );
-    }
-    if (
-      ctx.user?.roleName !== RoleName.SUPER_ADMIN &&
-      source.organizationId !== ctx.user?.organizationId
-    ) {
-      throw new NotFoundException(
-        `Knowledge base source with ID ${sourceId} not found`,
-      );
-    }
-
+    const source = await this.findOne(ctx, sourceId);
     source.collectionId = collectionId;
     return this.kbSourceRepository.save(source);
   }
@@ -403,7 +309,6 @@ export class SourcesService {
   ): Promise<KBSource[]> {
     return this.kbSourceRepository.find({
       where: { collectionId },
-      relations: ['bots', 'collection'],
     });
   }
 

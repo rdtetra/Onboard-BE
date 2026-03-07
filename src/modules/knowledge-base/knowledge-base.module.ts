@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { KBSource } from '../../common/entities/kb-source.entity';
+import { BotKbLinkModule } from '../bot-kb-link/bot-kb-link.module';
 import { BotsModule } from '../bots/bots.module';
 import { SourcesService } from './sources.service';
 import { SourcesController } from './sources.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([KBSource]), BotsModule],
+  imports: [
+    TypeOrmModule.forFeature([KBSource]),
+    BotKbLinkModule,
+    BotsModule,
+  ],
   controllers: [SourcesController],
   providers: [SourcesService],
   exports: [SourcesService],
