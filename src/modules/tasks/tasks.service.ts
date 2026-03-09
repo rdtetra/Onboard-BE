@@ -5,11 +5,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, ILike, In } from 'typeorm';
+import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { Task } from '../../common/entities/task.entity';
 import { Chip } from '../../common/entities/chip.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
-import { BotsService } from './bots.service';
+import { BotsService } from '../bots/bots.service';
 import { SourcesService } from '../knowledge-base/sources.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';

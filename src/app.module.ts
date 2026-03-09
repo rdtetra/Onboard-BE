@@ -28,6 +28,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { BotsModule } from './modules/bots/bots.module';
 import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 import { CollectionsModule } from './modules/collections/collections.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { EmailModule } from './modules/email/email.module';
@@ -92,6 +93,7 @@ import { EmailModule } from './modules/email/email.module';
     AuthModule,
     BotsModule,
     KnowledgeBaseModule,
+    TasksModule,
     CollectionsModule,
     OrganizationsModule,
     AuditModule,
