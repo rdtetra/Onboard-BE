@@ -19,6 +19,8 @@ import { Role } from './common/entities/role.entity';
 import { Bot } from './common/entities/bot.entity';
 import { KBSource } from './common/entities/kb-source.entity';
 import { Collection } from './common/entities/collection.entity';
+import { Task } from './common/entities/task.entity';
+import { Chip } from './common/entities/chip.entity';
 import { Organization } from './common/entities/organization.entity';
 import { AuditLog } from './common/entities/audit-log.entity';
 import { SeedModule } from './modules/seed/seed.module';
@@ -68,6 +70,8 @@ import { EmailModule } from './modules/email/email.module';
             Collection,
             Organization,
             AuditLog,
+            Task,
+            Chip,
           ],
           synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
           ...(sslEnabled && {

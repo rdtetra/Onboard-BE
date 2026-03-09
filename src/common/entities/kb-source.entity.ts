@@ -16,6 +16,7 @@ import {
 import { Organization } from './organization.entity';
 import { Bot } from './bot.entity';
 import { Collection } from './collection.entity';
+import { Task } from './task.entity';
 
 @Entity('kb_sources')
 export class KBSource extends BaseEntity {
@@ -82,4 +83,7 @@ export class KBSource extends BaseEntity {
 
   @DeleteDateColumn({ name: 'deleted_at' })
   deletedAt: Date | null;
+
+  @ManyToMany(() => Task, (task) => task.kbSources)
+  tasks: Task[];
 }

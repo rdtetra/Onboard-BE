@@ -5,6 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
   ManyToMany,
+  OneToMany,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import {
@@ -15,6 +16,7 @@ import {
 } from '../../types/bot';
 import { Organization } from './organization.entity';
 import { KBSource } from './kb-source.entity';
+import { Task } from './task.entity';
 
 @Entity('bots')
 export class Bot extends BaseEntity {
@@ -83,4 +85,7 @@ export class Bot extends BaseEntity {
 
   @ManyToMany(() => KBSource, (source) => source.bots)
   kbSources: KBSource[];
+
+  @OneToMany(() => Task, (task) => task.bot)
+  tasks: Task[];
 }

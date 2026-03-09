@@ -5,8 +5,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, ILike } from 'typeorm';
+import { Repository, FindOptionsWhere, ILike, In } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
+import { Task } from '../../common/entities/task.entity';
+import { Chip } from '../../common/entities/chip.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { BotKbLinkService } from '../bot-kb-link/bot-kb-link.service';
 import { CreateBotDto } from './dto/create-bot.dto';
@@ -25,6 +27,10 @@ export class BotsService {
   constructor(
     @InjectRepository(Bot)
     private readonly botRepository: Repository<Bot>,
+    @InjectRepository(Task)
+    private readonly taskRepository: Repository<Task>,
+    @InjectRepository(Chip)
+    private readonly chipRepository: Repository<Chip>,
     private readonly botKbLinkService: BotKbLinkService,
   ) {}
 
@@ -180,6 +186,17 @@ export class BotsService {
 
   async remove(ctx: RequestContext, id: string): Promise<void> {
     const bot = await this.findOne(ctx, id);
+    const tasks = await this.taskRepository.find({ where: { botId: bot.id } });
+    if (tasks.length > 0) {
+      const taskIds = tasks.map((t) => t.id);
+      const chips = await this.chipRepository.find({
+        where: { taskId: In(taskIds) },
+      });
+      if (chips.length > 0) {
+        await this.chipRepository.softRemove(chips);
+      }
+      await this.taskRepository.softRemove(tasks);
+    }
     await this.botRepository.softRemove(bot);
   }
 
