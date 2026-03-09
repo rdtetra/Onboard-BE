@@ -44,6 +44,15 @@ export class BotsController {
     return this.botsService.findAll(ctx, { page, limit }, { botType, search });
   }
 
+  @Get(':id/kb-sources')
+  @Allow(Permission.READ_BOT)
+  findKbSources(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ) {
+    return this.botsService.findKbSources(ctx, id);
+  }
+
   @Get(':id')
   @Allow(Permission.READ_BOT)
   findOne(

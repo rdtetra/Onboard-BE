@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
+import { KBSource } from '../../common/entities/kb-source.entity';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
 import { BotType, BotState, Behavior, BotPriority } from '../../types/bot';
@@ -129,6 +130,23 @@ export class BotsService {
     }
 
     return bot;
+  }
+
+  async findKbSources(ctx: RequestContext, botId: string): Promise<KBSource[]> {
+    const bot = await this.botRepository.findOne({
+      where: { id: botId },
+      relations: ['kbSources'],
+    });
+    if (!bot) {
+      throw new NotFoundException(`Bot with ID ${botId} not found`);
+    }
+    if (
+      ctx.user?.roleName !== RoleName.SUPER_ADMIN &&
+      bot.organizationId !== ctx.user?.organizationId
+    ) {
+      throw new NotFoundException(`Bot with ID ${botId} not found`);
+    }
+    return bot.kbSources ?? [];
   }
 
   async update(
