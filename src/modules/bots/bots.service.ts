@@ -68,7 +68,13 @@ export class BotsService {
         : null,
     });
 
-    return this.botRepository.save(bot);
+    const saved = await this.botRepository.save(bot);
+    await this.botWidgetLinkService.createDefaultWidgetForBot(saved.id);
+    const withWidget = await this.botRepository.findOne({
+      where: { id: saved.id },
+      relations: ['widget'],
+    });
+    return withWidget ?? saved;
   }
 
   async findAll(

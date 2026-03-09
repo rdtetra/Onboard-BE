@@ -447,7 +447,7 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 | visibilityEndDate   | PROJECT only, required, ISO date string |
 | oncePerSession      | PROJECT only, optional, default false |
 
-**Response:** `201` — created bot in `data`.
+**Response:** `201` — created bot in `data` (includes `widget` relation). A default widget is created and linked to the bot automatically; use PATCH `/widgets/:id` to customize it.
 
 ### Update bot
 **PATCH** `/bots/:id` — **Permission:** `UPDATE_BOT`. Body: subset of create fields. `botType` cannot be changed.
@@ -492,7 +492,7 @@ Base path: `/widgets`. Each widget is the configuration for one bot (one-to-one:
 **GET** `/widgets/by-bot/:botId` — **Permission:** `READ_WIDGET`. Returns the widget for the given bot, or `null` in `data` if the bot has no widget. **Errors:** `404` if bot not found or no access.
 
 ### Create widget
-**POST** `/widgets` — **Permission:** `CREATE_WIDGET`. Caller must have access to the bot. A bot can have at most one widget.
+**POST** `/widgets` — **Permission:** `CREATE_WIDGET`. Caller must have access to the bot. A bot can have at most one widget. (When a bot is created, a default widget is created automatically; use this endpoint only if that widget was deleted and you need to create a new one.)
 
 **Request body:**
 ```json

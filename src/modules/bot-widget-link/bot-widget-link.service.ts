@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { Widget } from '../../common/entities/widget.entity';
+import { WidgetPosition, WidgetAppearance } from '../../types/widget';
 
 /**
  * Single place for bot ↔ widget link behavior (e.g. when a bot is removed, delete its widget).
@@ -16,6 +17,32 @@ export class BotWidgetLinkService {
     @InjectRepository(Widget)
     private readonly widgetRepository: Repository<Widget>,
   ) {}
+
+  /**
+   * Create a default widget for a bot and link it. Caller is responsible for access checks.
+   * Used by BotsService when a bot is created.
+   */
+  async createDefaultWidgetForBot(botId: string): Promise<Widget> {
+    const widget = this.widgetRepository.create({
+      botLogoUrl: null,
+      position: WidgetPosition.BOTTOM_RIGHT,
+      appearance: WidgetAppearance.LIGHT,
+      primaryColor: '#7b61ff',
+      headerTextColor: '#fefefe',
+      background: '#fefefe',
+      botMessageBg: '#f2efff',
+      botMessageText: '#7b61ff',
+      userMessageBg: '#7b61ff',
+      userMessageText: '#fefefe',
+      headerText: 'Hi, how can I help?',
+      welcomeMessage:
+        'Welcome to Onboard Support! Ask me anything about our products.',
+      showPoweredBy: false,
+    });
+    const saved = await this.widgetRepository.save(widget);
+    await this.setBotWidget(botId, saved);
+    return saved;
+  }
 
   /**
    * Set the widget for a bot (link). Caller is responsible for access checks.
