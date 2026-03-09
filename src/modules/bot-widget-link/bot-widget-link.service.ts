@@ -29,12 +29,31 @@ export class BotWidgetLinkService {
   }
 
   /**
-   * Remove the widget linked to the given bot. Caller must pass bot with widget relation loaded.
+   * Soft-delete the widget linked to the given bot. Caller must pass bot with widget relation loaded.
+   * Unlinks the widget from the bot, then soft-deletes the widget.
    * Caller is responsible for access checks. Used by BotsService when a bot is removed.
    */
   async removeWidgetForBot(bot: Bot & { widget?: Widget | null }): Promise<void> {
     if (bot.widget) {
-      await this.widgetRepository.remove(bot.widget);
+      const widget = bot.widget;
+      bot.widget = null;
+      await this.botRepository.save(bot);
+      await this.widgetRepository.softRemove(widget);
+    }
+  }
+
+  /**
+   * Unlink the widget from a bot (set bot.widget = null). Caller is responsible for access checks.
+   * Used by WidgetsService when soft-deleting a widget.
+   */
+  async unlinkWidgetFromBot(botId: string): Promise<void> {
+    const bot = await this.botRepository.findOne({
+      where: { id: botId },
+      relations: ['widget'],
+    });
+    if (bot?.widget) {
+      bot.widget = null;
+      await this.botRepository.save(bot);
     }
   }
 }

@@ -46,7 +46,7 @@ The `access_token` is a JWT for the **target user** (same format as login). The 
 Endpoints can require specific permissions using the `@Allow()` decorator. Users must have all specified permissions to access the endpoint. If a user lacks required permissions, they will receive a `403 Forbidden` response.
 
 **Available Permissions:**  
-`CREATE_USER`, `READ_USER`, `UPDATE_USER`, `DELETE_USER` | `CREATE_BOT`, `READ_BOT`, `UPDATE_BOT`, `DELETE_BOT` | `CREATE_KB_SOURCE`, `READ_KB_SOURCE`, `UPDATE_KB_SOURCE`, `DELETE_KB_SOURCE` | `CREATE_COLLECTION`, `READ_COLLECTION`, `UPDATE_COLLECTION`, `DELETE_COLLECTION` | `CREATE_TASK`, `READ_TASK`, `UPDATE_TASK`, `DELETE_TASK` | `READ_AUDIT_LOG`
+`CREATE_USER`, `READ_USER`, `UPDATE_USER`, `DELETE_USER` | `CREATE_BOT`, `READ_BOT`, `UPDATE_BOT`, `DELETE_BOT` | `CREATE_WIDGET`, `READ_WIDGET`, `UPDATE_WIDGET`, `DELETE_WIDGET` | `CREATE_KB_SOURCE`, `READ_KB_SOURCE`, `UPDATE_KB_SOURCE`, `DELETE_KB_SOURCE` | `CREATE_COLLECTION`, `READ_COLLECTION`, `UPDATE_COLLECTION`, `DELETE_COLLECTION` | `CREATE_TASK`, `READ_TASK`, `UPDATE_TASK`, `DELETE_TASK` | `READ_AUDIT_LOG`
 
 Permissions are assigned to users and included in the JWT token. The system automatically checks permissions on protected endpoints.
 
@@ -459,7 +459,7 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 **Permission:** `UPDATE_BOT`.
 
 ### Delete bot
-**DELETE** `/bots/:id` — **Permission:** `DELETE_BOT`. Soft-delete. **Errors:** `404` if not found.
+**DELETE** `/bots/:id` — **Permission:** `DELETE_BOT`. Soft-delete. The bot's linked widget (if any) is soft-deleted and unlinked; tasks for the bot are soft-deleted. **Errors:** `404` if not found.
 
 ### Get bot's KB sources
 **GET** `/bots/:id/kb-sources` — **Permission:** `READ_BOT`. Returns the list of KB sources linked to this bot. **Errors:** `404` if bot not found.
@@ -471,6 +471,75 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 **DELETE** `/bots/:id/kb-sources/:sourceId` — **Permission:** `UPDATE_BOT`. Unlinks the KB source from the bot. **Errors:** `404` if bot or source not found.
 
 **Bot enums:** BotType `GENERAL` | `PROJECT`; BotState `ACTIVE` | `DISABLED` | `ARCHIVED`; Behavior `AUTO_SHOW` | `BUTTON_ONLY`; BotPriority `HIGHEST` | `HIGH` | `MEDIUM` | `LOW`.
+
+---
+
+## Widgets API
+
+Base path: `/widgets`. Each widget is the configuration for one bot (one-to-one: bot has at most one widget). Widgets control appearance (position, colors, header text, welcome message, etc.) for the chat widget. All operations are scoped to the current user's organization (SUPER_ADMIN can see all).
+
+### List widgets
+**GET** `/widgets` — **Permission:** `READ_WIDGET`
+
+**Query params:** `page`, `limit` (default 20, max 100), `botId` (filter by bot UUID), `search` (header text, partial case-insensitive).
+
+**Response:** `200 OK` — `data` is paginated: `{ data: Widget[], total, page, limit, totalPages }`. Each widget includes `bot` when loaded.
+
+### Get one widget
+**GET** `/widgets/:id` — **Permission:** `READ_WIDGET`. **Errors:** `404` if not found or user has no access to the widget's bot.
+
+### Get widget by bot
+**GET** `/widgets/by-bot/:botId` — **Permission:** `READ_WIDGET`. Returns the widget for the given bot, or `null` in `data` if the bot has no widget. **Errors:** `404` if bot not found or no access.
+
+### Create widget
+**POST** `/widgets` — **Permission:** `CREATE_WIDGET`. Caller must have access to the bot. A bot can have at most one widget.
+
+**Request body:**
+```json
+{
+  "botId": "uuid-of-bot",
+  "botLogoUrl": "https://example.com/logo.png",
+  "position": "bottom_right",
+  "appearance": "light",
+  "primaryColor": "#000000",
+  "headerTextColor": "#000000",
+  "background": "#ffffff",
+  "botMessageBg": "#f0f0f0",
+  "botMessageText": "#000000",
+  "userMessageBg": "#007bff",
+  "userMessageText": "#ffffff",
+  "headerText": "Chat with us",
+  "welcomeMessage": "Hi! How can we help?",
+  "showPoweredBy": true
+}
+```
+
+| Field           | Rules |
+|-----------------|-------|
+| botId           | Required, UUID of an existing bot (user must have access) |
+| botLogoUrl      | Optional, URL, max 2000 |
+| position        | Optional: `bottom_left` \| `bottom_right`; default `bottom_right` |
+| appearance      | Optional: `light` \| `dark`; default `light` |
+| primaryColor     | Optional, hex e.g. `#ffffff`; default `#000000` |
+| headerTextColor  | Optional, hex; default `#000000` |
+| background       | Optional, hex; default `#ffffff` |
+| botMessageBg     | Optional, hex; default `#f0f0f0` |
+| botMessageText   | Optional, hex; default `#000000` |
+| userMessageBg    | Optional, hex; default `#007bff` |
+| userMessageText  | Optional, hex; default `#ffffff` |
+| headerText       | Optional, max 200; default null |
+| welcomeMessage   | Optional, max 5000; default null |
+| showPoweredBy    | Optional, boolean; default true |
+
+**Response:** `201` — created widget in `data` (includes `bot`). **Errors:** `404` if bot not found; `409` if the bot already has a widget.
+
+### Update widget
+**PATCH** `/widgets/:id` — **Permission:** `UPDATE_WIDGET`. Body: any subset of create fields (except `botId`). **Errors:** `404` if not found.
+
+### Delete widget
+**DELETE** `/widgets/:id` — **Permission:** `DELETE_WIDGET`. Soft-deletes the widget and unlinks it from the bot. **Errors:** `404` if not found.
+
+**Widget enums:** WidgetPosition `bottom_left` | `bottom_right`; WidgetAppearance `light` | `dark`. All color fields use hex codes (e.g. `#ffffff`).
 
 ---
 

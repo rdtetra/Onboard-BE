@@ -1,10 +1,13 @@
-import { Entity, Column, OneToOne } from 'typeorm';
+import { Entity, Column, OneToOne, DeleteDateColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Bot } from './bot.entity';
 import { WidgetPosition, WidgetAppearance } from '../../types/widget';
 
 @Entity('widgets')
 export class Widget extends BaseEntity {
+  @DeleteDateColumn({ name: 'deleted_at' })
+  deletedAt: Date | null;
+
   /** Inverse side of Bot.widget – Bot owns the relation (bots.widget_id). */
   @OneToOne(() => Bot, (bot) => bot.widget)
   bot: Bot | null;
