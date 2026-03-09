@@ -5,7 +5,9 @@ import {
   ManyToOne,
   JoinColumn,
   ManyToMany,
+  JoinTable,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import {
@@ -17,6 +19,7 @@ import {
 import { Organization } from './organization.entity';
 import { KBSource } from './kb-source.entity';
 import { Task } from './task.entity';
+import { Widget } from './widget.entity';
 
 @Entity('bots')
 export class Bot extends BaseEntity {
@@ -84,8 +87,17 @@ export class Bot extends BaseEntity {
   visibilityEndDate: Date | null;
 
   @ManyToMany(() => KBSource, (source) => source.bots)
+  @JoinTable({
+    name: 'kb_source_bots',
+    joinColumn: { name: 'bot_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'kb_source_id', referencedColumnName: 'id' },
+  })
   kbSources: KBSource[];
 
   @OneToMany(() => Task, (task) => task.bot)
   tasks: Task[];
+
+  @OneToOne(() => Widget, (widget) => widget.bot, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'widget_id' })
+  widget: Widget | null;
 }

@@ -10,6 +10,7 @@ import { Bot } from '../../common/entities/bot.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { BotKbLinkService } from '../bot-kb-link/bot-kb-link.service';
 import { BotTaskLinkService } from '../bot-task-link/bot-task-link.service';
+import { BotWidgetLinkService } from '../bot-widget-link/bot-widget-link.service';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
 import { BotType, BotState, Behavior, BotPriority } from '../../types/bot';
@@ -28,6 +29,7 @@ export class BotsService {
     private readonly botRepository: Repository<Bot>,
     private readonly botKbLinkService: BotKbLinkService,
     private readonly botTaskLinkService: BotTaskLinkService,
+    private readonly botWidgetLinkService: BotWidgetLinkService,
   ) {}
 
   async create(ctx: RequestContext, createBotDto: CreateBotDto): Promise<Bot> {
@@ -115,12 +117,19 @@ export class BotsService {
     return toPaginatedResult(data, total, page, limit);
   }
 
-  async findOne(ctx: RequestContext, id: string): Promise<Bot> {
+  async findOne(
+    ctx: RequestContext,
+    id: string,
+    options?: { relations?: string[] },
+  ): Promise<Bot> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
 
-    const bot = await this.botRepository.findOne({ where: { id } });
+    const bot = await this.botRepository.findOne({
+      where: { id },
+      ...(options?.relations && { relations: options.relations }),
+    });
 
     if (!bot) {
       throw new NotFoundException(`Bot with ID ${id} not found`);
@@ -181,7 +190,8 @@ export class BotsService {
   }
 
   async remove(ctx: RequestContext, id: string): Promise<void> {
-    const bot = await this.findOne(ctx, id);
+    const bot = await this.findOne(ctx, id, { relations: ['widget'] });
+    await this.botWidgetLinkService.removeWidgetForBot(bot);
     await this.botTaskLinkService.softRemoveTasksForBot(bot.id);
     await this.botRepository.softRemove(bot);
   }

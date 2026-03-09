@@ -5,7 +5,6 @@ import {
   ManyToOne,
   JoinColumn,
   ManyToMany,
-  JoinTable,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import {
@@ -37,12 +36,8 @@ export class KBSource extends BaseEntity {
   @JoinColumn({ name: 'collection_id' })
   collection: Collection | null;
 
+  /** Inverse side of Bot.kbSources – Bot owns the many-to-many. */
   @ManyToMany(() => Bot, (bot) => bot.kbSources)
-  @JoinTable({
-    name: 'kb_source_bots',
-    joinColumn: { name: 'kb_source_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'bot_id', referencedColumnName: 'id' },
-  })
   bots: Bot[];
 
   @Column({ type: 'varchar' })

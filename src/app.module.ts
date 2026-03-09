@@ -21,6 +21,7 @@ import { KBSource } from './common/entities/kb-source.entity';
 import { Collection } from './common/entities/collection.entity';
 import { Task } from './common/entities/task.entity';
 import { Chip } from './common/entities/chip.entity';
+import { Widget } from './common/entities/widget.entity';
 import { Organization } from './common/entities/organization.entity';
 import { AuditLog } from './common/entities/audit-log.entity';
 import { SeedModule } from './modules/seed/seed.module';
@@ -29,6 +30,7 @@ import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { BotsModule } from './modules/bots/bots.module';
 import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { WidgetsModule } from './modules/widgets/widgets.module';
 import { CollectionsModule } from './modules/collections/collections.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { EmailModule } from './modules/email/email.module';
@@ -73,6 +75,7 @@ import { EmailModule } from './modules/email/email.module';
             AuditLog,
             Task,
             Chip,
+            Widget,
           ],
           synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
           ...(sslEnabled && {
@@ -94,6 +97,7 @@ import { EmailModule } from './modules/email/email.module';
     BotsModule,
     KnowledgeBaseModule,
     TasksModule,
+    WidgetsModule,
     CollectionsModule,
     OrganizationsModule,
     AuditModule,

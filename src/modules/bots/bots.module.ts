@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { BotKbLinkModule } from '../bot-kb-link/bot-kb-link.module';
 import { BotTaskLinkModule } from '../bot-task-link/bot-task-link.module';
+import { BotWidgetLinkModule } from '../bot-widget-link/bot-widget-link.module';
 import { BotsService } from './bots.service';
 import { BotsController } from './bots.controller';
 
@@ -11,6 +12,7 @@ import { BotsController } from './bots.controller';
     TypeOrmModule.forFeature([Bot]),
     BotKbLinkModule,
     BotTaskLinkModule,
+    BotWidgetLinkModule,
   ],
   controllers: [BotsController],
   providers: [BotsService],
