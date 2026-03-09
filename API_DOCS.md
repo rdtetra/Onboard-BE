@@ -46,7 +46,7 @@ The `access_token` is a JWT for the **target user** (same format as login). The 
 Endpoints can require specific permissions using the `@Allow()` decorator. Users must have all specified permissions to access the endpoint. If a user lacks required permissions, they will receive a `403 Forbidden` response.
 
 **Available Permissions:**  
-`CREATE_USER`, `READ_USER`, `UPDATE_USER`, `DELETE_USER` | `CREATE_BOT`, `READ_BOT`, `UPDATE_BOT`, `DELETE_BOT` | `CREATE_KB_SOURCE`, `READ_KB_SOURCE`, `UPDATE_KB_SOURCE`, `DELETE_KB_SOURCE` | `CREATE_COLLECTION`, `READ_COLLECTION`, `UPDATE_COLLECTION`, `DELETE_COLLECTION` | `READ_AUDIT_LOG`
+`CREATE_USER`, `READ_USER`, `UPDATE_USER`, `DELETE_USER` | `CREATE_BOT`, `READ_BOT`, `UPDATE_BOT`, `DELETE_BOT` | `CREATE_KB_SOURCE`, `READ_KB_SOURCE`, `UPDATE_KB_SOURCE`, `DELETE_KB_SOURCE` | `CREATE_COLLECTION`, `READ_COLLECTION`, `UPDATE_COLLECTION`, `DELETE_COLLECTION` | `CREATE_TASK`, `READ_TASK`, `UPDATE_TASK`, `DELETE_TASK` | `READ_AUDIT_LOG`
 
 Permissions are assigned to users and included in the JWT token. The system automatically checks permissions on protected endpoints.
 
@@ -461,7 +461,73 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 ### Delete bot
 **DELETE** `/bots/:id` — **Permission:** `DELETE_BOT`. Soft-delete. **Errors:** `404` if not found.
 
+### Get bot's KB sources
+**GET** `/bots/:id/kb-sources` — **Permission:** `READ_BOT`. Returns the list of KB sources linked to this bot. **Errors:** `404` if bot not found.
+
+### Link KB source to bot
+**POST** `/bots/:id/kb-sources/:sourceId` — **Permission:** `UPDATE_BOT`. Links the given KB source to the bot. Bot and source must belong to the same organization. **Errors:** `404` if bot or source not found; `400` if different organizations.
+
+### Unlink KB source from bot
+**DELETE** `/bots/:id/kb-sources/:sourceId` — **Permission:** `UPDATE_BOT`. Unlinks the KB source from the bot. **Errors:** `404` if bot or source not found.
+
 **Bot enums:** BotType `GENERAL` | `PROJECT`; BotState `ACTIVE` | `DISABLED` | `ARCHIVED`; Behavior `AUTO_SHOW` | `BUTTON_ONLY`; BotPriority `HIGHEST` | `HIGH` | `MEDIUM` | `LOW`.
+
+---
+
+## Tasks API
+
+Base path: `/tasks`. Tasks belong to a bot (one bot has many tasks). Each task can have multiple chips and a many-to-many link to KB sources. All operations are scoped to bots the user can access (same organization; SUPER_ADMIN can see all).
+
+### List tasks
+**GET** `/tasks` — **Permission:** `READ_TASK`
+
+**Query params:** `page`, `limit` (default 20, max 100), `botId` (filter by bot UUID), `search` (task name, partial case-insensitive), `isActive` (`true` | `false`).
+
+**Response:** `200 OK` — `data` is paginated: `{ data: Task[], total, page, limit, totalPages }`.
+
+### Get one task
+**GET** `/tasks/:id` — **Permission:** `READ_TASK`. **Errors:** `404` if not found or user has no access to the task's bot.
+
+### Create task
+**POST** `/tasks` — **Permission:** `CREATE_TASK`. Caller must have access to the given bot.
+
+**Request body:**
+```json
+{
+  "name": "Onboarding",
+  "introMessage": "Hi, I can help with…",
+  "instruction": "Answer using the linked KB sources.",
+  "targetUrls": ["/pricing", "/api"],
+  "isActive": true,
+  "botId": "uuid-of-bot",
+  "kbSourceIds": ["uuid-of-kb-source-1", "uuid-of-kb-source-2"],
+  "chips": [
+    { "type": "query", "chipName": "Pricing", "chipText": "What are your plans?" },
+    { "type": "link", "chipName": "Docs", "chipText": "https://docs.example.com" }
+  ]
+}
+```
+
+| Field        | Rules |
+|--------------|-------|
+| name         | Required, max 200 |
+| introMessage | Required, max 5000 |
+| instruction  | Required, max 10000 |
+| targetUrls   | Required; array of paths starting with `/` (e.g. `/pricing`, `/api`); can be empty |
+| isActive     | Required, boolean |
+| botId        | Required, UUID of an existing bot (user must have access) |
+| kbSourceIds  | Required; array of KB source UUIDs; can be empty `[]` |
+| chips        | Optional array. Each: `type` `query` \| `link`, `chipName` max 200, `chipText` max 2000 |
+
+**Response:** `201` — created task in `data`. **Errors:** `404` if bot not found.
+
+### Update task
+**PATCH** `/tasks/:id` — **Permission:** `UPDATE_TASK`. Body: subset of create fields. If `chips` is sent, it replaces all chips for the task. **Errors:** `404` if task or (when changing) bot not found.
+
+### Delete task
+**DELETE** `/tasks/:id` — **Permission:** `DELETE_TASK`. Permanently deletes the task and its chips. **Errors:** `404` if not found.
+
+**Task/Chip enums:** ChipType `query` | `link`.
 
 ---
 
