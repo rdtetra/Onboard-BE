@@ -108,10 +108,12 @@ export class TasksService {
 
     const [data, total] = await this.taskRepository.findAndCount({
       where,
+      relations: ['kbSources', 'chips'],
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
     });
+
     return toPaginatedResult(data, total, page, limit);
   }
 
