@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Bot } from '../../common/entities/bot.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { BotKbLinkService } from './bot-kb-link.service';
 
 /**
- * Module for bot ↔ KB source relation (link/unlink). Only persists the
- * relation; callers do permission checks via their own findOne and pass
- * validated entities.
+ * Single place for bot ↔ KB source link/unlink. Depends only on entities;
+ * Bots and KnowledgeBase modules only import this, never each other.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([KBSource])],
+  imports: [TypeOrmModule.forFeature([Bot, KBSource])],
   providers: [BotKbLinkService],
   exports: [BotKbLinkService],
 })

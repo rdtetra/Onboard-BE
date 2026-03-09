@@ -53,6 +53,26 @@ export class BotsController {
     return this.botsService.findKbSources(ctx, id);
   }
 
+  @Post(':id/kb-sources/:sourceId')
+  @Allow(Permission.UPDATE_BOT)
+  linkKbSource(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+    @Param('sourceId') sourceId: string,
+  ) {
+    return this.botsService.linkKbSource(ctx, id, sourceId);
+  }
+
+  @Delete(':id/kb-sources/:sourceId')
+  @Allow(Permission.UPDATE_BOT)
+  unlinkKbSource(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+    @Param('sourceId') sourceId: string,
+  ) {
+    return this.botsService.unlinkKbSource(ctx, id, sourceId);
+  }
+
   @Get(':id')
   @Allow(Permission.READ_BOT)
   findOne(

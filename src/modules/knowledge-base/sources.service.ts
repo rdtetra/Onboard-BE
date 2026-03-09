@@ -10,7 +10,6 @@ import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { CreateKBSourceDto } from './dto/create-source.dto';
 import { BotKbLinkService } from '../bot-kb-link/bot-kb-link.service';
-import { BotsService } from '../bots/bots.service';
 import { UpdateKBSourceDto } from './dto/update-source.dto';
 import {
   SourceType,
@@ -36,7 +35,6 @@ export class SourcesService {
     @InjectRepository(KBSource)
     private readonly kbSourceRepository: Repository<KBSource>,
     private readonly botKbLinkService: BotKbLinkService,
-    private readonly botsService: BotsService,
   ) {}
 
   private getNextRefreshAt(
@@ -271,14 +269,7 @@ export class SourcesService {
     sourceId: string,
     botId: string,
   ): Promise<KBSource> {
-    const source = await this.findOne(ctx, sourceId);
-    const bot = await this.botsService.findOne(ctx, botId);
-    if (source.organizationId !== bot.organizationId) {
-      throw new BadRequestException(
-        'Bot and source must belong to the same organization',
-      );
-    }
-    return this.botKbLinkService.link(source, bot);
+    return this.botKbLinkService.linkByIds(ctx, sourceId, botId);
   }
 
   async unlinkBot(
@@ -286,11 +277,7 @@ export class SourcesService {
     sourceId: string,
     botId: string,
   ): Promise<KBSource> {
-    const source = await this.findOne(ctx, sourceId, {
-      relations: ['bots'],
-    });
-    await this.botsService.findOne(ctx, botId);
-    return this.botKbLinkService.unlink(source, botId);
+    return this.botKbLinkService.unlinkByIds(ctx, sourceId, botId);
   }
 
   async setCollection(
