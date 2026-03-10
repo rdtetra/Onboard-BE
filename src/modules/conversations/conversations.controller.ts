@@ -43,6 +43,8 @@ export class ConversationsController {
         status: query.status,
         search: query.search,
         date: query.date,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
       },
       { page: query.page, limit: query.limit },
     );

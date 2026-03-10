@@ -489,9 +489,13 @@ Base path: `/conversations`. Conversations belong to a bot (one bot has many con
 | `visitorId`| UUID   | No       | Filter by visitor |
 | `status`  | string | No       | Filter: `OPEN` \| `CLOSED` \| `ARCHIVED` |
 | `search`   | string | No       | Matches **message content** only (case-insensitive partial match). Returns conversations that have at least one message containing the search text. |
-| `date`     | string | No       | ISO date (e.g. `YYYY-MM-DD`); filter conversations that **started on this day** (by `startedAt`). |
+| `date`     | string | No       | ISO date (`YYYY-MM-DD`); filter by **that calendar day in UTC** (startedAt from 00:00:00Z to end of day UTC). Can cause timezone confusion—prefer `dateFrom` + `dateTo` for user-timezone filtering. |
+| `dateFrom` | string | No       | Start of range (ISO 8601 UTC, e.g. `2024-01-15T00:00:00.000Z`). Use with `dateTo` for **timezone-safe** filtering: frontend computes the user’s selected day in their timezone and sends the UTC bounds here. |
+| `dateTo`   | string | No       | End of range (ISO 8601 UTC). Conversations with startedAt ≤ dateTo. Use with `dateFrom`. |
 | `page`     | string | No       | Page number (1-based). Default: 1 |
 | `limit`    | string | No       | Page size. Default: 20, max: 100 |
+
+**Date filter and timezones:** The single `date` param is interpreted as a **UTC calendar day** (e.g. `2024-01-15` = from `2024-01-15T00:00:00.000Z` to before `2024-01-16T00:00:00.000Z`). To avoid timezone issues, send **`dateFrom`** and **`dateTo`** from the frontend: for the user’s selected day in their timezone, compute the start and end of that day, convert to UTC, and send those ISO strings (e.g. for “Jan 15, 2024” in America/New_York: `dateFrom=2024-01-15T05:00:00.000Z` and `dateTo=2024-01-16T04:59:59.999Z`). The backend then filters with no extra timezone logic.
 
 **Search** matches only **message content** (the `content` field of messages in the conversation). It does not match visitor ID, conversation status, or any other field. Match is case-insensitive and partial (substring).
 

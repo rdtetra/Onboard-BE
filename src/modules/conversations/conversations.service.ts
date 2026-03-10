@@ -44,6 +44,8 @@ export class ConversationsService {
       status?: ConversationStatus;
       search?: string;
       date?: string;
+      dateFrom?: string;
+      dateTo?: string;
     },
     pagination?: { page?: string; limit?: string },
   ): Promise<PaginatedResult<Conversation>> {
@@ -88,6 +90,8 @@ export class ConversationsService {
       visitorId?: string;
       status?: ConversationStatus;
       date?: string;
+      dateFrom?: string;
+      dateTo?: string;
     },
   ): void {
     if (filters.visitorId != null) {
@@ -100,7 +104,19 @@ export class ConversationsService {
       qb.andWhere('conversation.status = :status', { status: filters.status });
     }
 
-    if (filters.date != null) {
+    // Explicit UTC range (timezone-safe): prefer over single date
+    if (filters.dateFrom != null) {
+      qb.andWhere('conversation.startedAt >= :dateFrom', {
+        dateFrom: filters.dateFrom,
+      });
+    }
+    if (filters.dateTo != null) {
+      qb.andWhere('conversation.startedAt <= :dateTo', {
+        dateTo: filters.dateTo,
+      });
+    }
+    // Single date: interpreted as that calendar day in UTC (can cause timezone confusion)
+    else if (filters.date != null) {
       const datePart = filters.date.trim().slice(0, 10);
       const dayStart = `${datePart}T00:00:00.000Z`;
       const d = new Date(dayStart);
@@ -119,6 +135,8 @@ export class ConversationsService {
       visitorId?: string;
       status?: ConversationStatus;
       date?: string;
+      dateFrom?: string;
+      dateTo?: string;
     },
     searchTerm: string,
   ): Promise<number> {
