@@ -8,42 +8,30 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
   const roleRepository = dataSource.getRepository(Role);
   const permissionRepository = dataSource.getRepository(Permission);
 
+  // Delete all existing: clear user role refs, join table, roles, then permissions
+  await dataSource.query('UPDATE users SET role_id = NULL WHERE role_id IS NOT NULL');
+  await dataSource.query('DELETE FROM role_permissions');
+  await roleRepository.createQueryBuilder().delete().execute();
+  await permissionRepository.createQueryBuilder().delete().execute();
+
   const allPermissions = Object.values(PermissionEnum);
 
   for (const permissionName of allPermissions) {
-    const existingPermission = await permissionRepository.findOne({
-      where: { name: permissionName },
+    const permission = permissionRepository.create({
+      name: permissionName,
+      description: `Permission to ${permissionName.replace(/_/g, ' ').toLowerCase()}`,
     });
-
-    if (!existingPermission) {
-      const permission = permissionRepository.create({
-        name: permissionName,
-        description: `Permission to ${permissionName.replace(/_/g, ' ').toLowerCase()}`,
-      });
-      await permissionRepository.save(permission);
-    }
+    await permissionRepository.save(permission);
   }
 
   const allPermissionEntities = await permissionRepository.find();
 
   for (const roleName of Object.values(RoleName)) {
-    const existingRole = await roleRepository.findOne({
-      where: { name: roleName },
-      relations: ['permissions'],
+    const role = roleRepository.create({
+      name: roleName,
+      description: `${roleName.replace(/_/g, ' ')} role`,
+      permissions: allPermissionEntities,
     });
-
-    if (!existingRole) {
-      const role = roleRepository.create({
-        name: roleName,
-        description: `${roleName.replace(/_/g, ' ')} role`,
-        permissions: allPermissionEntities,
-      });
-      await roleRepository.save(role);
-    } else if (
-      existingRole.permissions.length !== allPermissionEntities.length
-    ) {
-      existingRole.permissions = allPermissionEntities;
-      await roleRepository.save(existingRole);
-    }
+    await roleRepository.save(role);
   }
 }

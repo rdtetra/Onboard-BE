@@ -474,6 +474,97 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 
 ---
 
+## Conversations API
+
+Base path: `/conversations`. Conversations belong to a bot (one bot has many conversations). Each conversation has a visitor, a status, and optional messages. All operations require access to the conversation’s bot (same organization; SUPER_ADMIN can see all). **Permission:** `READ_BOT` for list/get; `READ_BOT` for create (no separate CREATE permission).
+
+### List conversations
+**GET** `/conversations` — **Permission:** `READ_BOT`
+
+**Query params:**
+
+| Param      | Type   | Required | Description |
+|------------|--------|----------|-------------|
+| `botId`    | UUID   | Yes      | Bot whose conversations to list (must have access) |
+| `visitorId`| UUID   | No       | Filter by visitor |
+| `status`  | string | No       | Filter: `OPEN` \| `CLOSED` \| `ARCHIVED` |
+| `search`   | string | No       | Matches **message content** only (case-insensitive partial match). Returns conversations that have at least one message containing the search text. |
+| `date`     | string | No       | ISO date (e.g. `YYYY-MM-DD`); filter conversations that **started on this day** (by `startedAt`). |
+| `page`     | string | No       | Page number (1-based). Default: 1 |
+| `limit`    | string | No       | Page size. Default: 20, max: 100 |
+
+**Search** matches only **message content** (the `content` field of messages in the conversation). It does not match visitor ID, conversation status, or any other field. Match is case-insensitive and partial (substring).
+
+**Response:** `200 OK` — `data` is paginated: `{ data: Conversation[], total, page, limit, totalPages }`. Each item is conversation details only (no `messages`). **Errors:** `400` if `botId` is missing.
+
+**Conversation shape (list — no messages):**
+```json
+{
+  "id": "uuid",
+  "botId": "uuid",
+  "visitorId": "uuid",
+  "status": "OPEN",
+  "startedAt": "2024-01-01T00:00:00.000Z",
+  "endedAt": null,
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z"
+}
+```
+
+### Get one conversation
+**GET** `/conversations/:id` — **Permission:** `READ_BOT`
+
+**URL Parameters:** `id` (required): Conversation UUID.
+
+**Response:** `200 OK` — single conversation in `data` **with** `messages` and `bot` (use this endpoint when you need to show chat messages). **Errors:** `404` if not found or user has no access to the conversation’s bot.
+
+**Conversation shape (single — with messages):**
+```json
+{
+  "id": "uuid",
+  "botId": "uuid",
+  "visitorId": "uuid",
+  "status": "OPEN",
+  "startedAt": "2024-01-01T00:00:00.000Z",
+  "endedAt": null,
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "messages": [
+    {
+      "id": "uuid",
+      "conversationId": "uuid",
+      "content": "Hello",
+      "sender": "USER",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "bot": { ... }
+}
+```
+
+### Create conversation
+**POST** `/conversations` — **Permission:** `READ_BOT`
+
+**Request body:**
+```json
+{
+  "botId": "uuid-of-bot",
+  "visitorId": "uuid-of-visitor"
+}
+```
+
+| Field      | Rules |
+|------------|-------|
+| botId      | Required, UUID of an existing bot (user must have access) |
+| visitorId  | Required, UUID identifying the visitor (e.g. from your frontend/session) |
+
+**Response:** `201` — created conversation in `data`. New conversations are created with `status: "OPEN"`, `startedAt` set to the current time, and `endedAt: null`. **Errors:** `404` if bot not found.
+
+**Conversation enums:** ConversationStatus `OPEN` | `CLOSED` | `ARCHIVED`. **Message sender:** `BOT` | `USER`.
+
+---
+
 ## Widgets API
 
 Base path: `/widgets`. Each widget is the configuration for one bot (one-to-one: bot has at most one widget). Widgets control appearance (position, colors, header text, welcome message, etc.) for the chat widget. All operations are scoped to the current user's organization (SUPER_ADMIN can see all).

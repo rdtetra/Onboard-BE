@@ -33,14 +33,13 @@ export async function seedConversations(dataSource: DataSource): Promise<void> {
   const conversationRepository = dataSource.getRepository(Conversation);
   const messageRepository = dataSource.getRepository(Message);
 
+  // Delete all existing messages then conversations (FK order)
+  await messageRepository.createQueryBuilder().delete().execute();
+  await conversationRepository.createQueryBuilder().delete().execute();
+
   const bots = await botRepository.find();
   if (bots.length === 0) {
     return; // no bots to attach conversations to
-  }
-
-  const existingCount = await conversationRepository.count();
-  if (existingCount > 0) {
-    return; // already have conversations, skip to avoid duplicates
   }
 
   for (const bot of bots) {
