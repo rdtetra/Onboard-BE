@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { seedRoles } from 'src/database/seed-roles';
+import { seedConversations } from 'src/database/seed-conversations';
 import { DataSource } from 'typeorm';
 
 @Injectable()
@@ -23,6 +24,7 @@ export class SeedService implements OnModuleInit {
       this.logger.log('Starting database seed...');
 
       await seedRoles(this.dataSource);
+      await seedConversations(this.dataSource);
 
       this.logger.log('Database seed completed');
     } catch (error) {
