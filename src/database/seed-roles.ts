@@ -8,15 +8,12 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
   const roleRepository = dataSource.getRepository(Role);
   const permissionRepository = dataSource.getRepository(Permission);
 
-  // Delete all existing: clear user role refs, join table, roles, then permissions
-  await dataSource.query('UPDATE users SET role_id = NULL WHERE role_id IS NOT NULL');
+  // Overwrite permissions: clear role–permission links, then replace all permission rows
   await dataSource.query('DELETE FROM role_permissions');
-  await roleRepository.createQueryBuilder().delete().execute();
   await permissionRepository.createQueryBuilder().delete().execute();
 
-  const allPermissions = Object.values(PermissionEnum);
-
-  for (const permissionName of allPermissions) {
+  const allPermissionNames = Object.values(PermissionEnum);
+  for (const permissionName of allPermissionNames) {
     const permission = permissionRepository.create({
       name: permissionName,
       description: `Permission to ${permissionName.replace(/_/g, ' ').toLowerCase()}`,
@@ -26,12 +23,22 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
 
   const allPermissionEntities = await permissionRepository.find();
 
+  // Assign the new permissions to every role (create missing roles, update existing)
   for (const roleName of Object.values(RoleName)) {
-    const role = roleRepository.create({
-      name: roleName,
-      description: `${roleName.replace(/_/g, ' ')} role`,
-      permissions: allPermissionEntities,
+    const existingRole = await roleRepository.findOne({
+      where: { name: roleName },
+      relations: ['permissions'],
     });
-    await roleRepository.save(role);
+    if (!existingRole) {
+      const role = roleRepository.create({
+        name: roleName,
+        description: `${roleName.replace(/_/g, ' ')} role`,
+        permissions: allPermissionEntities,
+      });
+      await roleRepository.save(role);
+    } else {
+      existingRole.permissions = allPermissionEntities;
+      await roleRepository.save(existingRole);
+    }
   }
 }
