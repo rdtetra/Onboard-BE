@@ -104,6 +104,7 @@ export class UsersService {
 
   /**
    * Super admin invites a new user: they get a new organization (random name) and are set as owner (TENANT).
+   * Email is sent first; the user is created only if the email is sent successfully.
    */
   async inviteBySuperAdmin(
     ctx: RequestContext,
@@ -125,6 +126,9 @@ export class UsersService {
 
     const tempPassword = generateTempPassword();
     const hashedPassword = await hashPassword(tempPassword);
+
+    await this.sendInviteEmail(inviteUserDto, tempPassword);
+
     const user = this.userRepository.create({
       email: inviteUserDto.email,
       fullName: inviteUserDto.fullName,
@@ -139,8 +143,6 @@ export class UsersService {
     const randomOrgName = `Organization ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
     await this.organizationsService.createForUser(saved.id, randomOrgName);
 
-    await this.sendInviteEmail(inviteUserDto, tempPassword);
-
     const updated = await this.userRepository.findOne({
       where: { id: saved.id },
       relations: ['role', 'organization'],
@@ -150,6 +152,7 @@ export class UsersService {
 
   /**
    * Org owner invites a new user: they join the inviter's organization with TENANT role.
+   * Email is sent first; the user is created only if the email is sent successfully.
    */
   async inviteByOrgAdmin(
     ctx: RequestContext,
@@ -177,6 +180,9 @@ export class UsersService {
 
     const tempPassword = generateTempPassword();
     const hashedPassword = await hashPassword(tempPassword);
+
+    await this.sendInviteEmail(inviteUserDto, tempPassword);
+
     const user = this.userRepository.create({
       email: inviteUserDto.email,
       fullName: inviteUserDto.fullName,
@@ -187,8 +193,6 @@ export class UsersService {
       emailVerifiedAt: new Date(),
     });
     const saved = await this.userRepository.save(user);
-
-    await this.sendInviteEmail(inviteUserDto, tempPassword);
 
     return saved;
   }
