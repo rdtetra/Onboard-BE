@@ -22,6 +22,8 @@ import { Collection } from './common/entities/collection.entity';
 import { Task } from './common/entities/task.entity';
 import { Chip } from './common/entities/chip.entity';
 import { Widget } from './common/entities/widget.entity';
+import { Conversation } from './common/entities/conversation.entity';
+import { Message } from './common/entities/message.entity';
 import { Organization } from './common/entities/organization.entity';
 import { AuditLog } from './common/entities/audit-log.entity';
 import { SeedModule } from './modules/seed/seed.module';
@@ -35,6 +37,7 @@ import { CollectionsModule } from './modules/collections/collections.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { EmailModule } from './modules/email/email.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { ConversationsModule } from './modules/conversations/conversations.module';
 
 @Module({
   imports: [
@@ -77,6 +80,8 @@ import { StorageModule } from './modules/storage/storage.module';
             Task,
             Chip,
             Widget,
+            Conversation,
+            Message,
           ],
           synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
           ...(sslEnabled && {
@@ -104,6 +109,7 @@ import { StorageModule } from './modules/storage/storage.module';
     AuditModule,
     EmailModule,
     StorageModule,
+    ConversationsModule,
   ],
   controllers: [AppController],
   providers: [

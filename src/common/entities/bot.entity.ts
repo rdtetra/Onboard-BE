@@ -20,6 +20,7 @@ import { Organization } from './organization.entity';
 import { KBSource } from './kb-source.entity';
 import { Task } from './task.entity';
 import { Widget } from './widget.entity';
+import { Conversation } from './conversation.entity';
 
 @Entity('bots')
 export class Bot extends BaseEntity {
@@ -96,6 +97,9 @@ export class Bot extends BaseEntity {
 
   @OneToMany(() => Task, (task) => task.bot)
   tasks: Task[];
+
+  @OneToMany(() => Conversation, (conversation) => conversation.bot)
+  conversations: Conversation[];
 
   @OneToOne(() => Widget, (widget) => widget.bot, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'widget_id' })
