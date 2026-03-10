@@ -17,9 +17,11 @@ export class StorageService {
   private readonly region: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.region = this.configService.get<string>('AWS_REGION', 'us-east-1');
+    const defaultRegion = this.configService.get<string>('AWS_REGION', 'us-east-1');
+    this.region =
+      this.configService.get<string>('AWS_ASSETS_BUCKET_REGION') || defaultRegion;
     this.bucket =
-      this.configService.get<string>('AWS_STORAGE_BUCKET_NAME') || '';
+      this.configService.get<string>('AWS_ASSETS_STORAGE_BUCKET_NAME') || '';
 
     this.s3 = new S3Client({
       region: this.region,
@@ -56,6 +58,7 @@ export class StorageService {
         Key: key,
         Body: buffer,
         ContentType: mimeType,
+        ACL: 'public-read',
       }),
     );
 
