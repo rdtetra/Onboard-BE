@@ -534,7 +534,10 @@ Base path: `/widgets`. Each widget is the configuration for one bot (one-to-one:
 **Response:** `201` — created widget in `data` (includes `bot`). **Errors:** `404` if bot not found; `409` if the bot already has a widget.
 
 ### Update widget
-**PATCH** `/widgets/:id` — **Permission:** `UPDATE_WIDGET`. Body: any subset of create fields (except `botId`). **Errors:** `404` if not found.
+**PATCH** `/widgets/:id` — **Permission:** `UPDATE_WIDGET`.
+
+- **JSON body:** any subset of create fields (except `botId`). **Errors:** `404` if not found.
+- **Multipart (optional logo):** send `Content-Type: multipart/form-data` with form fields for any widget fields and an optional file field **`logo`** (PNG or JPEG, max 1 MB). If `logo` is present, it is uploaded to S3 and `botLogoUrl` is set to the returned URL. You can send only the logo (no other fields), only other fields, or both.
 
 ### Delete widget
 **DELETE** `/widgets/:id` — **Permission:** `DELETE_WIDGET`. Soft-deletes the widget and unlinks it from the bot. **Errors:** `404` if not found.

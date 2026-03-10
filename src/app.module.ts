@@ -34,6 +34,7 @@ import { WidgetsModule } from './modules/widgets/widgets.module';
 import { CollectionsModule } from './modules/collections/collections.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { EmailModule } from './modules/email/email.module';
+import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
@@ -102,6 +103,7 @@ import { EmailModule } from './modules/email/email.module';
     OrganizationsModule,
     AuditModule,
     EmailModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [

@@ -7,7 +7,11 @@ import {
   Param,
   Delete,
   Query,
+  UseInterceptors,
+  UploadedFile,
+  UseFilters,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { WidgetsService } from './widgets.service';
 import { CreateWidgetDto } from './dto/create-widget.dto';
 import { UpdateWidgetDto } from './dto/update-widget.dto';
@@ -17,6 +21,8 @@ import { Allow } from '../../common/decorators/allow.decorator';
 import { Permission } from '../../types/permissions';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
+import { widgetLogoUploadOptions } from './widget-logo-upload.options';
+import { UploadExceptionFilter } from '../knowledge-base/upload-exception.filter';
 
 @Controller('widgets')
 export class WidgetsController {
@@ -63,12 +69,15 @@ export class WidgetsController {
 
   @Patch(':id')
   @Allow(Permission.UPDATE_WIDGET)
+  @UseFilters(UploadExceptionFilter)
+  @UseInterceptors(FileInterceptor('logo', widgetLogoUploadOptions))
   update(
     @RequestContext() ctx: RequestContextType,
     @Param('id') id: string,
     @Body() updateWidgetDto: UpdateWidgetDto,
+    @UploadedFile() logoFile?: Express.Multer.File,
   ): Promise<Widget> {
-    return this.widgetsService.update(ctx, id, updateWidgetDto);
+    return this.widgetsService.update(ctx, id, updateWidgetDto, logoFile);
   }
 
   @Delete(':id')

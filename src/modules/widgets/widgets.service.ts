@@ -3,12 +3,14 @@ import {
   NotFoundException,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { Widget } from '../../common/entities/widget.entity';
 import { BotsService } from '../bots/bots.service';
 import { BotWidgetLinkService } from '../bot-widget-link/bot-widget-link.service';
+import { StorageService } from '../storage/storage.service';
 import { CreateWidgetDto } from './dto/create-widget.dto';
 import { UpdateWidgetDto } from './dto/update-widget.dto';
 import { WidgetPosition, WidgetAppearance } from '../../types/widget';
@@ -27,6 +29,7 @@ export class WidgetsService {
     private readonly widgetRepository: Repository<Widget>,
     private readonly botsService: BotsService,
     private readonly botWidgetLinkService: BotWidgetLinkService,
+    private readonly storageService: StorageService,
   ) {}
 
   async create(ctx: RequestContext, dto: CreateWidgetDto): Promise<Widget> {
@@ -144,9 +147,25 @@ export class WidgetsService {
     ctx: RequestContext,
     id: string,
     dto: UpdateWidgetDto,
+    logoFile?: Express.Multer.File,
   ): Promise<Widget> {
     const widget = await this.findOne(ctx, id);
     const { botId: _, ...rest } = dto;
+
+    if (logoFile) {
+      try {
+        rest.botLogoUrl = await this.storageService.uploadWidgetLogo(
+          id,
+          logoFile.buffer,
+          logoFile.mimetype,
+        );
+      } catch (err) {
+        throw new BadRequestException(
+          err instanceof Error ? err.message : 'Logo upload failed',
+        );
+      }
+    }
+
     Object.assign(widget, rest);
     return this.widgetRepository.save(widget);
   }

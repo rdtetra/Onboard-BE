@@ -8,6 +8,7 @@ import {
   MaxLength,
   Matches,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { WidgetPosition, WidgetAppearance } from '../../../types/widget';
 
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
@@ -77,6 +78,11 @@ export class CreateWidgetDto {
   welcomeMessage?: string | null;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === true || value === 'true') return true;
+    if (value === false || value === 'false') return false;
+    return value;
+  })
   @IsBoolean()
   showPoweredBy?: boolean;
 }
