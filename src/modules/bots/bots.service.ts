@@ -43,7 +43,9 @@ export class BotsService {
       );
     }
 
-    const isProjectBot = createBotDto.botType === BotType.PROJECT;
+    const isProjectBot =
+      createBotDto.botType === BotType.PROJECT ||
+      createBotDto.botType === BotType.URL_SPECIFIC;
     const bot = this.botRepository.create({
       ...createBotDto,
       organizationId: ctx.user.organizationId,
@@ -240,7 +242,10 @@ export class BotsService {
       payload.domains = updateBotDto.domains;
     }
 
-    if (botType === BotType.PROJECT) {
+    if (
+      botType === BotType.PROJECT ||
+      botType === BotType.URL_SPECIFIC
+    ) {
       if (updateBotDto.targetUrls !== undefined) {
         payload.targetUrls = updateBotDto.targetUrls;
       }
