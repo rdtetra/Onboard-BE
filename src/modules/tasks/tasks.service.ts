@@ -13,6 +13,7 @@ import { BotsService } from '../bots/bots.service';
 import { SourcesService } from '../knowledge-base/sources.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { ChipType } from '../../types/task';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
@@ -64,6 +65,7 @@ export class TasksService {
           type: c.type,
           chipName: c.chipName.trim(),
           chipText: c.chipText.trim(),
+          url: c.type === ChipType.LINK && c.url ? c.url.trim() : null,
         })),
       );
       await this.chipRepository.save(chips);
@@ -167,6 +169,7 @@ export class TasksService {
             type: c.type,
             chipName: c.chipName.trim(),
             chipText: c.chipText.trim(),
+            url: c.type === ChipType.LINK && c.url ? c.url.trim() : null,
           })),
         );
         await this.chipRepository.save(chips);

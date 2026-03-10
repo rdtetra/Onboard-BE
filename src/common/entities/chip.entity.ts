@@ -27,6 +27,10 @@ export class Chip extends BaseEntity {
   @Column({ type: 'text', name: 'chip_text' })
   chipText: string;
 
+  /** URL for link-type chips. Null for query-type. */
+  @Column({ type: 'varchar', length: 2048, nullable: true })
+  url: string | null;
+
   @DeleteDateColumn({ name: 'deleted_at' })
   deletedAt: Date | null;
 }

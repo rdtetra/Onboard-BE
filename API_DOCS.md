@@ -572,7 +572,7 @@ Base path: `/tasks`. Tasks belong to a bot (one bot has many tasks). Each task c
   "kbSourceIds": ["uuid-of-kb-source-1", "uuid-of-kb-source-2"],
   "chips": [
     { "type": "query", "chipName": "Pricing", "chipText": "What are your plans?" },
-    { "type": "link", "chipName": "Docs", "chipText": "https://docs.example.com" }
+    { "type": "link", "chipName": "Docs", "chipText": "Open docs", "url": "https://docs.example.com" }
   ]
 }
 ```
@@ -586,7 +586,7 @@ Base path: `/tasks`. Tasks belong to a bot (one bot has many tasks). Each task c
 | isActive     | Required, boolean |
 | botId        | Required, UUID of an existing bot (user must have access) |
 | kbSourceIds  | Required; array of KB source UUIDs; can be empty `[]` |
-| chips        | Optional array. Each: `type` `query` \| `link`, `chipName` max 200, `chipText` max 2000 |
+| chips        | Optional array. Each: `type` `query` \| `link`, `chipName` max 200, `chipText` max 2000. For `type: "link"`, `url` is required (valid URL, max 2048). |
 
 **Response:** `201` — created task in `data`. **Errors:** `404` if bot not found.
 
