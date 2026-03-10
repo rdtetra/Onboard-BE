@@ -117,6 +117,7 @@ export class BotsService {
     
     const [data, total] = await this.botRepository.findAndCount({
       where,
+      relations: ['tasks'],
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
