@@ -15,6 +15,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ChipType } from '../../types/task';
 import { RoleName } from '../../types/roles';
+import { BotType } from '../../types/bot';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {
@@ -37,7 +38,10 @@ export class TasksService {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
-    await this.botsService.findOne(ctx, dto.botId);
+    const bot = await this.botsService.findOne(ctx, dto.botId);
+    if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
+      throw new BadRequestException('Only project bots can have tasks');
+    }
 
     const kbSources: KBSource[] = [];
     for (const sourceId of dto.kbSourceIds) {
@@ -148,7 +152,10 @@ export class TasksService {
     if (dto.targetUrls !== undefined) task.targetUrls = dto.targetUrls;
     if (dto.isActive !== undefined) task.isActive = dto.isActive;
     if (dto.botId !== undefined) {
-      await this.botsService.findOne(ctx, dto.botId);
+      const bot = await this.botsService.findOne(ctx, dto.botId);
+      if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
+        throw new BadRequestException('Only project bots can have tasks');
+      }
       task.botId = dto.botId;
     }
     if (dto.kbSourceIds !== undefined) {
