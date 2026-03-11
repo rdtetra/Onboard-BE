@@ -42,7 +42,8 @@ export class ConversationsService {
    */
   async findAll(
     ctx: RequestContext,
-    filters: {
+    pagination?: { page?: string; limit?: string },
+    filters?: {
       botId?: string;
       visitorId?: string;
       status?: ConversationStatus;
@@ -51,12 +52,12 @@ export class ConversationsService {
       dateFrom?: string;
       dateTo?: string;
     },
-    pagination?: { page?: string; limit?: string },
   ): Promise<PaginatedResult<Conversation>> {
+    const f = filters ?? {};
     let botIds: string[];
-    if (filters.botId != null) {
-      await this.botsService.findOne(ctx, filters.botId);
-      botIds = [filters.botId];
+    if (f.botId != null) {
+      await this.botsService.findOne(ctx, f.botId);
+      botIds = [f.botId];
     } else {
       const botOptions = await this.botsService.findOptions(ctx);
       botIds = botOptions.map((o) => o.id);
@@ -67,7 +68,7 @@ export class ConversationsService {
     }
 
     const { page, limit, skip } = parsePagination(pagination ?? {});
-    const searchTerm = filters.search?.trim() ?? '';
+    const searchTerm = f.search?.trim() ?? '';
     const hasSearch = searchTerm !== '';
 
     const qb = this.conversationRepository
@@ -82,9 +83,9 @@ export class ConversationsService {
         .distinct(true);
     }
 
-    this.applyListFilters(qb, filters);
+    this.applyListFilters(qb, f);
 
-    const countFilters = { ...filters, botIds };
+    const countFilters = { ...f, botIds };
     const total = hasSearch
       ? await this.getSearchCount(countFilters, searchTerm)
       : await qb.getCount();
