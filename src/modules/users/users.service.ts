@@ -151,8 +151,8 @@ export class UsersService {
   }
 
   /**
-   * Org owner invites a new user: they join the inviter's organization with TENANT role.
-   * Email is sent first; the user is created only if the email is sent successfully.
+   * Org owner/admin invites a new user: they join the inviter's organization.
+   * Role can be TENANT or MEMBER (optional; default TENANT). Email is sent first; user is created only if email sends.
    */
   async inviteByOrgAdmin(
     ctx: RequestContext,
@@ -164,17 +164,24 @@ export class UsersService {
       );
     }
 
+    const roleName = inviteUserDto.role ?? RoleName.TENANT;
+    if (roleName === RoleName.SUPER_ADMIN) {
+      throw new BadRequestException(
+        'You cannot invite users as super admin',
+      );
+    }
+
     const existingUser = await this.findByEmail(ctx, inviteUserDto.email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
-    const tenantRole = await this.roleRepository.findOne({
-      where: { name: RoleName.TENANT },
+    const role = await this.roleRepository.findOne({
+      where: { name: roleName },
     });
-    if (!tenantRole) {
+    if (!role) {
       throw new InternalServerErrorException(
-        'TENANT role not found. Please ensure roles are seeded.',
+        `Role ${roleName} not found. Please ensure roles are seeded.`,
       );
     }
 
@@ -187,7 +194,7 @@ export class UsersService {
       email: inviteUserDto.email,
       fullName: inviteUserDto.fullName,
       password: hashedPassword,
-      role: tenantRole,
+      role,
       organizationId: ctx.user.organizationId,
       passwordChangeRequired: true,
       emailVerifiedAt: new Date(),
@@ -229,6 +236,7 @@ export class UsersService {
 
     const qb = this.userRepository
       .createQueryBuilder('user')
+      .leftJoin('user.role', 'role')
       .select([
         'user.id',
         'user.email',
@@ -239,6 +247,8 @@ export class UsersService {
         'user.emailVerifiedAt',
         'user.passwordChangeRequired',
         'user.isActive',
+        'role.id',
+        'role.name',
       ])
       .orderBy('user.createdAt', 'DESC')
       .skip(skip)
