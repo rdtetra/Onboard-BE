@@ -2,8 +2,10 @@ import { IsUUID, IsEnum, IsOptional, IsString, IsDateString } from 'class-valida
 import { ConversationStatus } from '../../../types/conversation';
 
 export class GetConversationsQueryDto {
+  @IsOptional()
   @IsUUID()
-  botId: string;
+  /** If provided, list conversations for this bot only. If omitted, list from all bots the user can access. */
+  botId?: string;
 
   @IsOptional()
   @IsUUID()

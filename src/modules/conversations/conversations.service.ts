@@ -36,10 +36,14 @@ export class ConversationsService {
     return this.conversationRepository.save(conversation);
   }
 
+  /**
+   * List conversations. If botId is provided, scope to that bot (and verify access).
+   * If botId is omitted, return conversations from all bots the user can access (org-scoped).
+   */
   async findAll(
     ctx: RequestContext,
     filters: {
-      botId: string;
+      botId?: string;
       visitorId?: string;
       status?: ConversationStatus;
       search?: string;
@@ -49,17 +53,26 @@ export class ConversationsService {
     },
     pagination?: { page?: string; limit?: string },
   ): Promise<PaginatedResult<Conversation>> {
-    if (!filters.botId) {
-      throw new BadRequestException('botId is required');
+    let botIds: string[];
+    if (filters.botId != null) {
+      await this.botsService.findOne(ctx, filters.botId);
+      botIds = [filters.botId];
+    } else {
+      const botOptions = await this.botsService.findOptions(ctx);
+      botIds = botOptions.map((o) => o.id);
+      if (botIds.length === 0) {
+        const { page, limit } = parsePagination(pagination ?? {});
+        return toPaginatedResult([], 0, page, limit);
+      }
     }
-    await this.botsService.findOne(ctx, filters.botId);
+
     const { page, limit, skip } = parsePagination(pagination ?? {});
     const searchTerm = filters.search?.trim() ?? '';
     const hasSearch = searchTerm !== '';
 
     const qb = this.conversationRepository
       .createQueryBuilder('conversation')
-      .where('conversation.botId = :botId', { botId: filters.botId });
+      .where('conversation.botId IN (:...botIds)', { botIds });
 
     if (hasSearch) {
       qb.innerJoin('conversation.messages', 'message')
@@ -71,8 +84,9 @@ export class ConversationsService {
 
     this.applyListFilters(qb, filters);
 
+    const countFilters = { ...filters, botIds };
     const total = hasSearch
-      ? await this.getSearchCount(filters, searchTerm)
+      ? await this.getSearchCount(countFilters, searchTerm)
       : await qb.getCount();
 
     const data = await qb
@@ -131,7 +145,8 @@ export class ConversationsService {
 
   private async getSearchCount(
     filters: {
-      botId: string;
+      botId?: string;
+      botIds?: string[];
       visitorId?: string;
       status?: ConversationStatus;
       date?: string;
@@ -144,10 +159,19 @@ export class ConversationsService {
       .createQueryBuilder('conversation')
       .innerJoin('conversation.messages', 'message')
       .select('COUNT(DISTINCT conversation.id)', 'count')
-      .where('conversation.botId = :botId', { botId: filters.botId })
       .andWhere('message.content ILIKE :search', {
         search: `%${searchTerm}%`,
       });
+
+    if (filters.botIds != null && filters.botIds.length > 0) {
+      countQb.andWhere('conversation.botId IN (:...botIds)', {
+        botIds: filters.botIds,
+      });
+    } else if (filters.botId != null) {
+      countQb.andWhere('conversation.botId = :botId', {
+        botId: filters.botId,
+      });
+    }
 
     this.applyListFilters(countQb, filters);
 

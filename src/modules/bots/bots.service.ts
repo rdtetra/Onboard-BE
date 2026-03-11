@@ -126,6 +126,32 @@ export class BotsService {
     return toPaginatedResult(data, total, page, limit);
   }
 
+  /** Returns all bots the user can access (org-scoped), id and name only (e.g. for dropdowns). */
+  async findOptions(
+    ctx: RequestContext,
+  ): Promise<{ id: string; name: string }[]> {
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    const orgId =
+      ctx.user.roleName === RoleName.SUPER_ADMIN
+        ? undefined
+        : ctx.user.organizationId;
+    if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
+      throw new BadRequestException(
+        'Organization context required to list bots',
+      );
+    }
+    const where: FindOptionsWhere<Bot> = {};
+    if (orgId) where.organizationId = orgId;
+    return this.botRepository.find({
+      where,
+      select: ['id', 'name'],
+      order: { name: 'ASC' },
+    });
+  }
+
+  /** Returns IDs of all bots the user can access (org-scoped). */
   async findOne(
     ctx: RequestContext,
     id: string,

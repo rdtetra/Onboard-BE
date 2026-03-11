@@ -426,6 +426,13 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 
 **Response:** `200 OK` — `data` is paginated: `{ data: Bot[], total, page, limit, totalPages }`.
 
+### Bots options (dropdown)
+**GET** `/bots/options` — **Permission:** `READ_BOT`
+
+Returns all bots the user can access (org-scoped; SUPER_ADMIN sees all), **id and name only**, for use in dropdowns. Not paginated.
+
+**Response:** `200 OK` — `data` is an array: `{ id: string, name: string }[]`, ordered by name.
+
 ### Get one bot
 **GET** `/bots/:id` — **Permission:** `READ_BOT`. **Errors:** `404` if not found.
 
@@ -485,7 +492,7 @@ Base path: `/conversations`. Conversations belong to a bot (one bot has many con
 
 | Param      | Type   | Required | Description |
 |------------|--------|----------|-------------|
-| `botId`    | UUID   | Yes      | Bot whose conversations to list (must have access) |
+| `botId`    | UUID   | No       | If provided, list conversations for this bot only (must have access). If omitted, list from **all bots** the user can access (org-scoped). |
 | `visitorId`| UUID   | No       | Filter by visitor |
 | `status`  | string | No       | Filter: `OPEN` \| `CLOSED` \| `ARCHIVED` |
 | `search`   | string | No       | Matches **message content** only (case-insensitive partial match). Returns conversations that have at least one message containing the search text. |
@@ -499,7 +506,7 @@ Base path: `/conversations`. Conversations belong to a bot (one bot has many con
 
 **Search** matches only **message content** (the `content` field of messages in the conversation). It does not match visitor ID, conversation status, or any other field. Match is case-insensitive and partial (substring).
 
-**Response:** `200 OK` — `data` is paginated: `{ data: Conversation[], total, page, limit, totalPages }`. Each item is conversation details only (no `messages`). **Errors:** `400` if `botId` is missing.
+**Response:** `200 OK` — `data` is paginated: `{ data: Conversation[], total, page, limit, totalPages }`. Each item is conversation details only (no `messages`).
 
 **Conversation shape (list — no messages):**
 ```json
@@ -656,7 +663,7 @@ Base path: `/tasks`. Tasks belong to a bot (one bot has many tasks). Each task c
 **GET** `/tasks/:id` — **Permission:** `READ_TASK`. **Errors:** `404` if not found or user has no access to the task's bot.
 
 ### Create task
-**POST** `/tasks` — **Permission:** `CREATE_TASK`. Caller must have access to the given bot.
+**POST** `/tasks` — **Permission:** `CREATE_TASK`. Caller must have access to the given bot. **Only project bots can have tasks;** if `botId` refers to a general bot, the request returns `400 Bad Request`.
 
 **Request body:**
 ```json
@@ -689,7 +696,7 @@ Base path: `/tasks`. Tasks belong to a bot (one bot has many tasks). Each task c
 **Response:** `201` — created task in `data`. **Errors:** `404` if bot not found.
 
 ### Update task
-**PATCH** `/tasks/:id` — **Permission:** `UPDATE_TASK`. Body: subset of create fields. If `chips` is sent, it replaces all chips for the task. **Errors:** `404` if task or (when changing) bot not found.
+**PATCH** `/tasks/:id` — **Permission:** `UPDATE_TASK`. Body: subset of create fields. If `chips` is sent, it replaces all chips for the task. If `botId` is changed, the new bot must be a project bot (same rule as create). **Errors:** `404` if task or (when changing) bot not found; `400` if the new bot is not a project bot.
 
 ### Delete task
 **DELETE** `/tasks/:id` — **Permission:** `DELETE_TASK`. Permanently deletes the task and its chips. **Errors:** `404` if not found.
