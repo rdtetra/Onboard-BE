@@ -23,7 +23,6 @@ import { Allow } from '../../common/decorators/allow.decorator';
 import { Permission } from '../../types/permissions';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import { kbSourceUploadOptions } from './multer-options';
-import { SourceType } from '../../types/knowledge-base';
 import { UploadExceptionFilter } from './upload-exception.filter';
 import type { PaginatedResult } from '../../types/pagination';
 
@@ -33,32 +32,14 @@ export class SourcesController {
 
   @Post()
   @Allow(Permission.CREATE_KB_SOURCE)
+  @UseFilters(UploadExceptionFilter)
+  @UseInterceptors(FileInterceptor('file', kbSourceUploadOptions))
   create(
     @RequestContext() ctx: RequestContextType,
     @Body() dto: CreateKBSourceDto,
-  ): Promise<KBSource> {
-    return this.sourcesService.create(ctx, dto);
-  }
-
-  @Post('upload')
-  @Allow(Permission.CREATE_KB_SOURCE)
-  @UseFilters(UploadExceptionFilter)
-  @UseInterceptors(FileInterceptor('file', kbSourceUploadOptions))
-  upload(
-    @RequestContext() ctx: RequestContextType,
-    @Body('name') name: string,
-    @Body('sourceType') sourceType: SourceType,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<KBSource> {
-    if (!file) {
-      throw new BadRequestException('file is required');
-    }
-    return this.sourcesService.createFromUpload(
-      ctx,
-      name,
-      sourceType as SourceType.PDF | SourceType.DOCX,
-      file,
-    );
+    return this.sourcesService.create(ctx, dto, file);
   }
 
   @Get()
@@ -69,11 +50,12 @@ export class SourcesController {
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('sourceType') sourceType?: string,
+    @Query('status') status?: string,
   ): Promise<PaginatedResult<KBSource>> {
     return this.sourcesService.findAll(
       ctx,
       { page, limit },
-      { search, sourceType },
+      { search, sourceType, status },
     );
   }
 
@@ -126,12 +108,15 @@ export class SourcesController {
 
   @Patch(':id')
   @Allow(Permission.UPDATE_KB_SOURCE)
+  @UseFilters(UploadExceptionFilter)
+  @UseInterceptors(FileInterceptor('file', kbSourceUploadOptions))
   update(
     @RequestContext() ctx: RequestContextType,
     @Param('id') id: string,
     @Body() dto: UpdateKBSourceDto,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<KBSource> {
-    return this.sourcesService.update(ctx, id, dto);
+    return this.sourcesService.update(ctx, id, dto, file);
   }
 
   @Delete(':id')

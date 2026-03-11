@@ -30,9 +30,11 @@ export class CreateKBSourceDto {
   refreshSchedule?: RefreshSchedule;
 
   @ValidateIf(
-    (o) => o.sourceType === SourceType.PDF || o.sourceType === SourceType.DOCX,
+    (o) =>
+      (o.sourceType === SourceType.PDF || o.sourceType === SourceType.DOCX) &&
+      o.fileKey != null &&
+      o.fileKey !== '',
   )
-  @IsNotEmpty({ message: 'fileKey is required for file source type' })
   @IsString()
   @MaxLength(2048)
   fileKey?: string;

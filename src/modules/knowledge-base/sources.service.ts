@@ -18,11 +18,9 @@ import {
 } from '../../types/knowledge-base';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
-import {
-  getSourceValueFromFile,
-  getAbsolutePathForDownload,
-} from './multer-options';
+import { getAbsolutePathForDownload } from './multer-options';
 import { fileExists, createFileReadStream } from '../../utils/file.util';
+import { StorageService } from '../storage/storage.service';
 import type { PaginatedResult } from '../../types/pagination';
 import {
   parsePagination,
@@ -35,6 +33,7 @@ export class SourcesService {
     @InjectRepository(KBSource)
     private readonly kbSourceRepository: Repository<KBSource>,
     private readonly botKbLinkService: BotKbLinkService,
+    private readonly storageService: StorageService,
   ) {}
 
   private getNextRefreshAt(
@@ -59,7 +58,11 @@ export class SourcesService {
     return next;
   }
 
-  async create(ctx: RequestContext, dto: CreateKBSourceDto): Promise<KBSource> {
+  async create(
+    ctx: RequestContext,
+    dto: CreateKBSourceDto,
+    file?: Express.Multer.File,
+  ): Promise<KBSource> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
@@ -67,6 +70,55 @@ export class SourcesService {
       throw new BadRequestException(
         'You must belong to an organization to create KB sources',
       );
+    }
+
+    if (file?.buffer) {
+      if (!dto.name?.trim()) {
+        throw new BadRequestException('name is required');
+      }
+      if (
+        dto.sourceType !== SourceType.PDF &&
+        dto.sourceType !== SourceType.DOCX
+      ) {
+        throw new BadRequestException(
+          'sourceType must be PDF or DOCX when uploading a file',
+        );
+      }
+      const fileId = `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+      let s3Key: string;
+      try {
+        s3Key = await this.storageService.uploadKbSourceFile(
+          ctx.user.organizationId,
+          fileId,
+          file.buffer,
+          file.mimetype,
+        );
+      } catch (err) {
+        throw new BadRequestException(
+          err instanceof Error ? err.message : 'File upload failed',
+        );
+      }
+      const source = this.kbSourceRepository.create({
+        name: dto.name.trim(),
+        organizationId: ctx.user.organizationId,
+        sourceType: dto.sourceType,
+        sourceValue: s3Key,
+        fileSizeBytes: file.size ?? null,
+        status: SourceStatus.READY,
+        refreshSchedule: null,
+        linkedBots: 0,
+        lastRefreshed: null,
+        nextRefreshScheduledAt: null,
+      });
+      return this.kbSourceRepository.save(source);
+    }
+
+    if (dto.sourceType === SourceType.PDF || dto.sourceType === SourceType.DOCX) {
+      if (!dto.fileKey?.trim()) {
+        throw new BadRequestException(
+          'fileKey is required for PDF/DOCX when not uploading a file',
+        );
+      }
     }
 
     const sourceValue =
@@ -93,52 +145,15 @@ export class SourcesService {
     return this.kbSourceRepository.save(source);
   }
 
-  async createFromUpload(
-    ctx: RequestContext,
-    name: string,
-    sourceType: SourceType.PDF | SourceType.DOCX,
-    file: Express.Multer.File,
-  ): Promise<KBSource> {
-    if (!ctx.user?.userId) {
-      throw new UnauthorizedException('Authentication required');
-    }
-    if (!ctx.user.organizationId) {
-      throw new BadRequestException(
-        'You must belong to an organization to create KB sources',
-      );
-    }
-    if (!name?.trim()) {
-      throw new BadRequestException('name is required');
-    }
-    if (sourceType !== SourceType.PDF && sourceType !== SourceType.DOCX) {
-      throw new BadRequestException(
-        'sourceType must be PDF or DOCX for file upload',
-      );
-    }
-    if (!file?.filename) {
-      throw new BadRequestException('file is required');
-    }
-
-    const sourceValue = getSourceValueFromFile(file.filename);
-    const source = this.kbSourceRepository.create({
-      name: name.trim(),
-      organizationId: ctx.user.organizationId,
-      sourceType,
-      sourceValue,
-      fileSizeBytes: file.size ?? null,
-      status: SourceStatus.READY,
-      refreshSchedule: null,
-      linkedBots: 0,
-      lastRefreshed: null,
-      nextRefreshScheduledAt: null,
-    });
-    return this.kbSourceRepository.save(source);
-  }
-
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { search?: string; sourceType?: string; organizationId?: string },
+    filters?: {
+      search?: string;
+      sourceType?: string;
+      status?: string;
+      organizationId?: string;
+    },
   ): Promise<PaginatedResult<KBSource>> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
@@ -162,6 +177,16 @@ export class SourcesService {
         `sourceType must be one of: ${Object.values(SourceType).join(', ')}`,
       );
     }
+    const statusFilter = filters?.status?.toUpperCase();
+    if (
+      statusFilter != null &&
+      statusFilter !== '' &&
+      !Object.values(SourceStatus).includes(statusFilter as SourceStatus)
+    ) {
+      throw new BadRequestException(
+        `status must be one of: ${Object.values(SourceStatus).join(', ')}`,
+      );
+    }
 
     const { page, limit, skip } = parsePagination(pagination ?? {});
     const where: FindOptionsWhere<KBSource> = {};
@@ -170,6 +195,13 @@ export class SourcesService {
     }
     if (filters?.sourceType) {
       where.sourceType = filters.sourceType as SourceType;
+    }
+    if (
+      statusFilter === SourceStatus.READY ||
+      statusFilter === SourceStatus.PROCESSING ||
+      statusFilter === SourceStatus.FAILED
+    ) {
+      where.status = statusFilter as SourceStatus;
     }
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
@@ -223,18 +255,36 @@ export class SourcesService {
         'Only PDF and DOCX sources can be downloaded',
       );
     }
+
+    const mimeType =
+      source.sourceType === SourceType.PDF
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const ext = source.sourceType === SourceType.PDF ? '.pdf' : '.docx';
+    const downloadName = `${source.name.replace(/[^\w\s.-]/g, '_')}${ext}`;
+
+    if (this.storageService.isKbSourceS3Key(source.sourceValue)) {
+      try {
+        const { stream, contentLength } =
+          await this.storageService.getKbSourceFileStream(source.sourceValue);
+        return new StreamableFile(stream, {
+          type: mimeType,
+          disposition: `attachment; filename="${downloadName}"`,
+          length: contentLength,
+        });
+      } catch {
+        throw new NotFoundException(
+          'File not found or not available for download',
+        );
+      }
+    }
+
     const absolutePath = getAbsolutePathForDownload(source.sourceValue);
     if (!absolutePath || !fileExists(absolutePath)) {
       throw new NotFoundException(
         'File not found or not available for download',
       );
     }
-    const ext = source.sourceType === SourceType.PDF ? '.pdf' : '.docx';
-    const mimeType =
-      source.sourceType === SourceType.PDF
-        ? 'application/pdf'
-        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    const downloadName = `${source.name.replace(/[^\w\s.-]/g, '_')}${ext}`;
     const stream = createFileReadStream(absolutePath);
     return new StreamableFile(stream, {
       type: mimeType,
@@ -246,9 +296,39 @@ export class SourcesService {
     ctx: RequestContext,
     id: string,
     dto: UpdateKBSourceDto,
+    file?: Express.Multer.File,
   ): Promise<KBSource> {
     const source = await this.findOne(ctx, id);
     const payload = this.getUpdatePayload(source, dto);
+
+    if (file?.buffer) {
+      if (
+        source.sourceType !== SourceType.PDF &&
+        source.sourceType !== SourceType.DOCX
+      ) {
+        throw new BadRequestException(
+          'Only PDF and DOCX sources can be updated with a file upload',
+        );
+      }
+      if (!ctx.user?.organizationId) {
+        throw new BadRequestException('Organization context required');
+      }
+      try {
+        const s3Key = await this.storageService.uploadKbSourceFile(
+          ctx.user.organizationId,
+          id,
+          file.buffer,
+          file.mimetype,
+        );
+        payload.sourceValue = s3Key;
+        payload.fileSizeBytes = file.size ?? null;
+      } catch (err) {
+        throw new BadRequestException(
+          err instanceof Error ? err.message : 'File upload failed',
+        );
+      }
+    }
+
     Object.assign(source, payload);
     return this.kbSourceRepository.save(source);
   }

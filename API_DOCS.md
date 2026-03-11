@@ -722,14 +722,15 @@ Base path: `/knowledge-base/sources`. Sources can exist independently; each can 
 **GET** `/knowledge-base/sources/:id` — **Permission:** `READ_KB_SOURCE`. **Errors:** `404` if not found.
 
 ### Download source file
-**GET** `/knowledge-base/sources/:id/download` — **Permission:** `READ_KB_SOURCE`. Returns binary (PDF/DOCX). **Errors:** `400` if not PDF/DOCX; `404` if not found.
+**GET** `/knowledge-base/sources/:id/download` — **Permission:** `READ_KB_SOURCE`. Returns binary (PDF/DOCX). File sources are stored in S3 and streamed from there. **Errors:** `400` if not PDF/DOCX; `404` if not found.
 
-### Create source (JSON)
+### Create source
 **POST** `/knowledge-base/sources` — **Permission:** `CREATE_KB_SOURCE`. Caller must belong to an organization.
 
+**JSON body (no file):**  
 **URL:** `{ "sourceType": "URL", "name": "...", "url": "https://...", "refreshSchedule": "WEEKLY" }`  
 **TXT:** `{ "sourceType": "TXT", "name": "...", "content": "..." }`  
-**PDF/DOCX:** `{ "sourceType": "PDF", "name": "...", "fileKey": "uploads/..." }`
+**PDF/DOCX (by key):** `{ "sourceType": "PDF", "name": "...", "fileKey": "..." }`
 
 | Field           | Rules |
 |-----------------|-------|
@@ -738,16 +739,14 @@ Base path: `/knowledge-base/sources`. Sources can exist independently; each can 
 | url             | If URL; max 2048 |
 | refreshSchedule | If URL: `MANUAL`, `DAILY`, `WEEKLY`, `MONTHLY` |
 | content         | If TXT; max 50000 |
-| fileKey         | If PDF/DOCX; max 2048 |
+| fileKey         | If PDF/DOCX (when not uploading file); max 2048 |
 
-**Response:** `201` — created source in `data`.
-
-### Upload source (file)
-**POST** `/knowledge-base/sources/upload` — **Permission:** `CREATE_KB_SOURCE`  
-**Content-Type:** `multipart/form-data`. Fields: `name`, `sourceType` (`PDF` | `DOCX`), `file` (max 20 MB). **Response:** `201`.
+**With file upload:** Send `Content-Type: multipart/form-data` with form fields `name`, `sourceType` (`PDF` or `DOCX`), and **`file`** (PDF or DOCX, max 5 MB). The file is uploaded to S3 and the source is created with the stored file. **Response:** `201` — created source in `data`.
 
 ### Update source
 **PATCH** `/knowledge-base/sources/:id` — **Permission:** `UPDATE_KB_SOURCE`. Body: subset of fields; `sourceType` cannot be changed. Use Collections API to add/remove from collection.
+
+**Optional file upload:** For PDF/DOCX sources, you can send `Content-Type: multipart/form-data` with an optional **`file`** field (PDF or DOCX, max 5 MB). If present, the file is uploaded to S3 and the source’s file reference and size are updated. Other body fields (e.g. `name`) can be sent as form fields.
 
 ### Refresh source (URL only)
 **POST** `/knowledge-base/sources/:id/refresh` — **Permission:** `UPDATE_KB_SOURCE`. Forces refresh (updates `lastRefreshed`). **Errors:** `400` if not URL.
