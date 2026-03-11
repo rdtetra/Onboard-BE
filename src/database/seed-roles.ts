@@ -8,7 +8,6 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
   const roleRepository = dataSource.getRepository(Role);
   const permissionRepository = dataSource.getRepository(Permission);
 
-  // Overwrite permissions: clear role–permission links, then replace all permission rows
   await dataSource.query('DELETE FROM role_permissions');
   await permissionRepository.createQueryBuilder().delete().execute();
 
@@ -23,7 +22,6 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
 
   const allPermissionEntities = await permissionRepository.find();
 
-  // Assign the new permissions to every role (create missing roles, update existing)
   for (const roleName of Object.values(RoleName)) {
     const existingRole = await roleRepository.findOne({
       where: { name: roleName },
