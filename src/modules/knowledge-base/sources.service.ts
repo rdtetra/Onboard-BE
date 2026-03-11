@@ -208,6 +208,7 @@ export class SourcesService {
     }
     const [data, total] = await this.kbSourceRepository.findAndCount({
       where,
+      relations: ['bots'],
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
@@ -226,7 +227,7 @@ export class SourcesService {
 
     const source = await this.kbSourceRepository.findOne({
       where: { id },
-      relations: options?.relations,
+      relations: options?.relations ?? ['bots'],
     });
 
     if (!source) {
