@@ -37,6 +37,7 @@ export class ConversationsController {
   ): Promise<PaginatedResult<Conversation>> {
     return this.conversationsService.findAll(
       ctx,
+      { page: query.page, limit: query.limit },
       {
         botId: query.botId,
         visitorId: query.visitorId,
@@ -46,7 +47,6 @@ export class ConversationsController {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
       },
-      { page: query.page, limit: query.limit },
     );
   }
 
