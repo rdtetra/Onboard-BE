@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 import { IsStrongPassword } from '../../../common/validators/password.validator';
 import { UserStatus } from '../../../types/user-status';
+import { RoleName } from '../../../types/roles';
 
 export class CreateUserDto {
   @IsEmail()
@@ -22,6 +23,10 @@ export class CreateUserDto {
   @IsString()
   @MaxLength(200)
   fullName?: string;
+
+  @IsOptional()
+  @IsEnum(RoleName)
+  role?: RoleName;
 
   @IsOptional()
   @IsEnum(UserStatus)

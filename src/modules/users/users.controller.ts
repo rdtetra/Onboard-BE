@@ -49,8 +49,9 @@ export class UsersController {
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('status') status?: string,
+    @Query('role') role?: string,
   ): Promise<PaginatedResult<User>> {
-    return this.usersService.findAll(ctx, { page, limit }, { search, status });
+    return this.usersService.findAll(ctx, { page, limit }, { search, status, role });
   }
 
   @Get(':id')
@@ -60,6 +61,24 @@ export class UsersController {
     @Param('id') id: string,
   ): Promise<User> {
     return this.usersService.findOne(ctx, id);
+  }
+
+  @Patch(':id/activate')
+  @Allow(Permission.UPDATE_USER)
+  activate(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<User> {
+    return this.usersService.activate(ctx, id);
+  }
+
+  @Patch(':id/deactivate')
+  @Allow(Permission.UPDATE_USER)
+  deactivate(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<User> {
+    return this.usersService.deactivate(ctx, id);
   }
 
   @Patch(':id')

@@ -52,7 +52,9 @@ export class UsersService {
 
     const userCount = await this.userRepository.count();
     const isFirstUser = userCount === 0;
-    const roleName = isFirstUser ? RoleName.SUPER_ADMIN : RoleName.TENANT;
+    const roleName =
+      createUserDto.role ??
+      (isFirstUser ? RoleName.SUPER_ADMIN : RoleName.TENANT);
 
     const role = await this.roleRepository.findOne({
       where: { name: roleName },
@@ -60,14 +62,15 @@ export class UsersService {
 
     if (!role) {
       throw new InternalServerErrorException(
-        `${roleName} role not found. Please ensure roles are seeded.`,
+        `Role ${roleName} not found. Please ensure roles are seeded.`,
       );
     }
 
     const hashedPassword = await hashPassword(createUserDto.password);
 
+    const { role: _role, ...createPayload } = createUserDto;
     const user = this.userRepository.create({
-      ...createUserDto,
+      ...createPayload,
       password: hashedPassword,
       role,
       ...(isFirstUser && { emailVerifiedAt: new Date() }),
@@ -243,10 +246,13 @@ export class UsersService {
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { search?: string; status?: string },
+    filters?: { search?: string; status?: string; role?: string },
     _relations?: FindOptionsRelations<User>,
   ): Promise<PaginatedResult<User>> {
     const { page, limit, skip } = parsePagination(pagination ?? {});
+
+    const statusFilter = filters?.status?.toUpperCase();
+    const roleFilter = filters?.role?.toUpperCase();
 
     const qb = this.userRepository
       .createQueryBuilder('user')
@@ -281,8 +287,19 @@ export class UsersService {
         { search: term },
       );
     }
-    if (filters?.status === UserStatus.ACTIVE || filters?.status === UserStatus.DISABLED || filters?.status === UserStatus.PENDING) {
-      qb.andWhere('user.status = :status', { status: filters.status });
+    if (
+      statusFilter === UserStatus.ACTIVE ||
+      statusFilter === UserStatus.DISABLED ||
+      statusFilter === UserStatus.PENDING
+    ) {
+      qb.andWhere('user.status = :status', { status: statusFilter });
+    }
+    if (
+      roleFilter === RoleName.SUPER_ADMIN ||
+      roleFilter === RoleName.TENANT ||
+      roleFilter === RoleName.MEMBER
+    ) {
+      qb.andWhere('role.name = :roleName', { roleName: roleFilter });
     }
 
     const countQb = this.userRepository.createQueryBuilder('user');
@@ -296,8 +313,20 @@ export class UsersService {
         { search: term },
       );
     }
-    if (filters?.status === UserStatus.ACTIVE || filters?.status === UserStatus.DISABLED || filters?.status === UserStatus.PENDING) {
-      countQb.andWhere('user.status = :status', { status: filters.status });
+    if (
+      statusFilter === UserStatus.ACTIVE ||
+      statusFilter === UserStatus.DISABLED ||
+      statusFilter === UserStatus.PENDING
+    ) {
+      countQb.andWhere('user.status = :status', { status: statusFilter });
+    }
+    if (
+      roleFilter === RoleName.SUPER_ADMIN ||
+      roleFilter === RoleName.TENANT ||
+      roleFilter === RoleName.MEMBER
+    ) {
+      countQb.leftJoin('user.role', 'role');
+      countQb.andWhere('role.name = :roleName', { roleName: roleFilter });
     }
 
     const [data, total] = await Promise.all([
@@ -364,18 +393,45 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.getOne(id);
 
-    if (updateUserDto.password) {
-      updateUserDto.password = await hashPassword(updateUserDto.password);
+    const { role: roleName, ...rest } = updateUserDto;
+
+    if (roleName !== undefined) {
+      const role = await this.roleRepository.findOne({
+        where: { name: roleName },
+      });
+      if (!role) {
+        throw new BadRequestException(
+          `Role ${roleName} not found. Please ensure roles are seeded.`,
+        );
+      }
+      user.role = role;
     }
 
-    Object.assign(user, updateUserDto);
-    if (updateUserDto.password) {
+    if (rest.password) {
+      rest.password = await hashPassword(rest.password);
       user.passwordChangeRequired = false;
     }
+
+    Object.assign(user, rest);
+    return this.userRepository.save(user);
+  }
+
+  async activate(ctx: RequestContext, id: string): Promise<User> {
+    const user = await this.getOne(id);
+    user.status = UserStatus.ACTIVE;
+    return this.userRepository.save(user);
+  }
+
+  async deactivate(ctx: RequestContext, id: string): Promise<User> {
+    const user = await this.getOne(id);
+    user.status = UserStatus.DISABLED;
     return this.userRepository.save(user);
   }
 
   async remove(ctx: RequestContext, id: string): Promise<void> {
+    if (ctx.user?.userId === id) {
+      throw new BadRequestException('You cannot delete your own account');
+    }
     const user = await this.getOne(id);
     await this.userRepository.remove(user);
   }
