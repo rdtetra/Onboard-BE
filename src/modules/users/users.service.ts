@@ -78,13 +78,13 @@ export class UsersService {
 
     const saved = await this.userRepository.save(user);
 
-    if (!isFirstUser) {
+    if (!isFirstUser && roleName === RoleName.TENANT) {
       await this.organizationsService.createForUser(
         saved.id,
         `${saved.fullName || saved.email}'s Organization`,
       );
     }
-    
+
     const updated = await this.userRepository.findOne({
       where: { id: saved.id },
       relations: ['role', 'organization'],

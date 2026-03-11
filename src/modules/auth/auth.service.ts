@@ -43,7 +43,10 @@ export class AuthService {
     ctx: RequestContext,
     registerDto: RegisterDto,
   ): Promise<AuthResponse> {
-    const user = await this.usersService.create(ctx, registerDto);
+    const user = await this.usersService.create(ctx, {
+      ...registerDto,
+      status: UserStatus.PENDING,
+    });
 
     const payload: JwtPayload = {
       email: user.email,
