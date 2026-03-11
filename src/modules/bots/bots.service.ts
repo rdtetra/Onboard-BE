@@ -13,7 +13,7 @@ import { BotTaskLinkService } from '../bot-task-link/bot-task-link.service';
 import { BotWidgetLinkService } from '../bot-widget-link/bot-widget-link.service';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
-import { BotType, BotState, Behavior, BotPriority } from '../../types/bot';
+import { BotType, Behavior, BotPriority } from '../../types/bot';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
@@ -49,7 +49,8 @@ export class BotsService {
     const bot = this.botRepository.create({
       ...createBotDto,
       organizationId: ctx.user.organizationId,
-      state: BotState.ACTIVE,
+      isActive: true,
+      isArchived: false,
       behavior: isProjectBot
         ? (createBotDto.behavior ?? Behavior.AUTO_SHOW)
         : null,
@@ -233,19 +234,25 @@ export class BotsService {
 
   async archive(ctx: RequestContext, id: string): Promise<Bot> {
     const bot = await this.findOne(ctx, id);
-    bot.state = BotState.ARCHIVED;
+    bot.isArchived = true;
+    return this.botRepository.save(bot);
+  }
+
+  async unarchive(ctx: RequestContext, id: string): Promise<Bot> {
+    const bot = await this.findOne(ctx, id);
+    bot.isArchived = false;
     return this.botRepository.save(bot);
   }
 
   async disable(ctx: RequestContext, id: string): Promise<Bot> {
     const bot = await this.findOne(ctx, id);
-    bot.state = BotState.DISABLED;
+    bot.isActive = false;
     return this.botRepository.save(bot);
   }
 
   async enable(ctx: RequestContext, id: string): Promise<Bot> {
     const bot = await this.findOne(ctx, id);
-    bot.state = BotState.ACTIVE;
+    bot.isActive = true;
     return this.botRepository.save(bot);
   }
 

@@ -460,9 +460,11 @@ Returns all bots the user can access (org-scoped; SUPER_ADMIN sees all), **id an
 **PATCH** `/bots/:id` — **Permission:** `UPDATE_BOT`. Body: subset of create fields. `botType` cannot be changed.
 
 ### Archive / Disable / Enable bot
-**PATCH** `/bots/:id/archive` — sets state to `ARCHIVED`.  
-**PATCH** `/bots/:id/disable` — sets state to `DISABLED`.  
-**PATCH** `/bots/:id/enable` — sets state to `ACTIVE`.  
+**PATCH** `/bots/:id/archive` — sets `isArchived: true` only.
+**PATCH** `/bots/:id/unarchive` — sets `isArchived: false` only.
+**PATCH** `/bots/:id/disable` — sets `isActive: false` only.
+**PATCH** `/bots/:id/enable` — sets `isActive: true` only.  
+`isActive` and `isArchived` are independent; both can be true or false in any combination.
 **Permission:** `UPDATE_BOT`.
 
 ### Delete bot
@@ -477,7 +479,7 @@ Returns all bots the user can access (org-scoped; SUPER_ADMIN sees all), **id an
 ### Unlink KB source from bot
 **DELETE** `/bots/:id/kb-sources/:sourceId` — **Permission:** `UPDATE_BOT`. Unlinks the KB source from the bot. **Errors:** `404` if bot or source not found.
 
-**Bot enums:** BotType `GENERAL` | `PROJECT`; BotState `ACTIVE` | `DISABLED` | `ARCHIVED`; Behavior `AUTO_SHOW` | `BUTTON_ONLY`; BotPriority `HIGHEST` | `HIGH` | `MEDIUM` | `LOW`.
+**Bot enums:** BotType `GENERAL` | `PROJECT`; Behavior `AUTO_SHOW` | `BUTTON_ONLY`; BotPriority `HIGHEST` | `HIGH` | `MEDIUM` | `LOW`. **Bot flags:** `isActive` (boolean), `isArchived` (boolean).
 
 ---
 

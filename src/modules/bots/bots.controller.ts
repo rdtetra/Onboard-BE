@@ -99,6 +99,15 @@ export class BotsController {
     return this.botsService.archive(ctx, id);
   }
 
+  @Patch(':id/unarchive')
+  @Allow(Permission.UPDATE_BOT)
+  unarchive(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<Bot> {
+    return this.botsService.unarchive(ctx, id);
+  }
+
   @Patch(':id/disable')
   @Allow(Permission.UPDATE_BOT)
   disable(

@@ -10,12 +10,7 @@ import {
   OneToOne,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import {
-  BotType,
-  BotState,
-  Behavior,
-  BotPriority,
-} from '../../types/bot';
+import { BotType, Behavior, BotPriority } from '../../types/bot';
 import { Organization } from './organization.entity';
 import { KBSource } from './kb-source.entity';
 import { Task } from './task.entity';
@@ -37,8 +32,11 @@ export class Bot extends BaseEntity {
   @Column({ type: 'enum', enum: BotType, name: 'bot_type' })
   botType: BotType;
 
-  @Column({ type: 'enum', enum: BotState, default: BotState.ACTIVE })
-  state: BotState;
+  @Column({ type: 'boolean', default: true, name: 'is_active' })
+  isActive: boolean;
+
+  @Column({ type: 'boolean', default: false, name: 'is_archived' })
+  isArchived: boolean;
 
   @Column({
     type: 'enum',

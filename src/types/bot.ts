@@ -5,12 +5,6 @@ export enum BotType {
   URL_SPECIFIC = 'URL_SPECIFIC',
 }
 
-export enum BotState {
-  ACTIVE = 'ACTIVE',
-  DISABLED = 'DISABLED',
-  ARCHIVED = 'ARCHIVED',
-}
-
 export enum Behavior {
   AUTO_SHOW = 'AUTO_SHOW',
   BUTTON_ONLY = 'BUTTON_ONLY',
