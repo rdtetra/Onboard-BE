@@ -19,6 +19,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtPayload, AuthResponse, SessionResponse } from '../../types/auth';
 import { User } from '../../common/entities/user.entity';
+import { UserStatus } from '../../types/user-status';
 import { UsedToken } from '../../common/entities/used-token.entity';
 import type { RequestContext } from '../../types/request';
 import { AuditService } from '../audit/audit.service';
@@ -80,6 +81,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (user.status === UserStatus.DISABLED) {
+      throw new UnauthorizedException('Account is disabled');
+    }
+
     const isPasswordValid = await comparePassword(
       loginDto.password,
       user.password,
@@ -87,6 +92,10 @@ export class AuthService {
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (user.status === UserStatus.PENDING) {
+      await this.usersService.markPendingUserActivated(user.id);
     }
 
     const payload: JwtPayload = {

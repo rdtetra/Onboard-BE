@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Role } from './role.entity';
 import { Organization } from './organization.entity';
+import { UserStatus } from '../../types/user-status';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -20,8 +21,15 @@ export class User extends BaseEntity {
   @Column({ default: false, name: 'password_change_required' })
   passwordChangeRequired: boolean;
 
-  @Column({ default: true, name: 'is_active' })
-  isActive: boolean;
+  @Column({
+    type: 'varchar',
+    default: UserStatus.ACTIVE,
+    length: 20,
+  })
+  status: UserStatus;
+
+  @Column({ nullable: true, name: 'joined_at', type: 'timestamp' })
+  joinedAt: Date | null;
 
   @Column({
     nullable: true,

@@ -14,6 +14,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RoleName } from '../../types/roles';
+import { UserStatus } from '../../types/user-status';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {
@@ -137,6 +138,7 @@ export class UsersService {
       organizationId: null,
       passwordChangeRequired: true,
       emailVerifiedAt: new Date(),
+      status: UserStatus.PENDING,
     });
     const saved = await this.userRepository.save(user);
 
@@ -198,10 +200,22 @@ export class UsersService {
       organizationId: ctx.user.organizationId,
       passwordChangeRequired: true,
       emailVerifiedAt: new Date(),
+      status: UserStatus.PENDING,
     });
     const saved = await this.userRepository.save(user);
 
     return saved;
+  }
+
+  /**
+   * On first login, transition pending → active and set joinedAt.
+   * No-op if user is not pending.
+   */
+  async markPendingUserActivated(userId: string): Promise<void> {
+    await this.userRepository.update(
+      { id: userId, status: UserStatus.PENDING },
+      { status: UserStatus.ACTIVE, joinedAt: new Date() },
+    );
   }
 
   private async sendInviteEmail(
@@ -246,7 +260,8 @@ export class UsersService {
         'user.updatedAt',
         'user.emailVerifiedAt',
         'user.passwordChangeRequired',
-        'user.isActive',
+        'user.status',
+        'user.joinedAt',
         'role.id',
         'role.name',
       ])
@@ -266,10 +281,8 @@ export class UsersService {
         { search: term },
       );
     }
-    if (filters?.status === 'active') {
-      qb.andWhere('user.is_active = :isActive', { isActive: true });
-    } else if (filters?.status === 'inactive') {
-      qb.andWhere('user.is_active = :isActive', { isActive: false });
+    if (filters?.status === UserStatus.ACTIVE || filters?.status === UserStatus.DISABLED || filters?.status === UserStatus.PENDING) {
+      qb.andWhere('user.status = :status', { status: filters.status });
     }
 
     const countQb = this.userRepository.createQueryBuilder('user');
@@ -283,10 +296,8 @@ export class UsersService {
         { search: term },
       );
     }
-    if (filters?.status === 'active') {
-      countQb.andWhere('user.is_active = :isActive', { isActive: true });
-    } else if (filters?.status === 'inactive') {
-      countQb.andWhere('user.is_active = :isActive', { isActive: false });
+    if (filters?.status === UserStatus.ACTIVE || filters?.status === UserStatus.DISABLED || filters?.status === UserStatus.PENDING) {
+      countQb.andWhere('user.status = :status', { status: filters.status });
     }
 
     const [data, total] = await Promise.all([

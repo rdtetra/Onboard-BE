@@ -3,9 +3,11 @@ import {
   IsString,
   IsOptional,
   IsBoolean,
+  IsEnum,
   MaxLength,
 } from 'class-validator';
 import { IsStrongPassword } from '../../../common/validators/password.validator';
+import { UserStatus } from '../../../types/user-status';
 
 export class CreateUserDto {
   @IsEmail()
@@ -22,8 +24,8 @@ export class CreateUserDto {
   fullName?: string;
 
   @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
+  @IsEnum(UserStatus)
+  status?: UserStatus;
 
   @IsOptional()
   @IsBoolean()
