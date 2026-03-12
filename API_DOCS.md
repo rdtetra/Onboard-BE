@@ -235,6 +235,15 @@ On success, the user’s `passwordChangeRequired` flag is cleared. Use the same 
 
 ---
 
+### Update profile
+**PATCH** `/auth/profile`
+
+**Public:** No (Requires Authentication)
+
+Update the authenticated user's profile: full name and/or profile picture. Send **Content-Type: multipart/form-data** with optional form fields: **fullName** (string, optional), **image** (file: PNG or JPEG, max 5 MB, optional). You can send only fullName, only image, or both. The image is uploaded to S3 and the user's `profilePictureUrl` is set. **Response:** `200 OK` — `data` contains the updated user (without password); session and user list also include `profilePictureUrl` when set.
+
+---
+
 ## User Endpoints
 
 ### Get All Users

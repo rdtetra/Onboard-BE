@@ -8,12 +8,14 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { AuditModule } from '../audit/audit.module';
+import { StorageModule } from '../storage/storage.module';
 import { UsedToken } from '../../common/entities/used-token.entity';
 
 @Module({
   imports: [
     UsersModule,
     AuditModule,
+    StorageModule,
     PassportModule,
     TypeOrmModule.forFeature([UsedToken]),
     JwtModule.registerAsync({

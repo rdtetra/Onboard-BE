@@ -4,6 +4,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { Readable } from 'stream';
 
 const WIDGET_LOGO_MAX_BYTES = 1024 * 1024; // 1 MB
+const PROFILE_PICTURE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const KB_SOURCE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/jpg'] as const;
 const ALLOWED_KB_SOURCE_MIME = [
@@ -59,6 +60,38 @@ export class StorageService {
     }
     const ext = LOGO_EXT[normalized] ?? 'png';
     const key = `widgets/${widgetId}/logo.${ext}`;
+
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: mimeType,
+        ACL: 'public-read',
+      }),
+    );
+
+    return this.getPublicUrl(key);
+  }
+
+  async uploadUserProfilePicture(
+    userId: string,
+    buffer: Buffer,
+    mimeType: string,
+  ): Promise<string> {
+    if (buffer.length > PROFILE_PICTURE_MAX_BYTES) {
+      throw new Error(
+        `Profile picture must be at most 5 MB (got ${(buffer.length / 1024 / 1024).toFixed(2)} MB)`,
+      );
+    }
+    const normalized = mimeType.toLowerCase();
+    if (
+      !ALLOWED_LOGO_MIME.includes(normalized as (typeof ALLOWED_LOGO_MIME)[number])
+    ) {
+      throw new Error('Profile picture must be PNG or JPEG');
+    }
+    const ext = LOGO_EXT[normalized] ?? 'png';
+    const key = `users/${userId}/profile.${ext}`;
 
     await this.s3.send(
       new PutObjectCommand({

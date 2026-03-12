@@ -25,6 +25,7 @@ export type SessionResponse = {
   user: {
     email: string;
     fullName: string | null;
+    profilePictureUrl: string | null;
     roleName: RoleName;
     passwordChangeRequired: boolean;
   };

@@ -25,6 +25,7 @@ import type { RequestContext } from '../../types/request';
 import { AuditService } from '../audit/audit.service';
 import { EmailService } from '../email/email.service';
 import { EmailTemplatesService } from '../email/email-templates.service';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class AuthService {
@@ -35,6 +36,7 @@ export class AuthService {
     private auditService: AuditService,
     private emailService: EmailService,
     private emailTemplatesService: EmailTemplatesService,
+    private storageService: StorageService,
     @InjectRepository(UsedToken)
     private usedTokenRepository: Repository<UsedToken>,
   ) {}
@@ -299,6 +301,7 @@ export class AuthService {
       user: {
         email: user.email,
         fullName: user.fullName ?? null,
+        profilePictureUrl: user.profilePictureUrl ?? null,
         roleName: user.role.name,
         passwordChangeRequired: user.passwordChangeRequired,
       },
@@ -345,6 +348,39 @@ export class AuthService {
       .catch(() => {});
 
     return { message: 'Password has been changed successfully' };
+  }
+
+  async updateProfile(
+    ctx: RequestContext,
+    fullName?: string,
+    file?: Express.Multer.File,
+  ): Promise<User> {
+    const userId = ctx.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    let profilePictureUrl: string | null | undefined;
+    if (file?.buffer) {
+      try {
+        profilePictureUrl = await this.storageService.uploadUserProfilePicture(
+          userId,
+          file.buffer,
+          file.mimetype,
+        );
+      } catch (err) {
+        throw new BadRequestException(
+          err instanceof Error ? err.message : 'Profile picture upload failed',
+        );
+      }
+    }
+
+    const user = await this.usersService.updateProfile(ctx, {
+      ...(fullName !== undefined && { fullName: fullName?.trim() ?? null }),
+      ...(profilePictureUrl !== undefined && { profilePictureUrl }),
+    });
+    const { password: _p, ...rest } = user;
+    return rest as User;
   }
 
   async logout(

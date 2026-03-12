@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Query, Headers } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Query,
+  Headers,
+  UseInterceptors,
+  UploadedFile,
+  UseFilters,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -9,6 +21,9 @@ import { Public } from '../../common/decorators/public.decorator';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { AuthResponse, SessionResponse } from '../../types/auth';
 import type { RequestContext as RequestContextType } from '../../types/request';
+import { User } from '../../common/entities/user.entity';
+import { profilePictureUploadOptions } from './profile-upload.options';
+import { UploadExceptionFilter } from '../knowledge-base/upload-exception.filter';
 
 @Controller('auth')
 export class AuthController {
@@ -63,6 +78,17 @@ export class AuthController {
     @Body() changePasswordDto: ChangePasswordDto,
   ): Promise<{ message: string }> {
     return this.authService.changePassword(ctx, changePasswordDto);
+  }
+
+  @Patch('profile')
+  @UseFilters(UploadExceptionFilter)
+  @UseInterceptors(FileInterceptor('image', profilePictureUploadOptions))
+  updateProfile(
+    @RequestContext() ctx: RequestContextType,
+    @Body('fullName') fullName?: string,
+    @UploadedFile() image?: Express.Multer.File,
+  ): Promise<User> {
+    return this.authService.updateProfile(ctx, fullName, image);
   }
 
   @Public()

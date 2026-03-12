@@ -261,6 +261,7 @@ export class UsersService {
         'user.id',
         'user.email',
         'user.fullName',
+        'user.profilePictureUrl',
         'user.organizationId',
         'user.createdAt',
         'user.updatedAt',
@@ -413,6 +414,24 @@ export class UsersService {
     }
 
     Object.assign(user, rest);
+    return this.userRepository.save(user);
+  }
+
+  async updateProfile(
+    ctx: RequestContext,
+    payload: { fullName?: string; profilePictureUrl?: string | null },
+  ): Promise<User> {
+    const userId = ctx.user?.userId;
+    if (!userId) {
+      throw new BadRequestException('Authentication required');
+    }
+    const user = await this.getOne(userId);
+    if (payload.fullName !== undefined) {
+      user.fullName = payload.fullName?.trim() ?? null;
+    }
+    if (payload.profilePictureUrl !== undefined) {
+      user.profilePictureUrl = payload.profilePictureUrl;
+    }
     return this.userRepository.save(user);
   }
 
