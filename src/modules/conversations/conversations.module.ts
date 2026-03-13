@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { BotsModule } from '../bots/bots.module';
+import { TokenTransactionsModule } from '../token-transactions/token-transactions.module';
 import { ConversationsService } from './conversations.service';
 import { ConversationsController } from './conversations.controller';
 
@@ -10,6 +11,7 @@ import { ConversationsController } from './conversations.controller';
   imports: [
     TypeOrmModule.forFeature([Conversation, Message]),
     BotsModule,
+    TokenTransactionsModule,
   ],
   controllers: [ConversationsController],
   providers: [ConversationsService],

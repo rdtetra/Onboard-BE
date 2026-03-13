@@ -6,18 +6,25 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Conversation } from '../../common/entities/conversation.entity';
+import { Message } from '../../common/entities/message.entity';
 import { BotsService } from '../bots/bots.service';
+import { TokenUsageService } from '../token-transactions/token-usage.service';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
 import { ConversationStatus } from '../../types/conversation';
+import { MessageSender } from '../../types/message';
+import type { CreateMessageDto } from './dto/create-message.dto';
 
 @Injectable()
 export class ConversationsService {
   constructor(
     @InjectRepository(Conversation)
     private readonly conversationRepository: Repository<Conversation>,
+    @InjectRepository(Message)
+    private readonly messageRepository: Repository<Message>,
     private readonly botsService: BotsService,
+    private readonly tokenUsageService: TokenUsageService,
   ) {}
 
   async create(
@@ -196,4 +203,40 @@ export class ConversationsService {
     return conversation;
   }
 
+  /**
+   * Add a message to a conversation. When the sender is BOT, deducts tokens from
+   * the organization's wallet via TokenUsageService (requires tokenCount in dto).
+   */
+  async addMessage(
+    ctx: RequestContext,
+    conversationId: string,
+    dto: CreateMessageDto,
+  ): Promise<Message> {
+    const conversation = await this.findOne(ctx, conversationId, {
+      relations: ['messages', 'bot'],
+    });
+    const message = this.messageRepository.create({
+      conversationId: conversation.id,
+      content: dto.content.trim(),
+      sender: dto.sender,
+    });
+    const saved = await this.messageRepository.save(message);
+
+    if (
+      dto.sender === MessageSender.BOT &&
+      typeof dto.tokenCount === 'number' &&
+      dto.tokenCount >= 1 &&
+      conversation.bot?.organizationId
+    ) {
+      await this.tokenUsageService.consumeTokens({
+        organizationId: conversation.bot.organizationId,
+        botId: conversation.botId,
+        conversationId: conversation.id,
+        amount: dto.tokenCount,
+        metadata: { messageId: saved.id },
+      });
+    }
+
+    return saved;
+  }
 }

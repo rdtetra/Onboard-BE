@@ -46,7 +46,7 @@ The `access_token` is a JWT for the **target user** (same format as login). The 
 Endpoints can require specific permissions using the `@Allow()` decorator. Users must have all specified permissions to access the endpoint. If a user lacks required permissions, they will receive a `403 Forbidden` response.
 
 **Available Permissions:**  
-`CREATE_USER`, `READ_USER`, `UPDATE_USER`, `DELETE_USER` | `CREATE_BOT`, `READ_BOT`, `UPDATE_BOT`, `DELETE_BOT` | `CREATE_WIDGET`, `READ_WIDGET`, `UPDATE_WIDGET`, `DELETE_WIDGET` | `CREATE_KB_SOURCE`, `READ_KB_SOURCE`, `UPDATE_KB_SOURCE`, `DELETE_KB_SOURCE` | `CREATE_COLLECTION`, `READ_COLLECTION`, `UPDATE_COLLECTION`, `DELETE_COLLECTION` | `CREATE_TASK`, `READ_TASK`, `UPDATE_TASK`, `DELETE_TASK` | `READ_AUDIT_LOG`
+`CREATE_USER`, `READ_USER`, `UPDATE_USER`, `DELETE_USER` | `CREATE_BOT`, `READ_BOT`, `UPDATE_BOT`, `DELETE_BOT` | `CREATE_WIDGET`, `READ_WIDGET`, `UPDATE_WIDGET`, `DELETE_WIDGET` | `CREATE_KB_SOURCE`, `READ_KB_SOURCE`, `UPDATE_KB_SOURCE`, `DELETE_KB_SOURCE` | `CREATE_COLLECTION`, `READ_COLLECTION`, `UPDATE_COLLECTION`, `DELETE_COLLECTION` | `CREATE_TASK`, `READ_TASK`, `UPDATE_TASK`, `DELETE_TASK` | `READ_SUBSCRIPTION` | `READ_PAYMENT_METHOD`, `UPDATE_PAYMENT_METHOD` | `READ_INVOICE` | `READ_AUDIT_LOG`
 
 Permissions are assigned to users and included in the JWT token. The system automatically checks permissions on protected endpoints.
 
@@ -795,6 +795,93 @@ Base path: `/collections`. Collection has `name` and optional `description`; can
 ### Add / Remove source
 **POST** `/collections/:id/sources/:sourceId` — add source to collection (moves from another collection if needed).  
 **DELETE** `/collections/:id/sources/:sourceId` — remove source from collection. **Permission:** `UPDATE_COLLECTION`. **Errors:** `404` if collection/source not found or source not in collection.
+
+---
+
+## Billing API
+
+Base path: `/billing`. All operations require the current user's organization. **Permission:** `READ_SUBSCRIPTION`.
+
+### Billing overview
+**GET** `/billing/overview`
+
+Returns plan name, billing cycle, monthly cost (and `monthlyPriceCents`), next renewal, tokens total/used, storage total/used for the current org. If the org has no subscription, `subscription` is `null`; token and storage usage are still returned.
+
+**Response:** `200 OK` — `data` contains `subscription` (or null), `tokens: { total, used }`, `storage: { totalMb, usedMb }`.
+
+### Tokens by bot
+**GET** `/billing/tokens-by-bot`
+
+**Query params:** `periodStart`, `periodEnd` (optional; ISO date strings). Defaults to the current subscription period if the org has an active subscription.
+
+Returns token usage per bot for the org. All org bots are included; bots with no usage have `tokensUsed: 0`.
+
+**Response:** `200 OK` — `data` is `{ usageByBot: { botId, botName, tokensUsed }[] }`.
+
+---
+
+## Payment Methods API
+
+Base path: `/payment-methods`. All operations are scoped to the current user's organization. Stored fields include `last4`, `brand`, `nameOnCard`, `expMonth`, `expYear`, `isDefault`; card number is never stored (only used to derive `last4` and `brand`).
+
+### List payment methods
+**GET** `/payment-methods` — **Permission:** `READ_PAYMENT_METHOD`
+
+Returns all payment methods for the current org, ordered by default first then by creation date.
+
+**Response:** `200 OK` — `data` is an array of payment methods (not paginated).
+
+### Get one payment method
+**GET** `/payment-methods/:id` — **Permission:** `READ_PAYMENT_METHOD`. **Errors:** `404` if not found or different org.
+
+### Create payment method
+**POST** `/payment-methods` — **Permission:** `UPDATE_PAYMENT_METHOD`. Org is taken from the request context (no `orgId` in body).
+
+**Request body:** Optional `cardNumber` (full number; used only to derive `last4` and `brand`), `nameOnCard`, `expiry` (e.g. `MM/YY` or `MM/YYYY`), optional `provider`, `type`. Defaults: `provider` `MANUAL`, `type` `CARD`. Brand is detected from card number; do not send from frontend.
+
+**Response:** `201` — created payment method in `data`. The first payment method for the org is set as default automatically.
+
+### Set as default
+**PATCH** `/payment-methods/:id/set-default` — **Permission:** `UPDATE_PAYMENT_METHOD`
+
+Marks this payment method as the default for the org and clears default on all others. **Errors:** `404` if not found or different org.
+
+**Response:** `200 OK` — updated payment method in `data`.
+
+### Update payment method
+**PATCH** `/payment-methods/:id` — **Permission:** `UPDATE_PAYMENT_METHOD`. Body: subset of fields (e.g. `nameOnCard`, `expiry`, `isDefault`). If `isDefault` is set to `true`, other payment methods for the org are set to non-default.
+
+### Delete payment method
+**DELETE** `/payment-methods/:id` — **Permission:** `UPDATE_PAYMENT_METHOD`. **Errors:** `404` if not found.
+
+---
+
+## Invoices API
+
+Base path: `/invoices`. Invoices are bills for the organization (amount due/paid, status, period, due date, paid date, optional PDF URL). All list/get are scoped to the current user's organization.
+
+### List invoices
+**GET** `/invoices` — **Permission:** `READ_INVOICE`
+
+**Query params:**
+
+| Param   | Type   | Description |
+|---------|--------|-------------|
+| `page`  | string | Page number (1-based). Default: 1 |
+| `limit` | string | Page size. Default: 20, max: 100 |
+| `status`| string | Filter by status: `DRAFT`, `OPEN`, `PAID`, `VOID`, `UNCOLLECTIBLE`. Omit to return all. Use `PAID` for past/paid invoices. |
+
+**Response:** `200 OK` — `data` is paginated: `{ data: Invoice[], total, page, limit, totalPages }`. Each invoice includes `subscription` when loaded.
+
+### Get one invoice
+**GET** `/invoices/:id` — **Permission:** `READ_INVOICE`. **Errors:** `404` if not found or different org.
+
+**Response:** `200 OK` — single invoice in `data` (includes `organization`, `subscription`).
+
+### Create / Update / Delete invoice
+**POST** `/invoices`, **PATCH** `/invoices/:id`, **DELETE** `/invoices/:id` — **Permission:** `READ_INVOICE`. Used for creating or updating invoice records (e.g. from webhooks or admin). Request bodies follow the invoice entity fields (`orgId`, `subscriptionId`, `status`, `amountDue`, `amountPaid`, `currency`, `periodStart`, `periodEnd`, `dueDate`, `paidAt`, `invoicePdfUrl`, etc.).
+
+**Invoice status enum:** `DRAFT` | `OPEN` | `PAID` | `VOID` | `UNCOLLECTIBLE`.
 
 ---
 

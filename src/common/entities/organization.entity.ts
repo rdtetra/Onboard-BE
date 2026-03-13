@@ -1,9 +1,13 @@
-import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { Bot } from './bot.entity';
 import { KBSource } from './kb-source.entity';
 import { Collection } from './collection.entity';
+import { Subscription } from './subscription.entity';
+import { TokenWallet } from './token-wallet.entity';
+import { PaymentMethod } from './payment-method.entity';
+import { Invoice } from './invoice.entity';
 
 @Entity('organizations')
 export class Organization extends BaseEntity {
@@ -28,4 +32,16 @@ export class Organization extends BaseEntity {
 
   @OneToMany(() => Collection, (c) => c.organization)
   collections: Collection[];
+
+  @OneToOne(() => Subscription, (s) => s.organization)
+  subscription: Subscription | null;
+
+  @OneToOne(() => TokenWallet, (w) => w.organization)
+  tokenWallet: TokenWallet | null;
+
+  @OneToMany(() => PaymentMethod, (pm) => pm.organization)
+  paymentMethods: PaymentMethod[];
+
+  @OneToMany(() => Invoice, (i) => i.organization)
+  invoices: Invoice[];
 }

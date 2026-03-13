@@ -26,6 +26,12 @@ import { Conversation } from './common/entities/conversation.entity';
 import { Message } from './common/entities/message.entity';
 import { Organization } from './common/entities/organization.entity';
 import { AuditLog } from './common/entities/audit-log.entity';
+import { Plan } from './common/entities/plan.entity';
+import { Subscription } from './common/entities/subscription.entity';
+import { TokenWallet } from './common/entities/token-wallet.entity';
+import { TokenTransaction } from './common/entities/token-transaction.entity';
+import { PaymentMethod } from './common/entities/payment-method.entity';
+import { Invoice } from './common/entities/invoice.entity';
 import { SeedModule } from './modules/seed/seed.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
@@ -38,6 +44,14 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { EmailModule } from './modules/email/email.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
+import { PlansModule } from './modules/plans/plans.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { TokenWalletModule } from './modules/token-wallet/token-wallet.module';
+import { TokenTransactionsModule } from './modules/token-transactions/token-transactions.module';
+import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
+import { InvoicesModule } from './modules/invoices/invoices.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 @Module({
   imports: [
@@ -82,6 +96,12 @@ import { ConversationsModule } from './modules/conversations/conversations.modul
             Widget,
             Conversation,
             Message,
+            Plan,
+            Subscription,
+            TokenWallet,
+            TokenTransaction,
+            PaymentMethod,
+            Invoice,
           ],
           synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
           ...(sslEnabled && {
@@ -110,6 +130,14 @@ import { ConversationsModule } from './modules/conversations/conversations.modul
     EmailModule,
     StorageModule,
     ConversationsModule,
+    PlansModule,
+    SubscriptionsModule,
+    TokenWalletModule,
+    TokenTransactionsModule,
+    PaymentMethodsModule,
+    InvoicesModule,
+    WebhooksModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [

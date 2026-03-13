@@ -380,6 +380,21 @@ export class SourcesService {
     });
   }
 
+  /** Total storage (file_size_bytes) for the current org, excluding soft-deleted sources. */
+  async getTotalStorageBytesForOrganization(ctx: RequestContext): Promise<number> {
+    const orgId = ctx.user?.organizationId;
+    if (!orgId) {
+      throw new BadRequestException('Organization context required');
+    }
+    const result = await this.kbSourceRepository
+      .createQueryBuilder('kb')
+      .select('COALESCE(SUM(kb.file_size_bytes), 0)', 'sum')
+      .where('kb.organization_id = :orgId', { orgId })
+      .andWhere('kb.deleted_at IS NULL')
+      .getRawOne<{ sum: string }>();
+    return Math.floor(parseFloat(result?.sum ?? '0'));
+  }
+
   async remove(ctx: RequestContext, id: string): Promise<void> {
     const source = await this.findOne(ctx, id);
     source.collectionId = null;

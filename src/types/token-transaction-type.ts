@@ -1,0 +1,6 @@
+export enum TokenTransactionType {
+  SUBSCRIPTION_GRANT = 'SUBSCRIPTION_GRANT',
+  USAGE = 'USAGE',
+  ADJUSTMENT = 'ADJUSTMENT',
+  PURCHASE = 'PURCHASE',
+}
