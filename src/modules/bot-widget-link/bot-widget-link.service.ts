@@ -6,27 +6,23 @@ import { Widget } from '../../common/entities/widget.entity';
 import { WidgetPosition, WidgetAppearance } from '../../types/widget';
 
 /**
- * Single place for bot ↔ widget link behavior (e.g. when a bot is removed, delete its widget).
- * Depends only on entities; BotsModule imports this, no dependency on WidgetsModule — no circular deps.
+ * Single place for bot ↔ widget link behavior. Each bot has two widgets (LIGHT and DARK mode).
  */
 @Injectable()
 export class BotWidgetLinkService {
   constructor(
-    @InjectRepository(Bot)
-    private readonly botRepository: Repository<Bot>,
     @InjectRepository(Widget)
     private readonly widgetRepository: Repository<Widget>,
   ) {}
 
   /**
-   * Create a default widget for a bot and link it. Caller is responsible for access checks.
+   * Create default LIGHT and DARK widgets for a bot and link them. Caller is responsible for access checks.
    * Used by BotsService when a bot is created.
    */
-  async createDefaultWidgetForBot(botId: string): Promise<Widget> {
-    const widget = this.widgetRepository.create({
-      botLogoUrl: null,
+  async createDefaultWidgetForBot(botId: string): Promise<Widget[]> {
+    const defaults = {
+      botLogoUrl: null as string | null,
       position: WidgetPosition.BOTTOM_RIGHT,
-      appearance: WidgetAppearance.LIGHT,
       primaryColor: '#7b61ff',
       headerTextColor: '#fefefe',
       background: '#fefefe',
@@ -38,49 +34,41 @@ export class BotWidgetLinkService {
       welcomeMessage:
         'Welcome to Onboard Support! Ask me anything about our products.',
       showPoweredBy: false,
+    };
+    const lightWidget = this.widgetRepository.create({
+      botId,
+      mode: WidgetAppearance.LIGHT,
+      ...defaults,
     });
-    const saved = await this.widgetRepository.save(widget);
-    await this.setBotWidget(botId, saved);
-    return saved;
+    const darkWidget = this.widgetRepository.create({
+      botId,
+      mode: WidgetAppearance.DARK,
+      ...defaults,
+    });
+    const savedLight = await this.widgetRepository.save(lightWidget);
+    const savedDark = await this.widgetRepository.save(darkWidget);
+    return [savedLight, savedDark];
   }
 
   /**
-   * Set the widget for a bot (link). Caller is responsible for access checks.
+   * Soft-delete all widgets for the given bot. Caller must pass bot with widgets relation loaded.
+   * Used by BotsService when a bot is removed.
    */
-  async setBotWidget(botId: string, widget: Widget): Promise<void> {
-    const bot = await this.botRepository.findOne({ where: { id: botId } });
-    if (bot) {
-      bot.widget = widget;
-      await this.botRepository.save(bot);
-    }
-  }
-
-  /**
-   * Soft-delete the widget linked to the given bot. Caller must pass bot with widget relation loaded.
-   * Unlinks the widget from the bot, then soft-deletes the widget.
-   * Caller is responsible for access checks. Used by BotsService when a bot is removed.
-   */
-  async removeWidgetForBot(bot: Bot & { widget?: Widget | null }): Promise<void> {
-    if (bot.widget) {
-      const widget = bot.widget;
-      bot.widget = null;
-      await this.botRepository.save(bot);
+  async removeWidgetsForBot(bot: Bot & { widgets?: Widget[] }): Promise<void> {
+    const widgets = bot.widgets ?? (await this.widgetRepository.find({ where: { botId: bot.id } }));
+    for (const widget of widgets) {
       await this.widgetRepository.softRemove(widget);
     }
   }
 
   /**
-   * Unlink the widget from a bot (set bot.widget = null). Caller is responsible for access checks.
-   * Used by WidgetsService when soft-deleting a widget.
+   * Unlink a widget from its bot (set botId = null). Used when soft-deleting a single widget.
    */
-  async unlinkWidgetFromBot(botId: string): Promise<void> {
-    const bot = await this.botRepository.findOne({
-      where: { id: botId },
-      relations: ['widget'],
-    });
-    if (bot?.widget) {
-      bot.widget = null;
-      await this.botRepository.save(bot);
+  async unlinkWidget(widget: Widget): Promise<void> {
+    if (widget.botId) {
+      widget.botId = null;
+      widget.bot = null;
+      await this.widgetRepository.save(widget);
     }
   }
 }

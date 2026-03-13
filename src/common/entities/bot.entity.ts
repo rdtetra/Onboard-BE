@@ -7,7 +7,6 @@ import {
   ManyToMany,
   JoinTable,
   OneToMany,
-  OneToOne,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { BotType, Behavior, BotPriority } from '../../types/bot';
@@ -99,7 +98,6 @@ export class Bot extends BaseEntity {
   @OneToMany(() => Conversation, (conversation) => conversation.bot)
   conversations: Conversation[];
 
-  @OneToOne(() => Widget, (widget) => widget.bot, { onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'widget_id' })
-  widget: Widget | null;
+  @OneToMany(() => Widget, (widget) => widget.bot)
+  widgets: Widget[];
 }

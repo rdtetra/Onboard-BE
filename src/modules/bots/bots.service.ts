@@ -84,11 +84,11 @@ export class BotsService {
 
     const saved = await this.botRepository.save(bot);
     await this.botWidgetLinkService.createDefaultWidgetForBot(saved.id);
-    const withWidget = await this.botRepository.findOne({
+    const withWidgets = await this.botRepository.findOne({
       where: { id: saved.id },
-      relations: ['widget'],
+      relations: ['widgets'],
     });
-    return withWidget ?? saved;
+    return withWidgets ?? saved;
   }
 
   async findAll(
@@ -384,8 +384,8 @@ export class BotsService {
   }
 
   async remove(ctx: RequestContext, id: string): Promise<void> {
-    const bot = await this.findOne(ctx, id, { relations: ['widget'] });
-    await this.botWidgetLinkService.removeWidgetForBot(bot);
+    const bot = await this.findOne(ctx, id, { relations: ['widgets'] });
+    await this.botWidgetLinkService.removeWidgetsForBot(bot);
     await this.botTaskLinkService.softRemoveTasksForBot(bot.id);
     await this.botRepository.softRemove(bot);
   }

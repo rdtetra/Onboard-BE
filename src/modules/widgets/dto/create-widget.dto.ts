@@ -17,6 +17,9 @@ export class CreateWidgetDto {
   @IsUUID()
   botId: string;
 
+  @IsEnum(WidgetAppearance)
+  mode: WidgetAppearance;
+
   /** Bot logo URL (image max 1 MB, png or jpg) */
   @IsOptional()
   @IsString()
@@ -27,10 +30,6 @@ export class CreateWidgetDto {
   @IsOptional()
   @IsEnum(WidgetPosition)
   position?: WidgetPosition;
-
-  @IsOptional()
-  @IsEnum(WidgetAppearance)
-  appearance?: WidgetAppearance;
 
   @IsOptional()
   @IsString()

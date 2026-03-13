@@ -19,6 +19,7 @@ import { Widget } from '../../common/entities/widget.entity';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { Allow } from '../../common/decorators/allow.decorator';
 import { Permission } from '../../types/permissions';
+import { WidgetAppearance } from '../../types/widget';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import { widgetLogoUploadOptions } from './widget-logo-upload.options';
@@ -42,20 +43,36 @@ export class WidgetsController {
   findAll(
     @RequestContext() ctx: RequestContextType,
     @Query('botId') botId?: string,
+    @Query('mode') mode?: WidgetAppearance,
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<PaginatedResult<Widget>> {
-    return this.widgetsService.findAll(ctx, { page, limit }, { botId, search });
+    return this.widgetsService.findAll(ctx, { page, limit }, { botId, mode, search });
   }
 
   @Get('by-bot/:botId')
   @Allow(Permission.READ_WIDGET)
-  findByBot(
+  findByBotAndMode(
     @RequestContext() ctx: RequestContextType,
     @Param('botId') botId: string,
+    @Query('mode') mode: string,
   ): Promise<Widget | null> {
-    return this.widgetsService.findByBotId(ctx, botId);
+    return this.widgetsService.findByBotIdAndMode(ctx, botId, mode);
+  }
+
+  @Patch('by-bot/:botId/mode/:mode')
+  @Allow(Permission.UPDATE_WIDGET)
+  @UseFilters(UploadExceptionFilter)
+  @UseInterceptors(FileInterceptor('logo', widgetLogoUploadOptions))
+  updateByBotAndMode(
+    @RequestContext() ctx: RequestContextType,
+    @Param('botId') botId: string,
+    @Param('mode') mode: string,
+    @Body() updateWidgetDto: UpdateWidgetDto,
+    @UploadedFile() logoFile?: Express.Multer.File,
+  ): Promise<Widget> {
+    return this.widgetsService.updateByBotIdAndMode(ctx, botId, mode, updateWidgetDto, logoFile);
   }
 
   @Get(':id')

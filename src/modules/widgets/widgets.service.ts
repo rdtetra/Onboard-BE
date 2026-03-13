@@ -37,18 +37,20 @@ export class WidgetsService {
       throw new UnauthorizedException('Authentication required');
     }
     const bot = await this.botsService.findOne(ctx, dto.botId, {
-      relations: ['widget'],
+      relations: ['widgets'],
     });
-    if (bot.widget) {
+    const existingForMode = (bot.widgets ?? []).find((w) => w.mode === dto.mode);
+    if (existingForMode) {
       throw new ConflictException(
-        'A widget configuration already exists for this bot',
+        `A ${dto.mode} widget already exists for this bot`,
       );
     }
 
     const widget = this.widgetRepository.create({
+      botId: dto.botId,
+      mode: dto.mode,
       botLogoUrl: dto.botLogoUrl ?? null,
       position: dto.position ?? WidgetPosition.BOTTOM_RIGHT,
-      appearance: dto.appearance ?? WidgetAppearance.LIGHT,
       primaryColor: dto.primaryColor ?? '#000000',
       headerTextColor: dto.headerTextColor ?? '#000000',
       background: dto.background ?? '#ffffff',
@@ -61,7 +63,6 @@ export class WidgetsService {
       showPoweredBy: dto.showPoweredBy ?? true,
     });
     const saved = await this.widgetRepository.save(widget);
-    await this.botWidgetLinkService.setBotWidget(dto.botId, saved);
     const withBot = await this.widgetRepository.findOne({
       where: { id: saved.id },
       relations: ['bot'],
@@ -72,7 +73,7 @@ export class WidgetsService {
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
-    filters?: { botId?: string; search?: string },
+    filters?: { botId?: string; search?: string; mode?: WidgetAppearance },
   ): Promise<PaginatedResult<Widget>> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
@@ -100,6 +101,9 @@ export class WidgetsService {
     }
     if (Object.keys(where.bot).length === 0) {
       delete where.bot;
+    }
+    if (filters?.mode) {
+      where.mode = filters.mode;
     }
     if (filters?.search?.trim()) {
       where.headerText = ILike(`%${filters.search.trim()}%`);
@@ -133,14 +137,23 @@ export class WidgetsService {
     return widget;
   }
 
-  async findByBotId(ctx: RequestContext, botId: string): Promise<Widget | null> {
+  /** Get the widget for a bot and mode. Returns null if none. */
+  async findByBotIdAndMode(
+    ctx: RequestContext,
+    botId: string,
+    mode: string,
+  ): Promise<Widget | null> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
-    const bot = await this.botsService.findOne(ctx, botId, {
-      relations: ['widget'],
+    if (!mode || (mode !== WidgetAppearance.LIGHT && mode !== WidgetAppearance.DARK)) {
+      throw new BadRequestException('Query param "mode" is required (light or dark)');
+    }
+    await this.botsService.findOne(ctx, botId);
+    return this.widgetRepository.findOne({
+      where: { botId, mode: mode as WidgetAppearance },
+      relations: ['bot'],
     });
-    return bot.widget ?? null;
   }
 
   async update(
@@ -150,7 +163,7 @@ export class WidgetsService {
     logoFile?: Express.Multer.File,
   ): Promise<Widget> {
     const widget = await this.findOne(ctx, id);
-    const { botId: _, ...rest } = dto;
+    const { botId: _b, mode: _m, ...rest } = dto;
 
     if (logoFile) {
       try {
@@ -170,11 +183,29 @@ export class WidgetsService {
     return this.widgetRepository.save(widget);
   }
 
+  /** Update the widget for a bot and mode. */
+  async updateByBotIdAndMode(
+    ctx: RequestContext,
+    botId: string,
+    mode: string,
+    dto: UpdateWidgetDto,
+    logoFile?: Express.Multer.File,
+  ): Promise<Widget> {
+    if (mode !== WidgetAppearance.LIGHT && mode !== WidgetAppearance.DARK) {
+      throw new BadRequestException('Param "mode" must be light or dark');
+    }
+    const existing = await this.findByBotIdAndMode(ctx, botId, mode);
+    if (existing) {
+      return this.update(ctx, existing.id, dto, logoFile);
+    }
+    throw new NotFoundException(
+      `No ${mode} widget found for this bot. Create it first or use widget id.`,
+    );
+  }
+
   async remove(ctx: RequestContext, id: string): Promise<void> {
     const widget = await this.findOne(ctx, id);
-    if (widget.bot) {
-      await this.botWidgetLinkService.unlinkWidgetFromBot(widget.bot.id);
-    }
+    await this.botWidgetLinkService.unlinkWidget(widget);
     await this.widgetRepository.softRemove(widget);
   }
 }

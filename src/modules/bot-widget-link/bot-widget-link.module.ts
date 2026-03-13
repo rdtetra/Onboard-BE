@@ -9,7 +9,7 @@ import { BotWidgetLinkService } from './bot-widget-link.service';
  * Depends only on entities; BotsModule imports this, never WidgetsModule — no circular deps.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Bot, Widget])],
+  imports: [TypeOrmModule.forFeature([Widget])],
   providers: [BotWidgetLinkService],
   exports: [BotWidgetLinkService],
 })

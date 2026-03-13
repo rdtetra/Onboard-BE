@@ -499,7 +499,7 @@ Returns aggregated stats for bots in the current org, or for a single bot when `
 | visibilityEndDate   | PROJECT only, required, ISO date string |
 | oncePerSession      | PROJECT only, optional, default false |
 
-**Response:** `201` — created bot in `data` (includes `widget` relation). A default widget is created and linked to the bot automatically; use PATCH `/widgets/:id` to customize it.
+**Response:** `201` — created bot in `data` (includes `widgets` relation). Two default widgets (light and dark) are created for the bot; use widget APIs to customize by mode.
 
 ### Update bot
 **PATCH** `/bots/:id` — **Permission:** `UPDATE_BOT`. Body: subset of create fields. `botType` cannot be changed.
@@ -513,7 +513,7 @@ Returns aggregated stats for bots in the current org, or for a single bot when `
 **Permission:** `UPDATE_BOT`.
 
 ### Delete bot
-**DELETE** `/bots/:id` — **Permission:** `DELETE_BOT`. Soft-delete. The bot's linked widget (if any) is soft-deleted and unlinked; tasks for the bot are soft-deleted. **Errors:** `404` if not found.
+**DELETE** `/bots/:id` — **Permission:** `DELETE_BOT`. Soft-delete. The bot's widgets (light and dark) are soft-deleted; tasks for the bot are soft-deleted. **Errors:** `404` if not found.
 
 ### Get bot's KB sources
 **GET** `/bots/:id/kb-sources` — **Permission:** `READ_BOT`. Returns the list of KB sources linked to this bot. **Errors:** `404` if bot not found.
@@ -625,31 +625,31 @@ Base path: `/conversations`. Conversations belong to a bot (one bot has many con
 
 ## Widgets API
 
-Base path: `/widgets`. Each widget is the configuration for one bot (one-to-one: bot has at most one widget). Widgets control appearance (position, colors, header text, welcome message, etc.) for the chat widget. All operations are scoped to the current user's organization (SUPER_ADMIN can see all).
+Base path: `/widgets`. Each bot has two widget entities: one for **light** mode and one for **dark** mode. Each widget row has a `mode` (`light` | `dark`) and a single set of theme fields (position, colors, header text, welcome message, etc.). Get and update by bot + mode. All operations are scoped to the current user's organization (SUPER_ADMIN can see all).
 
 ### List widgets
 **GET** `/widgets` — **Permission:** `READ_WIDGET`
 
-**Query params:** `page`, `limit` (default 20, max 100), `botId` (filter by bot UUID), `search` (header text, partial case-insensitive).
+**Query params:** `page`, `limit` (default 20, max 100), `botId` (filter by bot UUID), `mode` (filter: `light` | `dark`), `search` (header text, partial case-insensitive).
 
-**Response:** `200 OK` — `data` is paginated: `{ data: Widget[], total, page, limit, totalPages }`. Each widget includes `bot` when loaded.
+**Response:** `200 OK` — `data` is paginated: `{ data: Widget[], total, page, limit, totalPages }`. Each widget includes `bot` when loaded. Each widget has a `mode` field.
 
 ### Get one widget
 **GET** `/widgets/:id` — **Permission:** `READ_WIDGET`. **Errors:** `404` if not found or user has no access to the widget's bot.
 
-### Get widget by bot
-**GET** `/widgets/by-bot/:botId` — **Permission:** `READ_WIDGET`. Returns the widget for the given bot, or `null` in `data` if the bot has no widget. **Errors:** `404` if bot not found or no access.
+### Get widget by bot and mode
+**GET** `/widgets/by-bot/:botId?mode=light|dark` — **Permission:** `READ_WIDGET`. Query param **`mode`** is required (`light` or `dark`). Returns the widget for that bot and mode, or `null` if none. **Errors:** `400` if `mode` missing or invalid; `404` if bot not found or no access.
 
 ### Create widget
-**POST** `/widgets` — **Permission:** `CREATE_WIDGET`. Caller must have access to the bot. A bot can have at most one widget. (When a bot is created, a default widget is created automatically; use this endpoint only if that widget was deleted and you need to create a new one.)
+**POST** `/widgets` — **Permission:** `CREATE_WIDGET`. Caller must have access to the bot. Body must include `mode`; at most one widget per (bot, mode). When a bot is created, default light and dark widgets are created; use this to add a widget for a mode if it was deleted.
 
 **Request body:**
 ```json
 {
   "botId": "uuid-of-bot",
+  "mode": "light",
   "botLogoUrl": "https://example.com/logo.png",
   "position": "bottom_right",
-  "appearance": "light",
   "primaryColor": "#000000",
   "headerTextColor": "#000000",
   "background": "#ffffff",
@@ -666,9 +666,9 @@ Base path: `/widgets`. Each widget is the configuration for one bot (one-to-one:
 | Field           | Rules |
 |-----------------|-------|
 | botId           | Required, UUID of an existing bot (user must have access) |
+| mode            | Required: `light` \| `dark` |
 | botLogoUrl      | Optional, URL, max 2000 |
 | position        | Optional: `bottom_left` \| `bottom_right`; default `bottom_right` |
-| appearance      | Optional: `light` \| `dark`; default `light` |
 | primaryColor     | Optional, hex e.g. `#ffffff`; default `#000000` |
 | headerTextColor  | Optional, hex; default `#000000` |
 | background       | Optional, hex; default `#ffffff` |
@@ -680,18 +680,20 @@ Base path: `/widgets`. Each widget is the configuration for one bot (one-to-one:
 | welcomeMessage   | Optional, max 5000; default null |
 | showPoweredBy    | Optional, boolean; default true |
 
-**Response:** `201` — created widget in `data` (includes `bot`). **Errors:** `404` if bot not found; `409` if the bot already has a widget.
+**Response:** `201` — created widget in `data` (includes `bot`). **Errors:** `404` if bot not found; `409` if the bot already has a widget for that mode.
 
-### Update widget
-**PATCH** `/widgets/:id` — **Permission:** `UPDATE_WIDGET`.
+### Update widget by id
+**PATCH** `/widgets/:id` — **Permission:** `UPDATE_WIDGET`. Body: any subset of create fields except `botId` and `mode`. **Errors:** `404` if not found.
 
-- **JSON body:** any subset of create fields (except `botId`). **Errors:** `404` if not found.
-- **Multipart (optional logo):** send `Content-Type: multipart/form-data` with form fields for any widget fields and an optional file field **`logo`** (PNG or JPEG, max 1 MB). If `logo` is present, it is uploaded to S3 and `botLogoUrl` is set to the returned URL. You can send only the logo (no other fields), only other fields, or both.
+### Update widget by bot and mode
+**PATCH** `/widgets/by-bot/:botId/mode/:mode` — **Permission:** `UPDATE_WIDGET`. Path param `mode` is `light` or `dark`. Body and optional logo same as PATCH by id. Updates the widget for that bot and mode. **Errors:** `404` if no widget exists for that bot and mode.
+
+- **Multipart (optional logo):** for either PATCH, send `Content-Type: multipart/form-data` with form fields and optional file **`logo`** (PNG or JPEG, max 1 MB); `botLogoUrl` is set to the uploaded URL.
 
 ### Delete widget
 **DELETE** `/widgets/:id` — **Permission:** `DELETE_WIDGET`. Soft-deletes the widget and unlinks it from the bot. **Errors:** `404` if not found.
 
-**Widget enums:** WidgetPosition `bottom_left` | `bottom_right`; WidgetAppearance `light` | `dark`. All color fields use hex codes (e.g. `#ffffff`).
+**Widget enums:** WidgetPosition `bottom_left` | `bottom_right`; mode (WidgetAppearance) `light` | `dark`. All color fields use hex codes (e.g. `#ffffff`). Each widget entity has one set of theme fields and a `mode`; use the widget for the current theme (light or dark).
 
 ---
 

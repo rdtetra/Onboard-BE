@@ -1,16 +1,23 @@
-import { Entity, Column, OneToOne, DeleteDateColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, DeleteDateColumn, Unique } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Bot } from './bot.entity';
 import { WidgetPosition, WidgetAppearance } from '../../types/widget';
 
 @Entity('widgets')
+@Unique(['botId', 'mode'])
 export class Widget extends BaseEntity {
   @DeleteDateColumn({ name: 'deleted_at' })
   deletedAt: Date | null;
 
-  /** Inverse side of Bot.widget – Bot owns the relation (bots.widget_id). */
-  @OneToOne(() => Bot, (bot) => bot.widget)
+  @Column({ type: 'uuid', name: 'bot_id', nullable: true })
+  botId: string | null;
+
+  @ManyToOne(() => Bot, (bot) => bot.widgets, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'bot_id' })
   bot: Bot | null;
+
+  @Column({ type: 'enum', enum: WidgetAppearance, default: WidgetAppearance.LIGHT })
+  mode: WidgetAppearance;
 
   /** Bot logo image URL or path (max 1 MB, png or jpg) */
   @Column({ type: 'varchar', name: 'bot_logo_url', nullable: true })
@@ -18,9 +25,6 @@ export class Widget extends BaseEntity {
 
   @Column({ type: 'enum', enum: WidgetPosition, default: WidgetPosition.BOTTOM_RIGHT })
   position: WidgetPosition;
-
-  @Column({ type: 'enum', enum: WidgetAppearance, default: WidgetAppearance.LIGHT })
-  appearance: WidgetAppearance;
 
   @Column({ type: 'varchar', name: 'primary_color', length: 7, default: '#000000' })
   primaryColor: string;
