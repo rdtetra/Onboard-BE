@@ -5,18 +5,23 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, ILike } from 'typeorm';
+import { Repository, FindOptionsWhere, ILike, In } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
+import { Conversation } from '../../common/entities/conversation.entity';
+import { Message } from '../../common/entities/message.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { BotKbLinkService } from '../bot-kb-link/bot-kb-link.service';
 import { BotTaskLinkService } from '../bot-task-link/bot-task-link.service';
 import { BotWidgetLinkService } from '../bot-widget-link/bot-widget-link.service';
+import { TokenWalletService } from '../token-wallet/token-wallet.service';
+import { TokenTransactionsService } from '../token-transactions/token-transactions.service';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
 import { BotType, Behavior, BotPriority } from '../../types/bot';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
+import type { BotsOverview, BotWithTokensUsed } from '../../types/bots-overview';
 import {
   parsePagination,
   toPaginatedResult,
@@ -27,9 +32,15 @@ export class BotsService {
   constructor(
     @InjectRepository(Bot)
     private readonly botRepository: Repository<Bot>,
+    @InjectRepository(Conversation)
+    private readonly conversationRepository: Repository<Conversation>,
+    @InjectRepository(Message)
+    private readonly messageRepository: Repository<Message>,
     private readonly botKbLinkService: BotKbLinkService,
     private readonly botTaskLinkService: BotTaskLinkService,
     private readonly botWidgetLinkService: BotWidgetLinkService,
+    private readonly tokenWalletService: TokenWalletService,
+    private readonly tokenTransactionsService: TokenTransactionsService,
   ) {}
 
   async create(ctx: RequestContext, createBotDto: CreateBotDto): Promise<Bot> {
@@ -84,7 +95,7 @@ export class BotsService {
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
     filters?: { botType?: BotType; search?: string },
-  ): Promise<PaginatedResult<Bot>> {
+  ): Promise<PaginatedResult<BotWithTokensUsed>> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
@@ -118,13 +129,141 @@ export class BotsService {
     
     const [data, total] = await this.botRepository.findAndCount({
       where,
-      relations: ['tasks'],
+      relations: ['tasks', 'conversations'],
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
     });
-    
-    return toPaginatedResult(data, total, page, limit);
+
+    const dataWithTokens = await this.attachTokensUsedToBots(
+      orgId ?? undefined,
+      data,
+    );
+    return toPaginatedResult(dataWithTokens, total, page, limit);
+  }
+
+  private async attachTokensUsedToBots(
+    orgId: string | undefined,
+    bots: Bot[],
+  ): Promise<BotWithTokensUsed[]> {
+    if (bots.length === 0 || !orgId) {
+      return bots.map((b) => ({ ...b, tokensUsed: 0 }));
+    }
+    const wallet = await this.tokenWalletService.getByOrganizationId(orgId);
+    if (!wallet) {
+      return bots.map((b) => ({ ...b, tokensUsed: 0 }));
+    }
+    const usageRows = await this.tokenTransactionsService.getUsageByBotIds(
+      wallet.id,
+      bots.map((b) => b.id),
+    );
+    const usageByBotId = new Map(
+      usageRows.map((r) => [r.botId, r.tokensUsed]),
+    );
+    return bots.map((b) => ({
+      ...b,
+      tokensUsed: usageByBotId.get(b.id) ?? 0,
+    }));
+  }
+
+  /**
+   * Overview stats for one bot or all org bots: active bots, conversations, messages, tokens used, KB sources.
+   * When botId is provided, stats are scoped to that bot; otherwise to all bots in the org.
+   */
+  async getOverview(
+    ctx: RequestContext,
+    botId?: string,
+  ): Promise<BotsOverview> {
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    const orgId =
+      ctx.user.roleName === RoleName.SUPER_ADMIN
+        ? undefined
+        : ctx.user.organizationId;
+    if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
+      throw new BadRequestException(
+        'Organization context required for bots overview',
+      );
+    }
+
+    let botIds: string[];
+    if (botId) {
+      const bot = await this.findOne(ctx, botId);
+      botIds = [bot.id];
+    } else {
+      const where: FindOptionsWhere<Bot> = {};
+      if (orgId) where.organizationId = orgId;
+      const bots = await this.botRepository.find({
+        where,
+        select: ['id', 'isActive'],
+      });
+      botIds = bots.map((b) => b.id);
+    }
+
+    if (botIds.length === 0) {
+      return {
+        activeBots: 0,
+        totalConversations: 0,
+        totalMessages: 0,
+        totalTokensUsed: 0,
+        totalKbSources: 0,
+      };
+    }
+
+    const [
+      activeBots,
+      totalConversations,
+      totalMessages,
+      totalTokensUsed,
+      totalKbSources,
+    ] = await Promise.all([
+      this.botRepository.count({
+        where: { id: In(botIds), isActive: true },
+      }),
+      this.conversationRepository.count({
+        where: { botId: In(botIds) },
+      }),
+      this.messageRepository
+        .createQueryBuilder('msg')
+        .innerJoin('msg.conversation', 'c')
+        .where('c.botId IN (:...botIds)', { botIds })
+        .getCount(),
+      orgId
+        ? this.getTotalTokensUsedForBots(orgId, botIds)
+        : Promise.resolve(0),
+      this.getDistinctKbSourcesCountForBots(botIds),
+    ]);
+
+    return {
+      activeBots,
+      totalConversations,
+      totalMessages,
+      totalTokensUsed,
+      totalKbSources,
+    };
+  }
+
+  private async getTotalTokensUsedForBots(
+    orgId: string,
+    botIds: string[],
+  ): Promise<number> {
+    const wallet = await this.tokenWalletService.getByOrganizationId(orgId);
+    if (!wallet) return 0;
+    return this.tokenTransactionsService.getTotalUsageByBotIds(
+      wallet.id,
+      botIds,
+    );
+  }
+
+  private async getDistinctKbSourcesCountForBots(botIds: string[]): Promise<number> {
+    const result = await this.botRepository
+      .createQueryBuilder('bot')
+      .innerJoin('bot.kbSources', 'kb')
+      .where('bot.id IN (:...botIds)', { botIds })
+      .select('COUNT(DISTINCT kb.id)', 'count')
+      .getRawOne<{ count: string }>();
+    return Math.floor(parseFloat(result?.count ?? '0'));
   }
 
   /** Returns all bots the user can access (org-scoped), id and name only (e.g. for dropdowns). */

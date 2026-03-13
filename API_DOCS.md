@@ -440,6 +440,22 @@ Base path: `/bots`. All operations are scoped to the current user's organization
 
 Returns all bots the user can access (org-scoped; SUPER_ADMIN sees all), **id and name only**, for use in dropdowns. Not paginated.
 
+### Bots overview
+**GET** `/bots/overview` — **Permission:** `READ_BOT`
+
+Returns aggregated stats for bots in the current org, or for a single bot when `botId` is provided.
+
+**Query params:** `botId` (optional, UUID) — when present, stats are scoped to that bot; otherwise to all org bots.
+
+**Response:** `200 OK` — `data` shape:
+- `activeBots` (number) — count of bots in scope with `isActive: true`
+- `totalConversations` (number) — conversations attached to those bots
+- `totalMessages` (number) — messages in those conversations
+- `totalTokensUsed` (number) — USAGE token transactions for those bots (org wallet)
+- `totalKbSources` (number) — distinct KB sources linked to those bots
+
+**Errors:** `404` if `botId` is provided and bot not found or different org.
+
 **Response:** `200 OK` — `data` is an array: `{ id: string, name: string }[]`, ordered by name.
 
 ### Get one bot

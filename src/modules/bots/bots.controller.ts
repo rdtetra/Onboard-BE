@@ -18,6 +18,7 @@ import { Permission } from '../../types/permissions';
 import { BotType } from '../../types/bot';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
+import type { BotsOverview, BotWithTokensUsed } from '../../types/bots-overview';
 
 @Controller('bots')
 export class BotsController {
@@ -40,7 +41,7 @@ export class BotsController {
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
-  ): Promise<PaginatedResult<Bot>> {
+  ): Promise<PaginatedResult<BotWithTokensUsed>> {
     return this.botsService.findAll(ctx, { page, limit }, { botType, search });
   }
 
@@ -50,6 +51,15 @@ export class BotsController {
     @RequestContext() ctx: RequestContextType,
   ): Promise<{ id: string; name: string }[]> {
     return this.botsService.findOptions(ctx);
+  }
+
+  @Get('overview')
+  @Allow(Permission.READ_BOT)
+  getOverview(
+    @RequestContext() ctx: RequestContextType,
+    @Query('botId') botId?: string,
+  ): Promise<BotsOverview> {
+    return this.botsService.getOverview(ctx, botId);
   }
 
   @Get(':id/kb-sources')
