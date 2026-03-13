@@ -79,10 +79,7 @@ export class UsersService {
     const saved = await this.userRepository.save(user);
 
     if (!isFirstUser && roleName === RoleName.TENANT) {
-      await this.organizationsService.createForUser(
-        saved.id,
-        `${saved.fullName || saved.email}'s Organization`,
-      );
+      await this.organizationsService.createForUser(saved.id);
     }
 
     const updated = await this.userRepository.findOne({
@@ -107,7 +104,7 @@ export class UsersService {
   }
 
   /**
-   * Super admin invites a new user: they get a new organization (random name) and are set as owner (TENANT).
+   * Super admin invites a new user: they get a new organization (name = UUID) and are set as owner (TENANT).
    * Email is sent first; the user is created only if the email is sent successfully.
    */
   async inviteBySuperAdmin(
@@ -145,8 +142,7 @@ export class UsersService {
     });
     const saved = await this.userRepository.save(user);
 
-    const randomOrgName = `Organization ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    await this.organizationsService.createForUser(saved.id, randomOrgName);
+    await this.organizationsService.createForUser(saved.id);
 
     const updated = await this.userRepository.findOne({
       where: { id: saved.id },

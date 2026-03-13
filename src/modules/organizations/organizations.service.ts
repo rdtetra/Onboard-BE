@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 import { Organization } from '../../common/entities/organization.entity';
 import { User } from '../../common/entities/user.entity';
 import { Role } from '../../common/entities/role.entity';
@@ -28,10 +29,11 @@ export class OrganizationsService {
 
   /**
    * Create an organization for a user and set them as owner. Used when a new tenant signs up or when super admin invites.
+   * Organization name is set to a UUID.
    */
   async createForUser(
     userId: string,
-    name: string = 'My Organization',
+    _name?: string,
   ): Promise<Organization> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -56,7 +58,7 @@ export class OrganizationsService {
     }
 
     const org = this.organizationRepository.create({
-      name: name.trim(),
+      name: uuidv4(),
       ownerId: userId,
     });
     const saved = await this.organizationRepository.save(org);
