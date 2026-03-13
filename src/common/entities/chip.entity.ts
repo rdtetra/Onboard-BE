@@ -31,6 +31,10 @@ export class Chip extends BaseEntity {
   @Column({ type: 'varchar', length: 2048, nullable: true })
   url: string | null;
 
+  /** Open link in new tab (link-type chips). Default false. */
+  @Column({ type: 'boolean', name: 'new_tab', default: false })
+  newTab: boolean;
+
   @DeleteDateColumn({ name: 'deleted_at' })
   deletedAt: Date | null;
 }

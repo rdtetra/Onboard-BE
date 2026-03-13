@@ -71,6 +71,7 @@ export class TasksService {
           chipName: c.chipName.trim(),
           chipText: c.chipText.trim(),
           url: c.type === ChipType.LINK && c.url ? c.url.trim() : null,
+          newTab: c.type === ChipType.LINK ? (c.newTab ?? false) : false,
         })),
       );
       await this.chipRepository.save(chips);
@@ -179,6 +180,7 @@ export class TasksService {
             chipName: c.chipName.trim(),
             chipText: c.chipText.trim(),
             url: c.type === ChipType.LINK && c.url ? c.url.trim() : null,
+            newTab: c.type === ChipType.LINK ? (c.newTab ?? false) : false,
           })),
         );
         await this.chipRepository.save(chips);

@@ -5,7 +5,10 @@ import {
   MaxLength,
   IsUrl,
   ValidateIf,
+  IsOptional,
+  IsBoolean,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ChipType } from '../../../types/task';
 
 export class ChipDto {
@@ -29,4 +32,11 @@ export class ChipDto {
   @IsNotEmpty({ message: 'url is required when chip type is link' })
   @MaxLength(2048)
   url?: string;
+
+  /** Open link in new tab (for link-type chips only). Default false. Validated only when type is LINK. */
+  @ValidateIf((o) => o.type === ChipType.LINK)
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  newTab?: boolean;
 }
