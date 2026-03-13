@@ -256,7 +256,11 @@ export class UsersService {
 
     const qb = this.userRepository
       .createQueryBuilder('user')
-      .leftJoin('user.role', 'role')
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.organization', 'organization')
+      .leftJoinAndSelect('organization.bots', 'bots')
+      .leftJoinAndSelect('organization.kbSources', 'kbSources')
+      .leftJoinAndSelect('bots.conversations', 'conversations')
       .select([
         'user.id',
         'user.email',
@@ -271,6 +275,14 @@ export class UsersService {
         'user.joinedAt',
         'role.id',
         'role.name',
+        'organization.id',
+        'organization.name',
+        'bots.id',
+        'bots.name',
+        'kbSources.id',
+        'kbSources.name',
+        'conversations.id',
+        'conversations.botId',
       ])
       .orderBy('user.createdAt', 'DESC')
       .skip(skip)
