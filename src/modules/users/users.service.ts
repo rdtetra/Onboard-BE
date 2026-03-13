@@ -402,8 +402,8 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.getOne(id);
 
-    const { role: roleName, status: _status, ...rest } = updateUserDto;
-    // Status is not updatable via update(); use activate/deactivate endpoints.
+    const { role: roleName, status: _status, password: _password, ...rest } =
+      updateUserDto;
 
     if (roleName !== undefined) {
       const role = await this.roleRepository.findOne({
@@ -415,11 +415,6 @@ export class UsersService {
         );
       }
       user.role = role;
-    }
-
-    if (rest.password) {
-      rest.password = await hashPassword(rest.password);
-      user.passwordChangeRequired = false;
     }
 
     Object.assign(user, rest);
