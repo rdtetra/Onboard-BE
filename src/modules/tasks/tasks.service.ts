@@ -39,9 +39,10 @@ export class TasksService {
       throw new UnauthorizedException('Authentication required');
     }
     const bot = await this.botsService.findOne(ctx, dto.botId);
-    if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
-      throw new BadRequestException('Only project bots can have tasks');
-    }
+    // REVERTED: General bots can have tasks. This might be reverted - uncomment below to restore "Only project bots can have tasks".
+    // if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
+    //   throw new BadRequestException('Only project bots can have tasks');
+    // }
 
     const kbSources: KBSource[] = [];
     for (const sourceId of dto.kbSourceIds) {
@@ -153,9 +154,10 @@ export class TasksService {
     if (dto.isActive !== undefined) task.isActive = dto.isActive;
     if (dto.botId !== undefined) {
       const bot = await this.botsService.findOne(ctx, dto.botId);
-      if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
-        throw new BadRequestException('Only project bots can have tasks');
-      }
+      // REVERTED: General bots can have tasks. This might be reverted - uncomment below to restore "Only project bots can have tasks".
+      // if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
+      //   throw new BadRequestException('Only project bots can have tasks');
+      // }
       task.botId = dto.botId;
     }
     if (dto.kbSourceIds !== undefined) {
