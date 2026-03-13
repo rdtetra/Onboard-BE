@@ -52,6 +52,7 @@ import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -138,6 +139,7 @@ import { BillingModule } from './modules/billing/billing.module';
     InvoicesModule,
     WebhooksModule,
     BillingModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

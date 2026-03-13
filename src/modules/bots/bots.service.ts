@@ -291,6 +291,25 @@ export class BotsService {
     });
   }
 
+  /** Total bot count for current scope (all for super admin, org for tenant). Excludes soft-deleted. */
+  async countAll(ctx: RequestContext): Promise<number> {
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    const orgId =
+      ctx.user.roleName === RoleName.SUPER_ADMIN
+        ? undefined
+        : ctx.user.organizationId;
+    if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
+      throw new BadRequestException(
+        'Organization context required to list bots',
+      );
+    }
+    const where: FindOptionsWhere<Bot> = {};
+    if (orgId) where.organizationId = orgId;
+    return this.botRepository.count({ where });
+  }
+
   /** Returns IDs of all bots the user can access (org-scoped). */
   async findOne(
     ctx: RequestContext,

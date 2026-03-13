@@ -2,13 +2,15 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository, SelectQueryBuilder, In } from 'typeorm';
 import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { BotsService } from '../bots/bots.service';
 import { TokenUsageService } from '../token-transactions/token-usage.service';
+import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
@@ -41,6 +43,22 @@ export class ConversationsService {
       endedAt: null,
     });
     return this.conversationRepository.save(conversation);
+  }
+
+  /** Total conversation count for current scope (all for super admin, org bots for tenant). */
+  async countAll(ctx: RequestContext): Promise<number> {
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    if (ctx.user.roleName === RoleName.SUPER_ADMIN) {
+      return this.conversationRepository.count();
+    }
+    const botOptions = await this.botsService.findOptions(ctx);
+    const botIds = botOptions.map((o) => o.id);
+    if (botIds.length === 0) return 0;
+    return this.conversationRepository.count({
+      where: { botId: In(botIds) },
+    });
   }
 
   /**

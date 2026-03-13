@@ -80,6 +80,26 @@ All responses follow this format:
 
 ---
 
+## Admin API (Super Admin)
+
+Base path: `/admin`. All endpoints require **super admin** role; non–super-admins receive `403 Forbidden`.
+
+### Platform overview
+**GET** `/admin/overview`
+
+Returns platform-wide counts (no org filter). **Access:** Super admin only.
+
+**Response:** `200 OK` — `data` shape:
+- `totalTenants` (number) — total users (all users regardless of status)
+- `activeTenants` (number) — users with status `ACTIVE`
+- `totalBots` (number) — total bots (soft-deleted excluded)
+- `totalConversations` (number) — total conversations
+- `totalKbSources` (number) — total KB sources (soft-deleted excluded)
+
+**Errors:** `401` if unauthenticated; `403` if not super admin.
+
+---
+
 ## Auth Endpoints
 
 ### Register

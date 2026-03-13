@@ -465,6 +465,18 @@ export class UsersService {
     });
   }
 
+  /** Total count of all users (platform-wide). Used e.g. by super admin overview. */
+  async countAll(): Promise<number> {
+    return this.userRepository.count();
+  }
+
+  /** Count of users with status ACTIVE. Used e.g. by super admin overview (active tenants). */
+  async getActiveTenantsCount(): Promise<number> {
+    return this.userRepository.count({
+      where: { status: UserStatus.ACTIVE },
+    });
+  }
+
   /** Public check: whether any SUPER_ADMIN user exists (for initial setup flow). */
   async hasSuperAdmin(): Promise<boolean> {
     const count = await this.userRepository.count({

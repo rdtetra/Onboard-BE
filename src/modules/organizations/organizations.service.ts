@@ -21,6 +21,11 @@ export class OrganizationsService {
     private readonly roleRepository: Repository<Role>,
   ) {}
 
+  /** Total count of organizations (platform-wide). Used e.g. by super admin overview. */
+  async countAll(): Promise<number> {
+    return this.organizationRepository.count();
+  }
+
   /**
    * Create an organization for a user and set them as owner. Used when a new tenant signs up or when super admin invites.
    */

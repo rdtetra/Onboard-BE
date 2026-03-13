@@ -36,6 +36,24 @@ export class SourcesService {
     private readonly storageService: StorageService,
   ) {}
 
+  /** Total KB source count for current scope (all for super admin, org for tenant). Excludes soft-deleted. */
+  async countAll(ctx: RequestContext): Promise<number> {
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    if (ctx.user.roleName === RoleName.SUPER_ADMIN) {
+      return this.kbSourceRepository.count();
+    }
+    if (!ctx.user.organizationId) {
+      throw new BadRequestException(
+        'Organization context required to count KB sources',
+      );
+    }
+    return this.kbSourceRepository.count({
+      where: { organizationId: ctx.user.organizationId },
+    });
+  }
+
   private getNextRefreshAt(
     schedule: RefreshSchedule,
     from: Date = new Date(),

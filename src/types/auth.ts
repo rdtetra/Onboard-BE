@@ -1,4 +1,4 @@
-import { RoleName } from './roles';
+import type { RoleName } from './roles';
 
 export type JwtPayload = {
   email: string;
@@ -8,6 +8,8 @@ export type JwtPayload = {
 export type JwtUser = {
   userId: string;
   email: string;
+  roleName?: RoleName;
+  organizationId?: string | null;
 };
 
 export type AuthResponse = {
