@@ -402,7 +402,8 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.getOne(id);
 
-    const { role: roleName, ...rest } = updateUserDto;
+    const { role: roleName, status: _status, ...rest } = updateUserDto;
+    // Status is not updatable via update(); use activate/deactivate endpoints.
 
     if (roleName !== undefined) {
       const role = await this.roleRepository.findOne({
@@ -445,12 +446,18 @@ export class UsersService {
 
   async activate(ctx: RequestContext, id: string): Promise<User> {
     const user = await this.getOne(id);
+    if (user.status === UserStatus.PENDING) {
+      throw new BadRequestException('Cannot change status of pending users');
+    }
     user.status = UserStatus.ACTIVE;
     return this.userRepository.save(user);
   }
 
   async deactivate(ctx: RequestContext, id: string): Promise<User> {
     const user = await this.getOne(id);
+    if (user.status === UserStatus.PENDING) {
+      throw new BadRequestException('Cannot change status of pending users');
+    }
     user.status = UserStatus.DISABLED;
     return this.userRepository.save(user);
   }
