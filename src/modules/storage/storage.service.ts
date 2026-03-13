@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 
 const WIDGET_LOGO_MAX_BYTES = 1024 * 1024; // 1 MB
@@ -162,6 +167,19 @@ export class StorageService {
 
   isKbSourceS3Key(sourceValue: string): boolean {
     return sourceValue?.startsWith(KB_SOURCE_S3_PREFIX) === true;
+  }
+
+  /** Delete a KB source file from S3 by key. No-op if key is invalid or object does not exist. */
+  async deleteKbSourceFile(key: string): Promise<void> {
+    if (!key?.startsWith(KB_SOURCE_S3_PREFIX)) {
+      return;
+    }
+    await this.s3.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+    );
   }
 
   getPublicUrl(key: string): string {

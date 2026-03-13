@@ -399,6 +399,17 @@ export class SourcesService {
     const source = await this.findOne(ctx, id);
     source.collectionId = null;
     await this.kbSourceRepository.save(source);
+    if (
+      (source.sourceType === SourceType.PDF || source.sourceType === SourceType.DOCX) &&
+      source.sourceValue &&
+      this.storageService.isKbSourceS3Key(source.sourceValue)
+    ) {
+      try {
+        await this.storageService.deleteKbSourceFile(source.sourceValue);
+      } catch {
+        // Continue with soft-remove even if S3 delete fails (e.g. file already gone)
+      }
+    }
     await this.kbSourceRepository.softRemove(source);
   }
 
