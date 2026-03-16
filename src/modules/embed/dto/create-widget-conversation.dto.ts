@@ -1,8 +1,9 @@
-import { IsUUID } from 'class-validator';
+import { IsOptional, IsUUID } from 'class-validator';
 
 export class CreateWidgetConversationDto {
+  @IsOptional()
   @IsUUID()
-  botId: string;
+  botId?: string;
 
   @IsUUID()
   visitorId: string;

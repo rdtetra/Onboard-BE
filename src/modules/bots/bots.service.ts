@@ -16,6 +16,7 @@ import { BotTaskLinkService } from '../bot-task-link/bot-task-link.service';
 import { BotWidgetLinkService } from '../bot-widget-link/bot-widget-link.service';
 import { TokenWalletService } from '../token-wallet/token-wallet.service';
 import { TokenTransactionsService } from '../token-transactions/token-transactions.service';
+import { ConfigService } from '@nestjs/config';
 import { JwtWrapperService } from '../jwt/jwt.service';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
@@ -46,7 +47,15 @@ export class BotsService {
     private readonly tokenWalletService: TokenWalletService,
     private readonly tokenTransactionsService: TokenTransactionsService,
     private readonly jwtWrapperService: JwtWrapperService,
+    private readonly configService: ConfigService,
   ) {}
+
+  getEmbedScriptTag(backendUrl: string, widgetToken: string): string {
+    const base = backendUrl.replace(/\/$/, '');
+    const src = `${base}/embed/embed.js`;
+    const escaped = widgetToken.replace(/"/g, '&quot;');
+    return `<script src="${src}" data-token="${escaped}"></script>`;
+  }
 
   async create(ctx: RequestContext, createBotDto: CreateBotDto): Promise<Bot> {
     if (!ctx.user?.userId) {
@@ -381,7 +390,7 @@ export class BotsService {
     ctx: RequestContext,
     id: string,
     options?: { name?: string },
-  ): Promise<{ widgetToken: string; expiresAt: string }> {
+  ): Promise<{ widgetToken: string; expiresAt: string; scriptTag: string }> {
     await this.findOne(ctx, id);
     const { token, expiresAt } = this.jwtWrapperService.signWithExpiresAt(
       { botId: id, type: 'widget' },
@@ -395,18 +404,31 @@ export class BotsService {
         name: options?.name ?? null,
       }),
     );
-    return { widgetToken: token, expiresAt };
+    const backendUrl =
+      this.configService.get<string>('API_URL') ?? '';
+    const baseUrl = (backendUrl ?? '').trim();
+    const scriptTag = this.getEmbedScriptTag(baseUrl, token);
+    return {
+      widgetToken: token,
+      expiresAt,
+      scriptTag,
+    };
   }
 
   async findWidgetTokens(
     ctx: RequestContext,
     botId: string,
-  ): Promise<BotWidgetToken[]> {
+  ): Promise<(BotWidgetToken & { scriptTag: string })[]> {
     await this.findOne(ctx, botId);
-    return this.botWidgetTokenRepository.find({
+    const tokens = await this.botWidgetTokenRepository.find({
       where: { botId },
       order: { createdAt: 'DESC' },
     });
+    const baseUrl = (this.configService.get<string>('API_URL') ?? '').trim();
+    return tokens.map((record) => ({
+      ...record,
+      scriptTag: this.getEmbedScriptTag(baseUrl, record.token),
+    }));
   }
 
   async removeWidgetToken(

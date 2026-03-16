@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConversationsService } from '../conversations/conversations.service';
+import { JwtWrapperService } from '../jwt/jwt.service';
 import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { MessageSender } from '../../types/message';
@@ -16,18 +17,49 @@ const widgetCtx: RequestContext = {
   requestId: 'embed-widget',
 };
 
+interface WidgetTokenPayload {
+  botId: string;
+  type: string;
+}
+
 @Injectable()
 export class EmbedService {
-  constructor(private readonly conversationsService: ConversationsService) {}
+  constructor(
+    private readonly conversationsService: ConversationsService,
+    private readonly jwtWrapperService: JwtWrapperService,
+  ) {}
 
   getScript(): string {
     return EMBED_SCRIPT;
   }
 
-  createConversation(dto: CreateWidgetConversationDto): Promise<Conversation> {
+  async createConversation(
+    dto: CreateWidgetConversationDto,
+    authorization?: string,
+  ): Promise<Conversation> {
+    let botId: string;
+    if (authorization?.startsWith('Bearer ')) {
+      const token = authorization.slice(7);
+      const payload = this.jwtWrapperService.verify<WidgetTokenPayload>(
+        token,
+        'widget',
+      );
+      if (payload?.type !== 'widget' || !payload?.botId) {
+        throw new BadRequestException('Invalid widget token');
+      }
+      botId = payload.botId;
+    } else {
+      if (!dto.botId) {
+        throw new BadRequestException('botId or Authorization token is required');
+      }
+      botId = dto.botId;
+    }
+    if (!dto.visitorId?.trim()) {
+      throw new BadRequestException('visitorId is required');
+    }
     return this.conversationsService.create(
       widgetCtx,
-      dto.botId,
+      botId,
       dto.visitorId,
       { forWidget: true },
     );

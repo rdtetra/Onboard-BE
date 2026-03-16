@@ -1,14 +1,25 @@
 /**
  * Inline embed script for the chat widget. Served as application/javascript.
- * Usage: <script src="https://your-api.com/embed/embed.js" data-bot-id="BOT_UUID"></script>
+ * Usage (token): <script src="https://your-api.com/embed/embed.js" data-token="JWT"></script>
+ * Usage (legacy): <script src="https://your-api.com/embed/embed.js" data-bot-id="BOT_UUID"></script>
  */
 export const EMBED_SCRIPT = `
 (function() {
   var script = document.currentScript;
+  var token = script && script.getAttribute('data-token');
   var botId = script && script.getAttribute('data-bot-id');
-  if (!botId) return;
+  if (!token && !botId) return;
   var base = script.src.replace(/\\/embed\\.js.*$/, '');
-  var storageKey = 'onboard_visitor_' + botId;
+  var botIdForStorage = botId || (token && (function() {
+    try {
+      var parts = token.split('.');
+      if (parts.length !== 3) return null;
+      var payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+      return payload.botId || null;
+    } catch (e) { return null; }
+  })());
+  if (!botIdForStorage) return;
+  var storageKey = 'onboard_visitor_' + botIdForStorage;
   var visitorId = localStorage.getItem(storageKey);
   if (!visitorId) {
     visitorId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -32,6 +43,7 @@ export const EMBED_SCRIPT = `
       method: opts.method || 'GET',
       headers: opts.headers || {}
     };
+    if (token) init.headers['Authorization'] = 'Bearer ' + token;
     if (opts.body) {
       init.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
       if (!init.headers['Content-Type']) init.headers['Content-Type'] = 'application/json';
@@ -43,9 +55,10 @@ export const EMBED_SCRIPT = `
   }
 
   function createConversationOnLoad() {
+    var body = token ? { visitorId: visitorId } : { botId: botId, visitorId: visitorId };
     return api('/conversations', {
       method: 'POST',
-      body: { botId: botId, visitorId: visitorId }
+      body: body
     }).then(function(c) {
       // API is wrapped in { data: { ...conversation } }
       var convo = c && c.data ? c.data : c;

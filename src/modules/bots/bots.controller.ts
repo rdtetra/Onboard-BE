@@ -101,34 +101,6 @@ export class BotsController {
     return this.botsService.findOne(ctx, id);
   }
 
-  @Post(':id/widget-token')
-  @Allow(Permission.READ_BOT)
-  createWidgetToken(
-    @RequestContext() ctx: RequestContextType,
-    @Param('id') id: string,
-  ) {
-    return this.botsService.createWidgetToken(ctx, id);
-  }
-
-  @Get(':id/widget-tokens')
-  @Allow(Permission.READ_BOT)
-  findWidgetTokens(
-    @RequestContext() ctx: RequestContextType,
-    @Param('id') id: string,
-  ): Promise<BotWidgetToken[]> {
-    return this.botsService.findWidgetTokens(ctx, id);
-  }
-
-  @Delete(':id/widget-tokens/:tokenId')
-  @Allow(Permission.UPDATE_BOT)
-  removeWidgetToken(
-    @RequestContext() ctx: RequestContextType,
-    @Param('id') id: string,
-    @Param('tokenId') tokenId: string,
-  ): Promise<void> {
-    return this.botsService.removeWidgetToken(ctx, id, tokenId);
-  }
-
   @Patch(':id/archive')
   @Allow(Permission.UPDATE_BOT)
   archive(
@@ -182,5 +154,33 @@ export class BotsController {
     @Param('id') id: string,
   ): Promise<void> {
     return this.botsService.remove(ctx, id);
+  }
+
+  @Get(':id/widget-tokens')
+  @Allow(Permission.READ_BOT)
+  findWidgetTokens(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ) {
+    return this.botsService.findWidgetTokens(ctx, id);
+  }
+
+  @Post(':id/widget-token')
+  @Allow(Permission.READ_BOT)
+  createWidgetToken(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ) {
+    return this.botsService.createWidgetToken(ctx, id);
+  }
+
+  @Delete(':id/widget-tokens/:tokenId')
+  @Allow(Permission.UPDATE_BOT)
+  removeWidgetToken(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+    @Param('tokenId') tokenId: string,
+  ): Promise<void> {
+    return this.botsService.removeWidgetToken(ctx, id, tokenId);
   }
 }

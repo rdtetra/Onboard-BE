@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Query, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Res,
+  Headers,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
 import { EmbedService } from './embed.service';
@@ -18,8 +27,11 @@ export class EmbedController {
   }
 
   @Post('conversations')
-  createConversation(@Body() dto: CreateWidgetConversationDto) {
-    return this.embedService.createConversation(dto);
+  createConversation(
+    @Body() dto: CreateWidgetConversationDto,
+    @Headers('authorization') authorization?: string,
+  ) {
+    return this.embedService.createConversation(dto, authorization);
   }
 
   @Get('conversations/:id/messages')

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { BotWidgetToken } from '../../common/entities/bot-widget-token.entity';
@@ -16,6 +17,7 @@ import { BotsController } from './bots.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Bot, BotWidgetToken, Conversation, Message]),
+    ConfigModule,
     BotKbLinkModule,
     BotTaskLinkModule,
     BotWidgetLinkModule,
