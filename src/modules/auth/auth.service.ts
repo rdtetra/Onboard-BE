@@ -244,9 +244,11 @@ export class AuthService {
       throw new BadRequestException('Invalid reset token');
     }
 
-    await this.usersService.update(ctx, user.id, {
-      password: resetPasswordDto.password,
-    });
+    await this.usersService.changePassword(
+      ctx,
+      user.id,
+      resetPasswordDto.password,
+    );
 
     const tokenEntity = this.usedTokenRepository.create({
       token,
@@ -339,9 +341,11 @@ export class AuthService {
       }
     }
 
-    await this.usersService.update(ctx, userId, {
-      password: changePasswordDto.newPassword,
-    });
+    await this.usersService.changePassword(
+      ctx,
+      userId,
+      changePasswordDto.newPassword,
+    );
 
     void this.auditService
       .log(ctx, { action: 'CHANGE_PASSWORD', resource: 'auth' })

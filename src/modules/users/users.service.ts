@@ -421,6 +421,25 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
+  async changePassword(
+    ctx: RequestContext,
+    id: string,
+    newPassword: string,
+    options?: { clearPasswordChangeRequired?: boolean },
+  ): Promise<User> {
+    const user = await this.getOne(id);
+    const hashedPassword = await hashPassword(newPassword);
+
+    user.password = hashedPassword;
+
+    const clearFlag = options?.clearPasswordChangeRequired ?? true;
+    if (clearFlag) {
+      user.passwordChangeRequired = false;
+    }
+
+    return this.userRepository.save(user);
+  }
+
   async updateProfile(
     ctx: RequestContext,
     payload: { fullName?: string; profilePictureUrl?: string | null },
