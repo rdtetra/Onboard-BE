@@ -6,8 +6,8 @@ import {
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { JwtWrapperService } from '../jwt/jwt.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { comparePassword } from '../../utils/crypto.util';
@@ -31,7 +31,7 @@ import { StorageService } from '../storage/storage.service';
 export class AuthService {
   constructor(
     private usersService: UsersService,
-    private jwtService: JwtService,
+    private jwtWrapperService: JwtWrapperService,
     private configService: ConfigService,
     private auditService: AuditService,
     private emailService: EmailService,
@@ -65,7 +65,7 @@ export class AuthService {
       .catch(() => {});
     
       return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.jwtWrapperService.sign(payload, 'auth'),
       user: {
         id: user.id,
         email: user.email,
@@ -118,7 +118,7 @@ export class AuthService {
       .catch(() => {});
     
       return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.jwtWrapperService.sign(payload, 'auth'),
       user: {
         id: user.id,
         email: user.email,
@@ -166,10 +166,7 @@ export class AuthService {
       sub: user.id,
     };
     
-    const resetToken = this.jwtService.sign(resetPayload, {
-      secret: resetSecret,
-      expiresIn: '30m',
-    });
+    const resetToken = this.jwtWrapperService.sign(resetPayload, 'reset');
 
     const appUrl = this.configService.get<string>('APP_URL', '');
     const resetUrl = appUrl
@@ -209,19 +206,10 @@ export class AuthService {
       throw new BadRequestException('Reset token is required');
     }
 
-    const resetSecret = this.configService.get<string>('JWT_RESET_SECRET');
-    if (!resetSecret) {
-      throw new InternalServerErrorException(
-        'JWT_RESET_SECRET is not defined in environment variables',
-      );
-    }
-
     let decodedPayload: JwtPayload;
     try {
-      decodedPayload = this.jwtService.verify<JwtPayload>(token, {
-        secret: resetSecret,
-      });
-    } catch (error) {
+      decodedPayload = this.jwtWrapperService.verify<JwtPayload>(token, 'reset');
+    } catch {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
@@ -281,14 +269,7 @@ export class AuthService {
       throw new ForbiddenException('Session is invalid');
     }
 
-    const secret = this.configService.get<string>('JWT_SECRET');
-    if (!secret) {
-      throw new InternalServerErrorException(
-        'JWT_SECRET is not defined in environment variables',
-      );
-    }
-
-    const payload = this.verifyAccessToken(token, secret);
+    const payload = this.jwtWrapperService.verify<JwtPayload>(token, 'auth');
 
     const user = await this.usersService.findOne(ctx, payload.sub, {
       role: true,
@@ -412,11 +393,4 @@ export class AuthService {
     };
   }
 
-  private verifyAccessToken(token: string, secret: string): JwtPayload {
-    try {
-      return this.jwtService.verify<JwtPayload>(token, { secret });
-    } catch {
-      throw new ForbiddenException('Session is invalid');
-    }
-  }
 }

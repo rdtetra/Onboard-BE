@@ -33,8 +33,13 @@ export class ConversationsService {
     ctx: RequestContext,
     botId: string,
     visitorId: string,
+    options?: { forWidget?: boolean },
   ): Promise<Conversation> {
-    await this.botsService.findOne(ctx, botId);
+    await this.botsService.findOne(
+      ctx,
+      botId,
+      options?.forWidget ? { forWidget: true } : undefined,
+    );
     const conversation = this.conversationRepository.create({
       botId,
       visitorId,
@@ -208,53 +213,106 @@ export class ConversationsService {
   async findOne(
     ctx: RequestContext,
     id: string,
-    options?: { relations?: string[] },
+    options?: {
+      relations?: string[];
+      forWidget?: boolean;
+      visitorId?: string;
+      botId?: string;
+      orderMessages?: 'ASC' | 'DESC';
+    },
   ): Promise<Conversation> {
+    let relations = options?.relations ?? ['messages', 'bot'];
+    if (options?.orderMessages != null) {
+      relations = relations.filter((r) => r !== 'messages');
+    }
     const conversation = await this.conversationRepository.findOne({
       where: { id },
-      relations: options?.relations ?? ['messages', 'bot'],
+      relations,
     });
     if (!conversation) {
       throw new NotFoundException(`Conversation with ID ${id} not found`);
     }
-    await this.botsService.findOne(ctx, conversation.botId);
+    if (options?.forWidget && options.visitorId != null) {
+      if (conversation.visitorId !== options.visitorId) {
+        throw new NotFoundException('Conversation not found');
+      }
+      if (options.botId != null && conversation.botId !== options.botId) {
+        throw new NotFoundException('Conversation not found');
+      }
+    } else {
+      await this.botsService.findOne(ctx, conversation.botId);
+    }
+    if (options?.orderMessages != null) {
+      conversation.messages = await this.messageRepository.find({
+        where: { conversationId: id },
+        order: { createdAt: options.orderMessages },
+      });
+    }
     return conversation;
   }
 
   /**
-   * Add a message to a conversation. When the sender is BOT, deducts tokens from
-   * the organization's wallet via TokenUsageService (requires tokenCount in dto).
+   * Add a message to a conversation (typically from widget: user message or bot response).
+   * Deducts 1 token per USER message; bot responses do not use tokens.
    */
   async addMessage(
     ctx: RequestContext,
     conversationId: string,
     dto: CreateMessageDto,
+    options?: { forWidget?: boolean; visitorId?: string; botId?: string },
   ): Promise<Message> {
-    const conversation = await this.findOne(ctx, conversationId, {
-      relations: ['messages', 'bot'],
-    });
+    const conversation = options?.forWidget
+      ? await this.findOne(ctx, conversationId, {
+          relations: ['messages', 'bot'],
+          forWidget: true,
+          visitorId: options.visitorId,
+          botId: options.botId,
+        })
+      : await this.findOne(ctx, conversationId, { relations: ['messages', 'bot'] });
+
     const message = this.messageRepository.create({
       conversationId: conversation.id,
       content: dto.content.trim(),
-      sender: dto.sender,
+      sender: options?.forWidget ? MessageSender.USER : dto.sender,
     });
     const saved = await this.messageRepository.save(message);
 
     if (
-      dto.sender === MessageSender.BOT &&
-      typeof dto.tokenCount === 'number' &&
-      dto.tokenCount >= 1 &&
-      conversation.bot?.organizationId
+      conversation.bot?.organizationId &&
+      saved.sender === MessageSender.USER
     ) {
       await this.tokenUsageService.consumeTokens({
         organizationId: conversation.bot.organizationId,
         botId: conversation.botId,
         conversationId: conversation.id,
-        amount: dto.tokenCount,
+        amount: 1,
         metadata: { messageId: saved.id },
       });
     }
 
     return saved;
+  }
+
+  async endConversation(
+    conversationId: string,
+    options: { forWidget: true; visitorId: string; botId?: string },
+  ): Promise<void> {
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+    });
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+    if (conversation.visitorId !== options.visitorId) {
+      throw new NotFoundException('Conversation not found');
+    }
+    if (options.botId != null && conversation.botId !== options.botId) {
+      throw new NotFoundException('Conversation not found');
+    }
+    if (conversation.status === ConversationStatus.OPEN) {
+      conversation.status = ConversationStatus.CLOSED;
+      conversation.endedAt = new Date();
+      await this.conversationRepository.save(conversation);
+    }
   }
 }

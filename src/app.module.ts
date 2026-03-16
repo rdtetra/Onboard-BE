@@ -17,6 +17,7 @@ import { UsedToken } from './common/entities/used-token.entity';
 import { Permission } from './common/entities/permission.entity';
 import { Role } from './common/entities/role.entity';
 import { Bot } from './common/entities/bot.entity';
+import { BotWidgetToken } from './common/entities/bot-widget-token.entity';
 import { KBSource } from './common/entities/kb-source.entity';
 import { Collection } from './common/entities/collection.entity';
 import { Task } from './common/entities/task.entity';
@@ -53,6 +54,7 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { EmbedModule } from './modules/embed/embed.module';
 
 @Module({
   imports: [
@@ -88,6 +90,7 @@ import { AdminModule } from './modules/admin/admin.module';
             Permission,
             Role,
             Bot,
+            BotWidgetToken,
             KBSource,
             Collection,
             Organization,
@@ -140,6 +143,7 @@ import { AdminModule } from './modules/admin/admin.module';
     WebhooksModule,
     BillingModule,
     AdminModule,
+    EmbedModule,
   ],
   controllers: [AppController],
   providers: [

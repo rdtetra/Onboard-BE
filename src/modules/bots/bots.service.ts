@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike, In } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
+import { BotWidgetToken } from '../../common/entities/bot-widget-token.entity';
 import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
@@ -15,6 +16,7 @@ import { BotTaskLinkService } from '../bot-task-link/bot-task-link.service';
 import { BotWidgetLinkService } from '../bot-widget-link/bot-widget-link.service';
 import { TokenWalletService } from '../token-wallet/token-wallet.service';
 import { TokenTransactionsService } from '../token-transactions/token-transactions.service';
+import { JwtWrapperService } from '../jwt/jwt.service';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
 import { BotType, Behavior, BotPriority } from '../../types/bot';
@@ -32,6 +34,8 @@ export class BotsService {
   constructor(
     @InjectRepository(Bot)
     private readonly botRepository: Repository<Bot>,
+    @InjectRepository(BotWidgetToken)
+    private readonly botWidgetTokenRepository: Repository<BotWidgetToken>,
     @InjectRepository(Conversation)
     private readonly conversationRepository: Repository<Conversation>,
     @InjectRepository(Message)
@@ -41,6 +45,7 @@ export class BotsService {
     private readonly botWidgetLinkService: BotWidgetLinkService,
     private readonly tokenWalletService: TokenWalletService,
     private readonly tokenTransactionsService: TokenTransactionsService,
+    private readonly jwtWrapperService: JwtWrapperService,
   ) {}
 
   async create(ctx: RequestContext, createBotDto: CreateBotDto): Promise<Bot> {
@@ -142,30 +147,6 @@ export class BotsService {
     return toPaginatedResult(dataWithTokens, total, page, limit);
   }
 
-  private async attachTokensUsedToBots(
-    orgId: string | undefined,
-    bots: Bot[],
-  ): Promise<BotWithTokensUsed[]> {
-    if (bots.length === 0 || !orgId) {
-      return bots.map((b) => ({ ...b, tokensUsed: 0 }));
-    }
-    const wallet = await this.tokenWalletService.getByOrganizationId(orgId);
-    if (!wallet) {
-      return bots.map((b) => ({ ...b, tokensUsed: 0 }));
-    }
-    const usageRows = await this.tokenTransactionsService.getUsageByBotIds(
-      wallet.id,
-      bots.map((b) => b.id),
-    );
-    const usageByBotId = new Map(
-      usageRows.map((r) => [r.botId, r.tokensUsed]),
-    );
-    return bots.map((b) => ({
-      ...b,
-      tokensUsed: usageByBotId.get(b.id) ?? 0,
-    }));
-  }
-
   /**
    * Overview stats for one bot or all org bots: active bots, conversations, messages, tokens used, KB sources.
    * When botId is provided, stats are scoped to that bot; otherwise to all bots in the org.
@@ -244,28 +225,6 @@ export class BotsService {
     };
   }
 
-  private async getTotalTokensUsedForBots(
-    orgId: string,
-    botIds: string[],
-  ): Promise<number> {
-    const wallet = await this.tokenWalletService.getByOrganizationId(orgId);
-    if (!wallet) return 0;
-    return this.tokenTransactionsService.getTotalUsageByBotIds(
-      wallet.id,
-      botIds,
-    );
-  }
-
-  private async getDistinctKbSourcesCountForBots(botIds: string[]): Promise<number> {
-    const result = await this.botRepository
-      .createQueryBuilder('bot')
-      .innerJoin('bot.kbSources', 'kb')
-      .where('bot.id IN (:...botIds)', { botIds })
-      .select('COUNT(DISTINCT kb.id)', 'count')
-      .getRawOne<{ count: string }>();
-    return Math.floor(parseFloat(result?.count ?? '0'));
-  }
-
   /** Returns all bots the user can access (org-scoped), id and name only (e.g. for dropdowns). */
   async findOptions(
     ctx: RequestContext,
@@ -310,25 +269,29 @@ export class BotsService {
     return this.botRepository.count({ where });
   }
 
-  /** Returns IDs of all bots the user can access (org-scoped). */
   async findOne(
     ctx: RequestContext,
     id: string,
-    options?: { relations?: string[] },
+    options?: { relations?: string[]; forWidget?: boolean },
   ): Promise<Bot> {
-    if (!ctx.user?.userId) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
     const bot = await this.botRepository.findOne({
-      where: { id },
+      where: options?.forWidget ? { id, isActive: true } : { id },
       ...(options?.relations && { relations: options.relations }),
     });
 
     if (!bot) {
-      throw new NotFoundException(`Bot with ID ${id} not found`);
+      throw new NotFoundException(
+        options?.forWidget ? 'Bot not found or not available' : `Bot with ID ${id} not found`,
+      );
     }
 
+    if (options?.forWidget) {
+      return bot;
+    }
+
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
     if (
       ctx.user.roleName !== RoleName.SUPER_ADMIN &&
       bot.organizationId !== ctx.user.organizationId
@@ -412,6 +375,99 @@ export class BotsService {
     const bot = await this.findOne(ctx, id);
     bot.isActive = true;
     return this.botRepository.save(bot);
+  }
+
+  async createWidgetToken(
+    ctx: RequestContext,
+    id: string,
+    options?: { name?: string },
+  ): Promise<{ widgetToken: string; expiresAt: string }> {
+    await this.findOne(ctx, id);
+    const { token, expiresAt } = this.jwtWrapperService.signWithExpiresAt(
+      { botId: id, type: 'widget' },
+      'widget',
+    );
+    await this.botWidgetTokenRepository.save(
+      this.botWidgetTokenRepository.create({
+        botId: id,
+        token,
+        expiresAt: new Date(expiresAt),
+        name: options?.name ?? null,
+      }),
+    );
+    return { widgetToken: token, expiresAt };
+  }
+
+  async findWidgetTokens(
+    ctx: RequestContext,
+    botId: string,
+  ): Promise<BotWidgetToken[]> {
+    await this.findOne(ctx, botId);
+    return this.botWidgetTokenRepository.find({
+      where: { botId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async removeWidgetToken(
+    ctx: RequestContext,
+    botId: string,
+    tokenId: string,
+  ): Promise<void> {
+    await this.findOne(ctx, botId);
+    const record = await this.botWidgetTokenRepository.findOne({
+      where: { id: tokenId, botId },
+    });
+    if (!record) {
+      throw new NotFoundException('Widget token not found');
+    }
+    await this.botWidgetTokenRepository.remove(record);
+  }
+
+  private async attachTokensUsedToBots(
+    orgId: string | undefined,
+    bots: Bot[],
+  ): Promise<BotWithTokensUsed[]> {
+    if (bots.length === 0 || !orgId) {
+      return bots.map((b) => ({ ...b, tokensUsed: 0 }));
+    }
+    const wallet = await this.tokenWalletService.getByOrganizationId(orgId);
+    if (!wallet) {
+      return bots.map((b) => ({ ...b, tokensUsed: 0 }));
+    }
+    const usageRows = await this.tokenTransactionsService.getUsageByBotIds(
+      wallet.id,
+      bots.map((b) => b.id),
+    );
+    const usageByBotId = new Map(
+      usageRows.map((r) => [r.botId, r.tokensUsed]),
+    );
+    return bots.map((b) => ({
+      ...b,
+      tokensUsed: usageByBotId.get(b.id) ?? 0,
+    }));
+  }
+
+  private async getTotalTokensUsedForBots(
+    orgId: string,
+    botIds: string[],
+  ): Promise<number> {
+    const wallet = await this.tokenWalletService.getByOrganizationId(orgId);
+    if (!wallet) return 0;
+    return this.tokenTransactionsService.getTotalUsageByBotIds(
+      wallet.id,
+      botIds,
+    );
+  }
+
+  private async getDistinctKbSourcesCountForBots(botIds: string[]): Promise<number> {
+    const result = await this.botRepository
+      .createQueryBuilder('bot')
+      .innerJoin('bot.kbSources', 'kb')
+      .where('bot.id IN (:...botIds)', { botIds })
+      .select('COUNT(DISTINCT kb.id)', 'count')
+      .getRawOne<{ count: string }>();
+    return Math.floor(parseFloat(result?.count ?? '0'));
   }
 
   private getUpdatePayloadForType(
