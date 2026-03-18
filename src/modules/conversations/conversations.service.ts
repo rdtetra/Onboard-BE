@@ -216,7 +216,6 @@ export class ConversationsService {
     options?: {
       relations?: string[];
       forWidget?: boolean;
-      visitorId?: string;
       botId?: string;
       orderMessages?: 'ASC' | 'DESC';
     },
@@ -232,10 +231,7 @@ export class ConversationsService {
     if (!conversation) {
       throw new NotFoundException(`Conversation with ID ${id} not found`);
     }
-    if (options?.forWidget && options.visitorId != null) {
-      if (conversation.visitorId !== options.visitorId) {
-        throw new NotFoundException('Conversation not found');
-      }
+    if (options?.forWidget) {
       if (options.botId != null && conversation.botId !== options.botId) {
         throw new NotFoundException('Conversation not found');
       }
@@ -259,23 +255,23 @@ export class ConversationsService {
     ctx: RequestContext,
     conversationId: string,
     dto: CreateMessageDto,
-    options?: { forWidget?: boolean; visitorId?: string; botId?: string },
+    options?: { forWidget?: boolean; botId?: string },
   ): Promise<Message> {
     const conversation = options?.forWidget
       ? await this.findOne(ctx, conversationId, {
           relations: ['messages', 'bot'],
           forWidget: true,
-          visitorId: options.visitorId,
           botId: options.botId,
         })
       : await this.findOne(ctx, conversationId, { relations: ['messages', 'bot'] });
-
+console.log(conversation, "hi5")
     const message = this.messageRepository.create({
       conversationId: conversation.id,
       content: dto.content.trim(),
       sender: options?.forWidget ? MessageSender.USER : dto.sender,
     });
     const saved = await this.messageRepository.save(message);
+    console.log("hi2")
 
     if (
       conversation.bot?.organizationId &&
@@ -295,7 +291,7 @@ export class ConversationsService {
 
   async endConversation(
     conversationId: string,
-    options: { forWidget: true; visitorId: string; botId?: string },
+    options: { forWidget: true; botId: string },
   ): Promise<void> {
     const conversation = await this.conversationRepository.findOne({
       where: { id: conversationId },
@@ -303,10 +299,7 @@ export class ConversationsService {
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
-    if (conversation.visitorId !== options.visitorId) {
-      throw new NotFoundException('Conversation not found');
-    }
-    if (options.botId != null && conversation.botId !== options.botId) {
+    if (conversation.botId !== options.botId) {
       throw new NotFoundException('Conversation not found');
     }
     if (conversation.status === ConversationStatus.OPEN) {

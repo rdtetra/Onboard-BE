@@ -364,7 +364,8 @@ export class AuthService {
       ...(fullName !== undefined && { fullName: fullName?.trim() ?? null }),
       ...(profilePictureUrl !== undefined && { profilePictureUrl }),
     });
-    const { password: _p, ...rest } = user;
+    const { password: omittedPassword, ...rest } = user;
+    void omittedPassword;
     return rest as User;
   }
 

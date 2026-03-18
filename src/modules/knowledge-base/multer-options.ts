@@ -13,10 +13,11 @@ const allowedMimeTypes: Record<string, SourceType> = {
 export const kbSourceUploadOptions = {
   storage: memoryStorage(),
   fileFilter: (
-    _req: unknown,
+    req: unknown,
     file: Express.Multer.File,
     cb: (err: Error | null, accept: boolean) => void,
   ) => {
+    void req;
     if (file.mimetype in allowedMimeTypes) {
       cb(null, true);
     } else {

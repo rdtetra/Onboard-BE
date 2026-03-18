@@ -17,7 +17,8 @@ import { Public } from '../../common/decorators/public.decorator';
 export class WebhooksController {
   @Public()
   @Post('stripe')
-  stripeWebhook(@Req() _req: Request): { received: boolean } {
+  stripeWebhook(@Req() req: Request): { received: boolean } {
+    void req;
     // Placeholder: no Stripe logic yet. Return 200 so Stripe does not retry.
     // When implementing: use raw body (e.g. from middleware) for
     // stripe.webhooks.constructEvent(payload, signature, secret).

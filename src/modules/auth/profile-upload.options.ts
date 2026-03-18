@@ -5,10 +5,11 @@ const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/jpg'];
 export const profilePictureUploadOptions = {
   storage: memoryStorage(),
   fileFilter: (
-    _req: unknown,
+    req: unknown,
     file: Express.Multer.File,
     cb: (err: Error | null, accept: boolean) => void,
   ) => {
+    void req;
     if (ALLOWED_MIME.includes(file.mimetype.toLowerCase())) {
       cb(null, true);
     } else {

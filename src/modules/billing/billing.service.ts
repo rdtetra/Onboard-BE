@@ -6,7 +6,12 @@ import { SourcesService } from '../knowledge-base/sources.service';
 import { BotsService } from '../bots/bots.service';
 import type { BillingCycle } from '../../types/billing-cycle';
 import type { RequestContext } from '../../types/request';
-import type { BillingOverview, TokensByBot, TokensByBotItem } from '../../types/billing';
+import type {
+  BillingOverview,
+  BillingOverviewTokens,
+  TokensByBot,
+  TokensByBotItem,
+} from '../../types/billing';
 
 @Injectable()
 export class BillingService {
@@ -66,7 +71,11 @@ export class BillingService {
             nextRenewalAt,
           }
         : null,
-      tokens: { total: tokensTotal, used: tokensUsed },
+      tokens: {
+        total: tokensTotal,
+        used: tokensUsed,
+        balance: wallet.balance,
+      },
       storage: { totalMb: storageTotalMb, usedMb: storageUsedMb },
     };
   }
@@ -86,6 +95,23 @@ export class BillingService {
 
     const periodStart = options?.periodStart ?? subscription?.currentPeriodStart;
     const periodEnd = options?.periodEnd ?? subscription?.currentPeriodEnd;
+
+    const plan = subscription?.plan ?? null;
+    const tokensTotal = plan?.monthlyTokens ?? 0;
+    let tokensUsedForPeriod = 0;
+    if (wallet && periodStart && periodEnd) {
+      tokensUsedForPeriod =
+        await this.tokenTransactionsService.getUsageSumForWalletInPeriod(
+          wallet.id,
+          periodStart,
+          periodEnd,
+        );
+    }
+    const tokensSummary: BillingOverviewTokens = {
+      total: tokensTotal,
+      used: tokensUsedForPeriod,
+      balance: wallet.balance,
+    };
 
     const usageRows =
       await this.tokenTransactionsService.getUsageByBotForWalletInPeriod(
@@ -117,6 +143,6 @@ export class BillingService {
       });
     }
 
-    return { usageByBot };
+    return { usageByBot, tokens: tokensSummary };
   }
 }

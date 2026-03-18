@@ -1,10 +1,10 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConversationsService } from '../conversations/conversations.service';
-import { JwtWrapperService } from '../jwt/jwt.service';
 import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { MessageSender } from '../../types/message';
 import type { RequestContext } from '../../types/request';
+import type { WidgetAuthContext } from '../../types/widget-auth';
 import { EMBED_SCRIPT } from './embed.script';
 import { CreateWidgetConversationDto } from './dto/create-widget-conversation.dto';
 import { AddWidgetMessageDto } from './dto/add-widget-message.dto';
@@ -17,67 +17,39 @@ const widgetCtx: RequestContext = {
   requestId: 'embed-widget',
 };
 
-interface WidgetTokenPayload {
-  botId: string;
-  type: string;
-}
-
 @Injectable()
 export class EmbedService {
-  constructor(
-    private readonly conversationsService: ConversationsService,
-    private readonly jwtWrapperService: JwtWrapperService,
-  ) {}
+  constructor(private readonly conversationsService: ConversationsService) {}
 
   getScript(): string {
     return EMBED_SCRIPT;
   }
 
   async createConversation(
+    widgetAuthContext: WidgetAuthContext,
     dto: CreateWidgetConversationDto,
-    authorization?: string,
   ): Promise<Conversation> {
-    let botId: string;
-    if (authorization?.startsWith('Bearer ')) {
-      const token = authorization.slice(7);
-      const payload = this.jwtWrapperService.verify<WidgetTokenPayload>(
-        token,
-        'widget',
-      );
-      if (payload?.type !== 'widget' || !payload?.botId) {
-        throw new BadRequestException('Invalid widget token');
-      }
-      botId = payload.botId;
-    } else {
-      if (!dto.botId) {
-        throw new BadRequestException('botId or Authorization token is required');
-      }
-      botId = dto.botId;
-    }
     if (!dto.visitorId?.trim()) {
       throw new BadRequestException('visitorId is required');
     }
     return this.conversationsService.create(
       widgetCtx,
-      botId,
+      widgetAuthContext.botId,
       dto.visitorId,
       { forWidget: true },
     );
   }
 
   async getMessages(
+    widgetAuthContext: WidgetAuthContext,
     conversationId: string,
-    visitorId: string,
   ): Promise<Message[]> {
-    if (!visitorId?.trim()) {
-      throw new BadRequestException('visitorId is required');
-    }
     const c = await this.conversationsService.findOne(
       widgetCtx,
       conversationId,
       {
         forWidget: true,
-        visitorId,
+        botId: widgetAuthContext.botId,
         relations: [],
         orderMessages: 'ASC',
       },
@@ -86,6 +58,7 @@ export class EmbedService {
   }
 
   addMessage(
+    widgetAuthContext: WidgetAuthContext,
     conversationId: string,
     dto: AddWidgetMessageDto,
   ): Promise<Message> {
@@ -93,17 +66,17 @@ export class EmbedService {
       widgetCtx,
       conversationId,
       { content: dto.content, sender: MessageSender.USER },
-      { forWidget: true, visitorId: dto.visitorId },
+      { forWidget: true, botId: widgetAuthContext.botId },
     );
   }
 
-  endConversation(conversationId: string, visitorId: string): Promise<void> {
-    if (!visitorId?.trim()) {
-      throw new BadRequestException('visitorId is required');
-    }
+  endConversation(
+    widgetAuthContext: WidgetAuthContext,
+    conversationId: string,
+  ): Promise<void> {
     return this.conversationsService.endConversation(conversationId, {
       forWidget: true,
-      visitorId,
+      botId: widgetAuthContext.botId,
     });
   }
 }

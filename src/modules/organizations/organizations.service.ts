@@ -31,10 +31,7 @@ export class OrganizationsService {
    * Create an organization for a user and set them as owner. Used when a new tenant signs up or when super admin invites.
    * Organization name is set to a UUID.
    */
-  async createForUser(
-    userId: string,
-    _name?: string,
-  ): Promise<Organization> {
+  async createForUser(userId: string): Promise<Organization> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['role'],

@@ -10,8 +10,12 @@ export type BillingOverviewSubscription = {
 };
 
 export type BillingOverviewTokens = {
+  /** Plan allowance (e.g. monthly tokens from subscription). */
   total: number;
+  /** Sum of usage in current billing period. */
   used: number;
+  /** Actual spendable balance in the token wallet (increased by grants, decreased by usage). */
+  balance: number;
 };
 
 export type BillingOverviewStorage = {
@@ -34,4 +38,5 @@ export type TokensByBotItem = {
 
 export type TokensByBot = {
   usageByBot: TokensByBotItem[];
+  tokens: BillingOverviewTokens;
 };

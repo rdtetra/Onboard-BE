@@ -68,7 +68,8 @@ export class UsersService {
 
     const hashedPassword = await hashPassword(createUserDto.password);
 
-    const { role: _role, ...createPayload } = createUserDto;
+    const { role: discardedRole, ...createPayload } = createUserDto;
+    void discardedRole;
     const user = this.userRepository.create({
       ...createPayload,
       password: hashedPassword,
@@ -243,7 +244,6 @@ export class UsersService {
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
     filters?: { search?: string; status?: string; role?: string },
-    _relations?: FindOptionsRelations<User>,
   ): Promise<PaginatedResult<User>> {
     const { page, limit, skip } = parsePagination(pagination ?? {});
 
@@ -402,8 +402,14 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.getOne(id);
 
-    const { role: roleName, status: _status, password: _password, ...rest } =
-      updateUserDto;
+    const {
+      role: roleName,
+      status: discardedStatus,
+      password: discardedPassword,
+      ...rest
+    } = updateUserDto;
+    void discardedStatus;
+    void discardedPassword;
 
     if (roleName !== undefined) {
       const role = await this.roleRepository.findOne({
@@ -486,9 +492,10 @@ export class UsersService {
 
   /** Mark that a password reset email was sent (for rate limiting). */
   async markPasswordResetEmailSent(
-    _ctx: RequestContext,
+    ctx: RequestContext,
     userId: string,
   ): Promise<void> {
+    void ctx;
     await this.userRepository.update(userId, {
       lastPasswordResetEmailAt: new Date(),
     });

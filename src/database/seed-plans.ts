@@ -2,8 +2,11 @@ import { DataSource } from 'typeorm';
 import { Plan } from '../common/entities/plan.entity';
 import { Subscription } from '../common/entities/subscription.entity';
 import { Organization } from '../common/entities/organization.entity';
+import { TokenWallet } from '../common/entities/token-wallet.entity';
+import { TokenTransaction } from '../common/entities/token-transaction.entity';
 import { PlanKey } from '../types/plan-key';
 import { SubscriptionStatus } from '../types/subscription-status';
+import { TokenTransactionType } from '../types/token-transaction-type';
 
 interface PlanSeedRow {
   key: PlanKey;
@@ -44,6 +47,34 @@ const DEFAULT_PLANS: PlanSeedRow[] = [
     features: { prioritySupport: true, apiAccess: true, analytics: true, sso: true, dedicatedSlack: true },
   },
 ];
+
+/** Credit the org wallet (same as recordGrant) — used when assigning a plan in seed. */
+async function grantTokensToOrgWallet(
+  dataSource: DataSource,
+  orgId: string,
+  amount: number,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  if (amount <= 0) return;
+  const walletRepo = dataSource.getRepository(TokenWallet);
+  const txRepo = dataSource.getRepository(TokenTransaction);
+  let wallet = await walletRepo.findOne({ where: { organizationId: orgId } });
+  if (!wallet) {
+    wallet = walletRepo.create({ organizationId: orgId, balance: 0 });
+    wallet = await walletRepo.save(wallet);
+  }
+  const tx = txRepo.create({
+    walletId: wallet.id,
+    type: TokenTransactionType.SUBSCRIPTION_GRANT,
+    amount,
+    botId: null,
+    conversationId: null,
+    metadata,
+  });
+  await txRepo.save(tx);
+  wallet.balance += amount;
+  await walletRepo.save(wallet);
+}
 
 export async function seedPlans(dataSource: DataSource): Promise<void> {
   const planRepository = dataSource.getRepository(Plan);
@@ -102,5 +133,44 @@ export async function seedPlans(dataSource: DataSource): Promise<void> {
       providerSubscriptionId: null,
     });
     await subscriptionRepository.save(sub);
+    await grantTokensToOrgWallet(dataSource, org.id, starterPlan.monthlyTokens, {
+      source: 'seed',
+      reason: 'new_subscription_starter_plan',
+    });
+  }
+
+  // Orgs that already had a subscription but no grant row yet (e.g. before wallet grants existed)
+  const activeSubs = await subscriptionRepository.find({
+    where: { status: SubscriptionStatus.ACTIVE },
+    relations: ['plan'],
+  });
+  const walletRepo = dataSource.getRepository(TokenWallet);
+  const txRepo = dataSource.getRepository(TokenTransaction);
+  for (const sub of activeSubs) {
+    const plan = sub.plan as Plan | undefined;
+    if (!plan?.monthlyTokens) continue;
+    let wallet = await walletRepo.findOne({
+      where: { organizationId: sub.organizationId },
+    });
+    if (!wallet) {
+      wallet = walletRepo.create({
+        organizationId: sub.organizationId,
+        balance: 0,
+      });
+      wallet = await walletRepo.save(wallet);
+    }
+    const grantCount = await txRepo.count({
+      where: {
+        walletId: wallet.id,
+        type: TokenTransactionType.SUBSCRIPTION_GRANT,
+      },
+    });
+    if (grantCount > 0) continue;
+    await grantTokensToOrgWallet(
+      dataSource,
+      sub.organizationId,
+      plan.monthlyTokens,
+      { source: 'seed', reason: 'backfill_subscription_grant' },
+    );
   }
 }

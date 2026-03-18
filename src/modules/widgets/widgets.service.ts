@@ -163,7 +163,9 @@ export class WidgetsService {
     logoFile?: Express.Multer.File,
   ): Promise<Widget> {
     const widget = await this.findOne(ctx, id);
-    const { botId: _b, mode: _m, ...rest } = dto;
+    const { botId: discardedBotId, mode: discardedMode, ...rest } = dto;
+    void discardedBotId;
+    void discardedMode;
 
     if (logoFile) {
       try {
