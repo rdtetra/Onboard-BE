@@ -18,6 +18,15 @@ import {
 } from '../../utils/pagination.util';
 import { RoleName } from '../../types/roles';
 
+/** Used for usage/grant paths where there is no HTTP request (widget, jobs, etc.). */
+const internalTokenTransactionsCtx: RequestContext = {
+  user: null,
+  url: '',
+  method: 'INTERNAL',
+  timestamp: new Date().toISOString(),
+  requestId: 'token-transactions-internal',
+};
+
 @Injectable()
 export class TokenTransactionsService {
   constructor(
@@ -27,12 +36,10 @@ export class TokenTransactionsService {
   ) {}
 
   async create(
-    ctx: RequestContext | undefined,
+    ctx: RequestContext,
     dto: CreateTokenTransactionDto,
   ): Promise<TokenTransaction> {
-    const wallet = ctx
-      ? await this.tokenWalletService.findOne(ctx, dto.walletId)
-      : await this.tokenWalletService.findOneById(dto.walletId);
+    const wallet = await this.tokenWalletService.findOne(ctx, dto.walletId);
     const tx = this.transactionRepository.create({
       walletId: dto.walletId,
       type: dto.type,
@@ -61,7 +68,7 @@ export class TokenTransactionsService {
     if (amount <= 0) {
       throw new BadRequestException('Usage amount must be positive');
     }
-    return this.create(undefined, {
+    return this.create(internalTokenTransactionsCtx, {
       walletId,
       type: TokenTransactionType.USAGE,
       amount: -amount,
@@ -79,7 +86,7 @@ export class TokenTransactionsService {
     if (amount <= 0) {
       throw new BadRequestException('Grant amount must be positive');
     }
-    return this.create(undefined, {
+    return this.create(internalTokenTransactionsCtx, {
       walletId,
       type: TokenTransactionType.SUBSCRIPTION_GRANT,
       amount,
@@ -126,7 +133,7 @@ export class TokenTransactionsService {
       throw new NotFoundException(`Token transaction with id ${id} not found`);
     }
     if (
-      ctx?.user &&
+      ctx.user &&
       ctx.user.organizationId &&
       tx.wallet.organizationId !== ctx.user.organizationId
     ) {
