@@ -8,9 +8,13 @@ export class Message extends BaseEntity {
   @Column({ type: 'uuid', name: 'conversation_id' })
   conversationId: string;
 
-  @ManyToOne('Conversation', (conversation: Conversation) => conversation.messages, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    'Conversation',
+    (conversation: Conversation) => conversation.messages,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
   @JoinColumn({ name: 'conversation_id' })
   conversation: Conversation;
 

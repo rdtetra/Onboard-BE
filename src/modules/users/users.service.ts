@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsRelations, FindOptionsWhere, ILike } from 'typeorm';
+import { Repository, FindOptionsRelations } from 'typeorm';
 import { hashPassword, generateTempPassword } from '../../utils/crypto.util';
 import { User } from '../../common/entities/user.entity';
 import { Role } from '../../common/entities/role.entity';
@@ -87,7 +87,7 @@ export class UsersService {
       where: { id: saved.id },
       relations: ['role', 'organization'],
     });
-    
+
     return updated ?? saved;
   }
 
@@ -168,9 +168,7 @@ export class UsersService {
 
     const roleName = inviteUserDto.role ?? RoleName.TENANT;
     if (roleName === RoleName.SUPER_ADMIN) {
-      throw new BadRequestException(
-        'You cannot invite users as super admin',
-      );
+      throw new BadRequestException('You cannot invite users as super admin');
     }
 
     const existingUser = await this.findByEmail(ctx, inviteUserDto.email);
@@ -225,12 +223,15 @@ export class UsersService {
     const appUrl = this.configService.get<string>('APP_URL', '');
     const loginUrl = appUrl ? `${appUrl.replace(/\/$/, '')}/login` : null;
 
-    const html = await this.emailTemplatesService.renderFile('emails/invite.ejs', {
-      name: inviteUserDto.fullName || inviteUserDto.email,
-      email: inviteUserDto.email,
-      tempPassword,
-      loginUrl,
-    });
+    const html = await this.emailTemplatesService.renderFile(
+      'emails/invite.ejs',
+      {
+        name: inviteUserDto.fullName || inviteUserDto.email,
+        email: inviteUserDto.email,
+        tempPassword,
+        loginUrl,
+      },
+    );
 
     await this.emailService.sendMail({
       to: inviteUserDto.email,
@@ -338,10 +339,7 @@ export class UsersService {
       countQb.andWhere('role.name = :roleName', { roleName: roleFilter });
     }
 
-    const [data, total] = await Promise.all([
-      qb.getMany(),
-      countQb.getCount(),
-    ]);
+    const [data, total] = await Promise.all([qb.getMany(), countQb.getCount()]);
 
     return toPaginatedResult(data, total, page, limit);
   }

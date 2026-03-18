@@ -48,7 +48,11 @@ export class WidgetsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<PaginatedResult<Widget>> {
-    return this.widgetsService.findAll(ctx, { page, limit }, { botId, mode, search });
+    return this.widgetsService.findAll(
+      ctx,
+      { page, limit },
+      { botId, mode, search },
+    );
   }
 
   @Get('by-bot/:botId')
@@ -72,7 +76,13 @@ export class WidgetsController {
     @Body() updateWidgetDto: UpdateWidgetDto,
     @UploadedFile() logoFile?: Express.Multer.File,
   ): Promise<Widget> {
-    return this.widgetsService.updateByBotIdAndMode(ctx, botId, mode, updateWidgetDto, logoFile);
+    return this.widgetsService.updateByBotIdAndMode(
+      ctx,
+      botId,
+      mode,
+      updateWidgetDto,
+      logoFile,
+    );
   }
 
   @Get(':id')

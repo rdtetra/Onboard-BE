@@ -52,7 +52,9 @@ export class InvoicesService {
       throw new UnauthorizedException('Authentication required');
     }
     const resolvedOrgId =
-      orgId ?? ctx.user.organizationId ?? (ctx.user.roleName === RoleName.SUPER_ADMIN ? undefined : null);
+      orgId ??
+      ctx.user.organizationId ??
+      (ctx.user.roleName === RoleName.SUPER_ADMIN ? undefined : null);
     if (resolvedOrgId === null) {
       throw new BadRequestException('Organization context required');
     }
@@ -61,12 +63,17 @@ export class InvoicesService {
     if (resolvedOrgId) {
       where.organizationId = resolvedOrgId;
     }
-    if (pagination?.status && Object.values(InvoiceStatus).includes(pagination.status as InvoiceStatus)) {
+    if (
+      pagination?.status &&
+      Object.values(InvoiceStatus).includes(pagination.status as InvoiceStatus)
+    ) {
       where.status = pagination.status as InvoiceStatus;
     }
     if (ctx.user.organizationId && orgId && orgId !== ctx.user.organizationId) {
       if (ctx.user.roleName !== RoleName.SUPER_ADMIN) {
-        throw new UnauthorizedException('Cannot list invoices for another organization');
+        throw new UnauthorizedException(
+          'Cannot list invoices for another organization',
+        );
       }
     }
     const [data, total] = await this.invoiceRepository.findAndCount({

@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  BadRequestException,
   UseInterceptors,
   UploadedFile,
   UseFilters,

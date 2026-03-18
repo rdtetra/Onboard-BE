@@ -1,4 +1,11 @@
-import { Entity, Column, ManyToOne, JoinColumn, OneToOne, Unique } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToOne,
+  Unique,
+} from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Plan } from './plan.entity';
 import { Organization } from './organization.entity';
@@ -10,7 +17,9 @@ export class Subscription extends BaseEntity {
   @Column({ type: 'uuid', name: 'org_id' })
   organizationId: string;
 
-  @OneToOne(() => Organization, (org) => org.subscription, { onDelete: 'CASCADE' })
+  @OneToOne(() => Organization, (org) => org.subscription, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'org_id' })
   organization: Organization;
 

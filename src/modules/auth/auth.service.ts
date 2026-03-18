@@ -63,8 +63,8 @@ export class AuthService {
     void this.auditService
       .log(authCtx, { action: 'REGISTER', resource: 'auth' })
       .catch(() => {});
-    
-      return {
+
+    return {
       access_token: this.jwtWrapperService.sign(payload, 'auth'),
       user: {
         id: user.id,
@@ -112,12 +112,12 @@ export class AuthService {
       ...ctx,
       user: { userId: user.id, email: user.email },
     };
-    
+
     void this.auditService
       .log(authCtx, { action: 'LOGIN', resource: 'auth' })
       .catch(() => {});
-    
-      return {
+
+    return {
       access_token: this.jwtWrapperService.sign(payload, 'auth'),
       user: {
         id: user.id,
@@ -165,7 +165,7 @@ export class AuthService {
       email: user.email,
       sub: user.id,
     };
-    
+
     const resetToken = this.jwtWrapperService.sign(resetPayload, 'reset');
 
     const appUrl = this.configService.get<string>('APP_URL', '');
@@ -208,7 +208,10 @@ export class AuthService {
 
     let decodedPayload: JwtPayload;
     try {
-      decodedPayload = this.jwtWrapperService.verify<JwtPayload>(token, 'reset');
+      decodedPayload = this.jwtWrapperService.verify<JwtPayload>(
+        token,
+        'reset',
+      );
     } catch {
       throw new BadRequestException('Invalid or expired reset token');
     }
@@ -306,7 +309,7 @@ export class AuthService {
     }
 
     const skipCurrentCheck = user.passwordChangeRequired === true;
-    
+
     if (!skipCurrentCheck) {
       if (!changePasswordDto.currentPassword) {
         throw new BadRequestException('Current password is required');
@@ -393,5 +396,4 @@ export class AuthService {
       message: 'Logged out',
     };
   }
-
 }

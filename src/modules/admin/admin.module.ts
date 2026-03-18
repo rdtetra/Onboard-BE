@@ -7,12 +7,7 @@ import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 
 @Module({
-  imports: [
-    UsersModule,
-    BotsModule,
-    ConversationsModule,
-    KnowledgeBaseModule,
-  ],
+  imports: [UsersModule, BotsModule, ConversationsModule, KnowledgeBaseModule],
   controllers: [AdminController],
   providers: [AdminService],
   exports: [AdminService],

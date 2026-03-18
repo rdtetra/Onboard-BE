@@ -16,7 +16,11 @@ export class Conversation extends BaseEntity {
   @Column({ type: 'uuid', name: 'visitor_id' })
   visitorId: string;
 
-  @Column({ type: 'enum', enum: ConversationStatus, default: ConversationStatus.OPEN })
+  @Column({
+    type: 'enum',
+    enum: ConversationStatus,
+    default: ConversationStatus.OPEN,
+  })
   status: ConversationStatus;
 
   @Column({ type: 'timestamp', name: 'started_at' })

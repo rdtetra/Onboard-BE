@@ -25,7 +25,10 @@ export class SubscriptionsService {
     private readonly subscriptionRepository: Repository<Subscription>,
   ) {}
 
-  async create(ctx: RequestContext, dto: CreateSubscriptionDto): Promise<Subscription> {
+  async create(
+    ctx: RequestContext,
+    dto: CreateSubscriptionDto,
+  ): Promise<Subscription> {
     const subscription = this.subscriptionRepository.create({
       organizationId: dto.orgId,
       planId: dto.planId,
@@ -46,7 +49,8 @@ export class SubscriptionsService {
       throw new UnauthorizedException('Authentication required');
     }
     const orgId =
-      ctx.user.organizationId ?? (ctx.user.roleName === RoleName.SUPER_ADMIN ? undefined : null);
+      ctx.user.organizationId ??
+      (ctx.user.roleName === RoleName.SUPER_ADMIN ? undefined : null);
     if (orgId === null) {
       throw new BadRequestException('Organization context required');
     }
@@ -73,7 +77,11 @@ export class SubscriptionsService {
     if (!subscription) {
       throw new NotFoundException(`Subscription with id ${id} not found`);
     }
-    if (ctx?.user && ctx.user.organizationId && subscription.organizationId !== ctx.user.organizationId) {
+    if (
+      ctx?.user &&
+      ctx.user.organizationId &&
+      subscription.organizationId !== ctx.user.organizationId
+    ) {
       if (ctx.user.roleName !== RoleName.SUPER_ADMIN) {
         throw new NotFoundException(`Subscription with id ${id} not found`);
       }
@@ -81,7 +89,9 @@ export class SubscriptionsService {
     return subscription;
   }
 
-  async findCurrentForOrganization(ctx: RequestContext): Promise<Subscription | null> {
+  async findCurrentForOrganization(
+    ctx: RequestContext,
+  ): Promise<Subscription | null> {
     const orgId = ctx.user?.organizationId;
     if (!orgId) {
       return null;
@@ -97,7 +107,11 @@ export class SubscriptionsService {
     return this.findCurrentForOrganization(ctx);
   }
 
-  async update(ctx: RequestContext, id: string, dto: UpdateSubscriptionDto): Promise<Subscription> {
+  async update(
+    ctx: RequestContext,
+    id: string,
+    dto: UpdateSubscriptionDto,
+  ): Promise<Subscription> {
     const subscription = await this.findOne(ctx, id);
     if (dto.orgId !== undefined) subscription.organizationId = dto.orgId;
     if (dto.planId !== undefined) subscription.planId = dto.planId;
@@ -109,7 +123,9 @@ export class SubscriptionsService {
       subscription.currentPeriodEnd = new Date(dto.currentPeriodEnd);
     }
     if (dto.nextRenewalAt !== undefined) {
-      subscription.nextRenewalAt = dto.nextRenewalAt ? new Date(dto.nextRenewalAt) : null;
+      subscription.nextRenewalAt = dto.nextRenewalAt
+        ? new Date(dto.nextRenewalAt)
+        : null;
     }
     if (dto.providerSubscriptionId !== undefined) {
       subscription.providerSubscriptionId = dto.providerSubscriptionId ?? null;

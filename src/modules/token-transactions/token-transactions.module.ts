@@ -7,10 +7,7 @@ import { TokenUsageService } from './token-usage.service';
 import { TokenWalletModule } from '../token-wallet/token-wallet.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([TokenTransaction]),
-    TokenWalletModule,
-  ],
+  imports: [TypeOrmModule.forFeature([TokenTransaction]), TokenWalletModule],
   controllers: [TokenTransactionsController],
   providers: [TokenTransactionsService, TokenUsageService],
   exports: [TokenTransactionsService, TokenUsageService],

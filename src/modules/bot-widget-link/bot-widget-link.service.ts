@@ -55,7 +55,9 @@ export class BotWidgetLinkService {
    * Used by BotsService when a bot is removed.
    */
   async removeWidgetsForBot(bot: Bot & { widgets?: Widget[] }): Promise<void> {
-    const widgets = bot.widgets ?? (await this.widgetRepository.find({ where: { botId: bot.id } }));
+    const widgets =
+      bot.widgets ??
+      (await this.widgetRepository.find({ where: { botId: bot.id } }));
     for (const widget of widgets) {
       await this.widgetRepository.softRemove(widget);
     }

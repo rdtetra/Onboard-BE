@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { TokenTransactionsService } from './token-transactions.service';
 import { CreateTokenTransactionDto } from './dto/create-token-transaction.dto';
 import { TokenTransaction } from '../../common/entities/token-transaction.entity';
@@ -51,11 +44,10 @@ export class TokenTransactionsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<PaginatedResult<TokenTransaction>> {
-    return this.tokenTransactionsService.findAllByWalletId(
-      ctx,
-      walletId,
-      { page, limit },
-    );
+    return this.tokenTransactionsService.findAllByWalletId(ctx, walletId, {
+      page,
+      limit,
+    });
   }
 
   @Get(':id')

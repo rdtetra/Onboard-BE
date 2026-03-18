@@ -43,11 +43,15 @@ export class TasksController {
   ): Promise<PaginatedResult<Task>> {
     const isActiveBool =
       isActive === 'true' ? true : isActive === 'false' ? false : undefined;
-    return this.tasksService.findAll(ctx, { page, limit }, {
-      botId,
-      search,
-      isActive: isActiveBool,
-    });
+    return this.tasksService.findAll(
+      ctx,
+      { page, limit },
+      {
+        botId,
+        search,
+        isActive: isActiveBool,
+      },
+    );
   }
 
   @Get(':id')

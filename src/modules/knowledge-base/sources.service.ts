@@ -131,7 +131,10 @@ export class SourcesService {
       return this.kbSourceRepository.save(source);
     }
 
-    if (dto.sourceType === SourceType.PDF || dto.sourceType === SourceType.DOCX) {
+    if (
+      dto.sourceType === SourceType.PDF ||
+      dto.sourceType === SourceType.DOCX
+    ) {
       if (!dto.fileKey?.trim()) {
         throw new BadRequestException(
           'fileKey is required for PDF/DOCX when not uploading a file',
@@ -399,7 +402,9 @@ export class SourcesService {
   }
 
   /** Total storage (file_size_bytes) for the current org, excluding soft-deleted sources. */
-  async getTotalStorageBytesForOrganization(ctx: RequestContext): Promise<number> {
+  async getTotalStorageBytesForOrganization(
+    ctx: RequestContext,
+  ): Promise<number> {
     const orgId = ctx.user?.organizationId;
     if (!orgId) {
       throw new BadRequestException('Organization context required');
@@ -418,7 +423,8 @@ export class SourcesService {
     source.collectionId = null;
     await this.kbSourceRepository.save(source);
     if (
-      (source.sourceType === SourceType.PDF || source.sourceType === SourceType.DOCX) &&
+      (source.sourceType === SourceType.PDF ||
+        source.sourceType === SourceType.DOCX) &&
       source.sourceValue &&
       this.storageService.isKbSourceS3Key(source.sourceValue)
     ) {

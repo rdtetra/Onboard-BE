@@ -33,7 +33,10 @@ const USE_CASE_CONFIG: Record<
 export class JwtWrapperService {
   constructor(private readonly configService: ConfigService) {}
 
-  private getConfig(useCase: JwtUseCase): { secret: string; expiresIn: string } {
+  private getConfig(useCase: JwtUseCase): {
+    secret: string;
+    expiresIn: string;
+  } {
     const { secretKey, expiresInKey, defaultExpiresIn } =
       USE_CASE_CONFIG[useCase];
     const secret = this.configService.get<string>(secretKey);

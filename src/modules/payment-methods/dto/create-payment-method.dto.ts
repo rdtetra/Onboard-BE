@@ -31,7 +31,9 @@ export class CreatePaymentMethodDto {
   @IsOptional()
   @IsString()
   @MaxLength(24)
-  @Matches(/^[\d\s-]+$/, { message: 'cardNumber must contain only digits, spaces or dashes' })
+  @Matches(/^[\d\s-]+$/, {
+    message: 'cardNumber must contain only digits, spaces or dashes',
+  })
   cardNumber?: string;
 
   @IsOptional()

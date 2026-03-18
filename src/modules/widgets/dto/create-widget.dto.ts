@@ -33,12 +33,16 @@ export class CreateWidgetDto {
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, { message: 'primaryColor must be a valid hex code (e.g. #ffffff)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'primaryColor must be a valid hex code (e.g. #ffffff)',
+  })
   primaryColor?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, { message: 'headerTextColor must be a valid hex code' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'headerTextColor must be a valid hex code',
+  })
   headerTextColor?: string;
 
   @IsOptional()
@@ -48,22 +52,30 @@ export class CreateWidgetDto {
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, { message: 'botMessageBg must be a valid hex code' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'botMessageBg must be a valid hex code',
+  })
   botMessageBg?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, { message: 'botMessageText must be a valid hex code' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'botMessageText must be a valid hex code',
+  })
   botMessageText?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, { message: 'userMessageBg must be a valid hex code' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'userMessageBg must be a valid hex code',
+  })
   userMessageBg?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, { message: 'userMessageText must be a valid hex code' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'userMessageText must be a valid hex code',
+  })
   userMessageText?: string;
 
   @IsOptional()

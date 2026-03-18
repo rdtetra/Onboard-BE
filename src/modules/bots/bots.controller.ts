@@ -12,14 +12,16 @@ import { BotsService } from './bots.service';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
 import { Bot } from '../../common/entities/bot.entity';
-import { BotWidgetToken } from '../../common/entities/bot-widget-token.entity';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { Allow } from '../../common/decorators/allow.decorator';
 import { Permission } from '../../types/permissions';
 import { BotType } from '../../types/bot';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
-import type { BotsOverview, BotWithTokensUsed } from '../../types/bots-overview';
+import type {
+  BotsOverview,
+  BotWithTokensUsed,
+} from '../../types/bots-overview';
 
 @Controller('bots')
 export class BotsController {

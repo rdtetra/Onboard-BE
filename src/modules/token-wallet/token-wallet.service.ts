@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -20,7 +19,10 @@ export class TokenWalletService {
     private readonly walletRepository: Repository<TokenWallet>,
   ) {}
 
-  async create(ctx: RequestContext, dto: CreateTokenWalletDto): Promise<TokenWallet> {
+  async create(
+    ctx: RequestContext,
+    dto: CreateTokenWalletDto,
+  ): Promise<TokenWallet> {
     const existing = await this.walletRepository.findOne({
       where: { organizationId: dto.orgId },
     });
@@ -100,10 +102,7 @@ export class TokenWalletService {
     return this.getOrCreateForOrganization(ctx.user.organizationId);
   }
 
-  async updateBalance(
-    walletId: string,
-    delta: number,
-  ): Promise<TokenWallet> {
+  async updateBalance(walletId: string, delta: number): Promise<TokenWallet> {
     const wallet = await this.walletRepository.findOne({
       where: { id: walletId },
     });

@@ -15,9 +15,15 @@ const VISITOR_IDS = [
 
 const SAMPLE_MESSAGES: { content: string; sender: MessageSender }[] = [
   { content: 'Hi, I need help with my order.', sender: MessageSender.USER },
-  { content: "Hello! I'd be happy to help. Could you share your order ID?", sender: MessageSender.BOT },
+  {
+    content: "Hello! I'd be happy to help. Could you share your order ID?",
+    sender: MessageSender.BOT,
+  },
   { content: "It's #ORD-12345", sender: MessageSender.USER },
-  { content: "I've found your order. It's shipping tomorrow. Anything else?", sender: MessageSender.BOT },
+  {
+    content: "I've found your order. It's shipping tomorrow. Anything else?",
+    sender: MessageSender.BOT,
+  },
   { content: 'No, that was all. Thanks!', sender: MessageSender.USER },
   { content: "You're welcome! Have a great day.", sender: MessageSender.BOT },
 ];

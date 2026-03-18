@@ -52,13 +52,19 @@ export class PlansService {
     return plan;
   }
 
-  async update(ctx: RequestContext, id: string, dto: UpdatePlanDto): Promise<Plan> {
+  async update(
+    ctx: RequestContext,
+    id: string,
+    dto: UpdatePlanDto,
+  ): Promise<Plan> {
     const plan = await this.findOne(ctx, id);
     if (dto.key !== undefined) plan.key = dto.key ?? null;
     if (dto.name !== undefined) plan.name = dto.name.trim();
-    if (dto.monthlyPriceCents !== undefined) plan.monthlyPriceCents = dto.monthlyPriceCents;
+    if (dto.monthlyPriceCents !== undefined)
+      plan.monthlyPriceCents = dto.monthlyPriceCents;
     if (dto.monthlyTokens !== undefined) plan.monthlyTokens = dto.monthlyTokens;
-    if (dto.storageLimitMb !== undefined) plan.storageLimitMb = dto.storageLimitMb;
+    if (dto.storageLimitMb !== undefined)
+      plan.storageLimitMb = dto.storageLimitMb;
     if (dto.maxBots !== undefined) plan.maxBots = dto.maxBots;
     if (dto.features !== undefined) plan.features = dto.features ?? null;
     return this.planRepository.save(plan);

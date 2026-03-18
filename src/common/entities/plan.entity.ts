@@ -1,4 +1,4 @@
-import { Entity, Column, OneToMany, Unique } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Subscription } from './subscription.entity';
 import { PlanKey } from '../../types/plan-key';

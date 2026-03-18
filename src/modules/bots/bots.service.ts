@@ -24,7 +24,10 @@ import { BotType, Behavior, BotPriority } from '../../types/bot';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
-import type { BotsOverview, BotWithTokensUsed } from '../../types/bots-overview';
+import type {
+  BotsOverview,
+  BotWithTokensUsed,
+} from '../../types/bots-overview';
 import {
   parsePagination,
   toPaginatedResult,
@@ -128,19 +131,19 @@ export class BotsService {
     const { page, limit, skip } = parsePagination(pagination ?? {});
 
     const where: FindOptionsWhere<Bot> = {};
-    
+
     if (orgId) {
       where.organizationId = orgId;
     }
-    
+
     if (filters?.botType) {
       where.botType = filters.botType;
     }
-    
+
     if (filters?.search?.trim()) {
       where.name = ILike(`%${filters.search.trim()}%`);
     }
-    
+
     const [data, total] = await this.botRepository.findAndCount({
       where,
       relations: ['tasks', 'conversations'],
@@ -290,7 +293,9 @@ export class BotsService {
 
     if (!bot) {
       throw new NotFoundException(
-        options?.forWidget ? 'Bot not found or not available' : `Bot with ID ${id} not found`,
+        options?.forWidget
+          ? 'Bot not found or not available'
+          : `Bot with ID ${id} not found`,
       );
     }
 
@@ -404,8 +409,7 @@ export class BotsService {
         name: options?.name ?? null,
       }),
     );
-    const backendUrl =
-      this.configService.get<string>('API_URL') ?? '';
+    const backendUrl = this.configService.get<string>('API_URL') ?? '';
     const baseUrl = (backendUrl ?? '').trim();
     const scriptTag = this.getEmbedScriptTag(baseUrl, token);
     return {
@@ -461,9 +465,7 @@ export class BotsService {
       wallet.id,
       bots.map((b) => b.id),
     );
-    const usageByBotId = new Map(
-      usageRows.map((r) => [r.botId, r.tokensUsed]),
-    );
+    const usageByBotId = new Map(usageRows.map((r) => [r.botId, r.tokensUsed]));
     return bots.map((b) => ({
       ...b,
       tokensUsed: usageByBotId.get(b.id) ?? 0,
@@ -482,7 +484,9 @@ export class BotsService {
     );
   }
 
-  private async getDistinctKbSourcesCountForBots(botIds: string[]): Promise<number> {
+  private async getDistinctKbSourcesCountForBots(
+    botIds: string[],
+  ): Promise<number> {
     const result = await this.botRepository
       .createQueryBuilder('bot')
       .innerJoin('bot.kbSources', 'kb')
@@ -512,10 +516,7 @@ export class BotsService {
       payload.domains = updateBotDto.domains;
     }
 
-    if (
-      botType === BotType.PROJECT ||
-      botType === BotType.URL_SPECIFIC
-    ) {
+    if (botType === BotType.PROJECT || botType === BotType.URL_SPECIFIC) {
       if (updateBotDto.targetUrls !== undefined) {
         payload.targetUrls = updateBotDto.targetUrls;
       }

@@ -20,7 +20,11 @@ export class EmailTemplatesService {
   /**
    * Render an EJS template string with the given data.
    */
-  render(template: string, data: Record<string, unknown> = {}, opts?: RenderOptions): string {
+  render(
+    template: string,
+    data: Record<string, unknown> = {},
+    opts?: RenderOptions,
+  ): string {
     return ejs.render(template, data, opts?.options);
   }
 

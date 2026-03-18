@@ -39,7 +39,9 @@ export class WidgetsService {
     const bot = await this.botsService.findOne(ctx, dto.botId, {
       relations: ['widgets'],
     });
-    const existingForMode = (bot.widgets ?? []).find((w) => w.mode === dto.mode);
+    const existingForMode = (bot.widgets ?? []).find(
+      (w) => w.mode === dto.mode,
+    );
     if (existingForMode) {
       throw new ConflictException(
         `A ${dto.mode} widget already exists for this bot`,
@@ -146,8 +148,13 @@ export class WidgetsService {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
-    if (!mode || (mode !== WidgetAppearance.LIGHT && mode !== WidgetAppearance.DARK)) {
-      throw new BadRequestException('Query param "mode" is required (light or dark)');
+    if (
+      !mode ||
+      (mode !== WidgetAppearance.LIGHT && mode !== WidgetAppearance.DARK)
+    ) {
+      throw new BadRequestException(
+        'Query param "mode" is required (light or dark)',
+      );
     }
     await this.botsService.findOne(ctx, botId);
     return this.widgetRepository.findOne({

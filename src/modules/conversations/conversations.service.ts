@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,7 +12,10 @@ import { TokenUsageService } from '../token-transactions/token-usage.service';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
-import { parsePagination, toPaginatedResult } from '../../utils/pagination.util';
+import {
+  parsePagination,
+  toPaginatedResult,
+} from '../../utils/pagination.util';
 import { ConversationStatus } from '../../types/conversation';
 import { MessageSender } from '../../types/message';
 import type { CreateMessageDto } from './dto/create-message.dto';
@@ -263,15 +265,17 @@ export class ConversationsService {
           forWidget: true,
           botId: options.botId,
         })
-      : await this.findOne(ctx, conversationId, { relations: ['messages', 'bot'] });
-console.log(conversation, "hi5")
+      : await this.findOne(ctx, conversationId, {
+          relations: ['messages', 'bot'],
+        });
+    console.log(conversation, 'hi5');
     const message = this.messageRepository.create({
       conversationId: conversation.id,
       content: dto.content.trim(),
       sender: options?.forWidget ? MessageSender.USER : dto.sender,
     });
     const saved = await this.messageRepository.save(message);
-    console.log("hi2")
+    console.log('hi2');
 
     if (
       conversation.bot?.organizationId &&

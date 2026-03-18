@@ -15,7 +15,6 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ChipType } from '../../types/task';
 import { RoleName } from '../../types/roles';
-import { BotType } from '../../types/bot';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {
@@ -191,7 +190,9 @@ export class TasksService {
 
   async remove(ctx: RequestContext, id: string): Promise<void> {
     const task = await this.findOne(ctx, id);
-    const chips = await this.chipRepository.find({ where: { taskId: task.id } });
+    const chips = await this.chipRepository.find({
+      where: { taskId: task.id },
+    });
     if (chips.length > 0) {
       await this.chipRepository.softRemove(chips);
     }

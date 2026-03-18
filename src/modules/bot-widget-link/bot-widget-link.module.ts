@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Bot } from '../../common/entities/bot.entity';
 import { Widget } from '../../common/entities/widget.entity';
 import { BotWidgetLinkService } from './bot-widget-link.service';
 

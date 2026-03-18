@@ -15,7 +15,12 @@ export class User extends BaseEntity {
   @Column({ nullable: true, name: 'full_name' })
   fullName: string;
 
-  @Column({ nullable: true, name: 'profile_picture_url', type: 'varchar', length: 2048 })
+  @Column({
+    nullable: true,
+    name: 'profile_picture_url',
+    type: 'varchar',
+    length: 2048,
+  })
   profilePictureUrl: string | null;
 
   @Column({ nullable: true, name: 'email_verified_at', type: 'timestamp' })

@@ -31,9 +31,8 @@ export class BillingService {
 
     const subscription =
       await this.subscriptionsService.findCurrentForOrganization(ctx);
-    const wallet = await this.tokenWalletService.getOrCreateForOrganization(
-      orgId,
-    );
+    const wallet =
+      await this.tokenWalletService.getOrCreateForOrganization(orgId);
 
     const plan = subscription?.plan ?? null;
     const billingCycle: BillingCycle = 'MONTHLY';
@@ -62,15 +61,16 @@ export class BillingService {
       Math.round((storageUsedBytes / (1024 * 1024)) * 100) / 100;
 
     return {
-      subscription: subscription && plan
-        ? {
-            planName: plan.name,
-            billingCycle,
-            monthlyPriceCents,
-            monthlyCost,
-            nextRenewalAt,
-          }
-        : null,
+      subscription:
+        subscription && plan
+          ? {
+              planName: plan.name,
+              billingCycle,
+              monthlyPriceCents,
+              monthlyCost,
+              nextRenewalAt,
+            }
+          : null,
       tokens: {
         total: tokensTotal,
         used: tokensUsed,
@@ -93,7 +93,8 @@ export class BillingService {
     const subscription =
       await this.subscriptionsService.findCurrentForOrganization(ctx);
 
-    const periodStart = options?.periodStart ?? subscription?.currentPeriodStart;
+    const periodStart =
+      options?.periodStart ?? subscription?.currentPeriodStart;
     const periodEnd = options?.periodEnd ?? subscription?.currentPeriodEnd;
 
     const plan = subscription?.plan ?? null;
@@ -116,9 +117,7 @@ export class BillingService {
     const usageRows =
       await this.tokenTransactionsService.getUsageByBotForWalletInPeriod(
         wallet.id,
-        periodStart && periodEnd
-          ? { periodStart, periodEnd }
-          : undefined,
+        periodStart && periodEnd ? { periodStart, periodEnd } : undefined,
       );
 
     const usageByBotId = new Map<string | null, number>();

@@ -52,7 +52,11 @@ export class TokenTransactionsService {
   async recordUsage(
     walletId: string,
     amount: number,
-    options: { botId?: string; conversationId?: string; metadata?: Record<string, unknown> } = {},
+    options: {
+      botId?: string;
+      conversationId?: string;
+      metadata?: Record<string, unknown>;
+    } = {},
   ): Promise<TokenTransaction> {
     if (amount <= 0) {
       throw new BadRequestException('Usage amount must be positive');
@@ -127,7 +131,9 @@ export class TokenTransactionsService {
       tx.wallet.organizationId !== ctx.user.organizationId
     ) {
       if (ctx.user.roleName !== RoleName.SUPER_ADMIN) {
-        throw new NotFoundException(`Token transaction with id ${id} not found`);
+        throw new NotFoundException(
+          `Token transaction with id ${id} not found`,
+        );
       }
     }
     return tx;
@@ -191,7 +197,9 @@ export class TokenTransactionsService {
   async getUsageByBotForWalletInPeriod(
     walletId: string,
     options?: { periodStart?: Date; periodEnd?: Date },
-  ): Promise<{ botId: string | null; botName: string | null; tokensUsed: number }[]> {
+  ): Promise<
+    { botId: string | null; botName: string | null; tokensUsed: number }[]
+  > {
     const qb = this.transactionRepository
       .createQueryBuilder('tx')
       .leftJoin('tx.bot', 'bot')
@@ -209,7 +217,9 @@ export class TokenTransactionsService {
       });
     }
     if (options?.periodEnd) {
-      qb.andWhere('tx.created_at <= :periodEnd', { periodEnd: options.periodEnd });
+      qb.andWhere('tx.created_at <= :periodEnd', {
+        periodEnd: options.periodEnd,
+      });
     }
 
     const rows = await qb.getRawMany<{

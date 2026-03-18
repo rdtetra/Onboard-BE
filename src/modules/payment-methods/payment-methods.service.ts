@@ -23,15 +23,17 @@ export class PaymentMethodsService {
     private readonly paymentMethodRepository: Repository<PaymentMethod>,
   ) {}
 
-  async create(ctx: RequestContext, dto: CreatePaymentMethodDto): Promise<PaymentMethod> {
+  async create(
+    ctx: RequestContext,
+    dto: CreatePaymentMethodDto,
+  ): Promise<PaymentMethod> {
     const orgId = ctx.user?.organizationId;
     if (!orgId) {
       throw new BadRequestException('Organization context required');
     }
     let last4 = dto.last4 ?? null;
     let brand =
-      dto.brand ??
-      (dto.cardPrefix ? detectCardBrand(dto.cardPrefix) : null);
+      dto.brand ?? (dto.cardPrefix ? detectCardBrand(dto.cardPrefix) : null);
     if (dto.cardNumber) {
       const digits = dto.cardNumber.replace(/\D/g, '');
       if (digits.length >= 4) last4 = digits.slice(-4);
@@ -78,7 +80,9 @@ export class PaymentMethodsService {
   ): Promise<PaymentMethod[]> {
     if (ctx?.user?.organizationId && ctx.user.organizationId !== orgId) {
       if (ctx.user.roleName !== RoleName.SUPER_ADMIN) {
-        throw new UnauthorizedException('Cannot list payment methods for another organization');
+        throw new UnauthorizedException(
+          'Cannot list payment methods for another organization',
+        );
       }
     }
     return this.paymentMethodRepository.find({

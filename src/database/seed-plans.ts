@@ -44,7 +44,13 @@ const DEFAULT_PLANS: PlanSeedRow[] = [
     monthlyTokens: 200_000,
     storageLimitMb: 200_000,
     maxBots: 50,
-    features: { prioritySupport: true, apiAccess: true, analytics: true, sso: true, dedicatedSlack: true },
+    features: {
+      prioritySupport: true,
+      apiAccess: true,
+      analytics: true,
+      sso: true,
+      dedicatedSlack: true,
+    },
   },
 ];
 
@@ -133,10 +139,15 @@ export async function seedPlans(dataSource: DataSource): Promise<void> {
       providerSubscriptionId: null,
     });
     await subscriptionRepository.save(sub);
-    await grantTokensToOrgWallet(dataSource, org.id, starterPlan.monthlyTokens, {
-      source: 'seed',
-      reason: 'new_subscription_starter_plan',
-    });
+    await grantTokensToOrgWallet(
+      dataSource,
+      org.id,
+      starterPlan.monthlyTokens,
+      {
+        source: 'seed',
+        reason: 'new_subscription_starter_plan',
+      },
+    );
   }
 
   // Orgs that already had a subscription but no grant row yet (e.g. before wallet grants existed)

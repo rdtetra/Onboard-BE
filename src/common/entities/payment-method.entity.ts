@@ -30,7 +30,12 @@ export class PaymentMethod extends BaseEntity {
   @Column({ type: 'varchar', length: 4, nullable: true })
   last4: string | null;
 
-  @Column({ type: 'varchar', name: 'name_on_card', length: 200, nullable: true })
+  @Column({
+    type: 'varchar',
+    name: 'name_on_card',
+    length: 200,
+    nullable: true,
+  })
   nameOnCard: string | null;
 
   @Column({ type: 'varchar', length: 50, nullable: true })

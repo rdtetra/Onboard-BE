@@ -1,10 +1,4 @@
-import {
-  IsUUID,
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsObject,
-} from 'class-validator';
+import { IsUUID, IsEnum, IsInt, IsOptional, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TokenTransactionType } from '../../../types/token-transaction-type';
 

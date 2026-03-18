@@ -22,16 +22,18 @@ export class TokenUsageService {
    */
   async consumeTokens(params: ConsumeTokensParams): Promise<TokenTransaction> {
     const { organizationId, botId, conversationId, amount, metadata } = params;
-    console.log(params, "hi")
+    console.log(params, 'hi');
 
     if (amount <= 0) {
-      throw new BadRequestException('Token consumption amount must be positive');
+      throw new BadRequestException(
+        'Token consumption amount must be positive',
+      );
     }
 
     const wallet =
       await this.tokenWalletService.getOrCreateForOrganization(organizationId);
 
-    console.log(wallet, "hi6")
+    console.log(wallet, 'hi6');
 
     return this.tokenTransactionsService.recordUsage(wallet.id, amount, {
       botId,

@@ -1,4 +1,10 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { RoleName } from '../../../types/roles';
 
 export class InviteUserDto {

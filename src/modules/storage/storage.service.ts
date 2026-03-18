@@ -18,7 +18,8 @@ const ALLOWED_KB_SOURCE_MIME = [
 ] as const;
 const KB_SOURCE_EXT: Record<string, string> = {
   'application/pdf': 'pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    'docx',
 };
 const LOGO_EXT: Record<string, string> = {
   'image/png': 'png',
@@ -35,9 +36,13 @@ export class StorageService {
   private readonly region: string;
 
   constructor(private readonly configService: ConfigService) {
-    const defaultRegion = this.configService.get<string>('AWS_REGION', 'us-east-1');
+    const defaultRegion = this.configService.get<string>(
+      'AWS_REGION',
+      'us-east-1',
+    );
     this.region =
-      this.configService.get<string>('AWS_ASSETS_BUCKET_REGION') || defaultRegion;
+      this.configService.get<string>('AWS_ASSETS_BUCKET_REGION') ||
+      defaultRegion;
     this.bucket =
       this.configService.get<string>('AWS_ASSETS_STORAGE_BUCKET_NAME') || '';
 
@@ -46,7 +51,10 @@ export class StorageService {
       forcePathStyle: this.bucket.includes('.'),
       credentials: {
         accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID', ''),
-        secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY', ''),
+        secretAccessKey: this.configService.get<string>(
+          'AWS_SECRET_ACCESS_KEY',
+          '',
+        ),
       },
     });
   }
@@ -57,10 +65,16 @@ export class StorageService {
     mimeType: string,
   ): Promise<string> {
     if (buffer.length > WIDGET_LOGO_MAX_BYTES) {
-      throw new Error(`Logo must be at most 1 MB (got ${(buffer.length / 1024).toFixed(1)} KB)`);
+      throw new Error(
+        `Logo must be at most 1 MB (got ${(buffer.length / 1024).toFixed(1)} KB)`,
+      );
     }
     const normalized = mimeType.toLowerCase();
-    if (!ALLOWED_LOGO_MIME.includes(normalized as (typeof ALLOWED_LOGO_MIME)[number])) {
+    if (
+      !ALLOWED_LOGO_MIME.includes(
+        normalized as (typeof ALLOWED_LOGO_MIME)[number],
+      )
+    ) {
       throw new Error('Logo must be PNG or JPEG');
     }
     const ext = LOGO_EXT[normalized] ?? 'png';
@@ -91,7 +105,9 @@ export class StorageService {
     }
     const normalized = mimeType.toLowerCase();
     if (
-      !ALLOWED_LOGO_MIME.includes(normalized as (typeof ALLOWED_LOGO_MIME)[number])
+      !ALLOWED_LOGO_MIME.includes(
+        normalized as (typeof ALLOWED_LOGO_MIME)[number],
+      )
     ) {
       throw new Error('Profile picture must be PNG or JPEG');
     }
