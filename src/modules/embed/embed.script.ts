@@ -84,6 +84,8 @@ export const EMBED_SCRIPT = `
   var WELCOME = 'Welcome to Onboard Support! Ask me anything about our products.';
   var widgetConfig = null;
   var bootLoading = false;
+  var socket = null;
+  var ioFactory = null;
 
   function q(sel) { return shadow.querySelector(sel); }
 
@@ -115,6 +117,75 @@ export const EMBED_SCRIPT = `
       if (!r.ok) throw new Error('Request failed');
       return r.json();
     });
+  }
+
+  function loadSocketIoClient() {
+    if (ioFactory) return Promise.resolve(ioFactory);
+    return new Promise(function(resolve, reject) {
+      var existing = document.getElementById('onboard-socketio-client');
+      if (existing && window.io) {
+        ioFactory = window.io;
+        return resolve(ioFactory);
+      }
+      var tag = existing || document.createElement('script');
+      tag.id = 'onboard-socketio-client';
+      tag.src = base + '/socket.io/socket.io.js';
+      tag.async = true;
+      tag.onload = function() {
+        if (!window.io) return reject(new Error('socket.io client unavailable'));
+        ioFactory = window.io;
+        resolve(ioFactory);
+      };
+      tag.onerror = function() { reject(new Error('socket.io client failed to load')); };
+      if (!existing) document.head.appendChild(tag);
+    });
+  }
+
+  function connectSocket() {
+    if (socket && socket.connected) return Promise.resolve(socket);
+    return loadSocketIoClient().then(function(io) {
+      socket = io(base + '/chat', {
+        transports: ['websocket'],
+        withCredentials: true,
+      });
+      return socket;
+    });
+  }
+
+  function joinConversationRoom() {
+    if (!conversationId || !token) return Promise.resolve();
+    return connectSocket().then(function(s) {
+      return new Promise(function(resolve) {
+        var done = false;
+        var timer = setTimeout(function() {
+          if (done) return;
+          done = true;
+          resolve();
+        }, 3000);
+        try {
+          s.emit('joinConversation', { conversationId: conversationId, token: token }, function() {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            resolve();
+          });
+        } catch (e) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+    }).catch(function(err) {
+      console.warn('[Onboard widget] socket connect failed', err);
+    });
+  }
+
+  function disconnectSocket() {
+    try {
+      if (socket) socket.disconnect();
+      socket = null;
+    } catch (e) {}
   }
 
   function getConfigValue(key, fallback) {
@@ -326,6 +397,7 @@ export const EMBED_SCRIPT = `
     setBootLoading(true);
     loadConfig()
       .then(function() { return createConversationOnLoad(); })
+      .then(function() { return joinConversationRoom(); })
       .then(function() { return loadMessages(); })
       .then(renderMessages)
       .then(function() { setBootLoading(false); })
@@ -344,7 +416,10 @@ export const EMBED_SCRIPT = `
       if (mq.addEventListener) mq.addEventListener('change', onSchemeChange);
       else if (mq.addListener) mq.addListener(onSchemeChange);
     } catch (e) {}
-    window.addEventListener('beforeunload', endConversation);
+    window.addEventListener('beforeunload', function() {
+      endConversation();
+      disconnectSocket();
+    });
   }
 
   function appendHost() {

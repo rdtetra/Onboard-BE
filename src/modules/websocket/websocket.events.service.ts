@@ -6,12 +6,11 @@ export class WebsocketEventsService {
 
   constructor() {}
 
-  onConnection(clientId: string): void {
+  onConnect(clientId: string): void {
     this.logger.log(`Socket connected: ${clientId}`);
   }
 
-  onDisconnection(clientId: string): void {
+  onDisconnect(clientId: string): void {
     this.logger.log(`Socket disconnected: ${clientId}`);
   }
-
 }
