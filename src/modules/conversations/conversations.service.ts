@@ -19,6 +19,7 @@ import {
 import { ConversationStatus } from '../../types/conversation';
 import { MessageSender } from '../../types/message';
 import type { CreateMessageDto } from './dto/create-message.dto';
+import { WebsocketEventsService } from '../websocket/websocket.events.service';
 
 @Injectable()
 export class ConversationsService {
@@ -29,6 +30,7 @@ export class ConversationsService {
     private readonly messageRepository: Repository<Message>,
     private readonly botsService: BotsService,
     private readonly tokenUsageService: TokenUsageService,
+    private readonly websocketEventsService: WebsocketEventsService,
   ) {}
 
   async create(
