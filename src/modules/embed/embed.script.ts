@@ -1,5 +1,5 @@
 /**
- * Inline embed script for the chat widget. Served as application/javascript.
+ * Injects a host div with Shadow DOM so widget styles are isolated from the page.
  * Usage: <script src="https://your-api.com/embed/embed.js" data-token="JWT"></script>
  */
 export const EMBED_SCRIPT = `
@@ -27,20 +27,75 @@ export const EMBED_SCRIPT = `
     localStorage.setItem(storageKey, visitorId);
   }
 
+  if (!document.getElementById('onboard-widget-font')) {
+    var pre = document.createElement('link');
+    pre.rel = 'preconnect';
+    pre.href = 'https://fonts.googleapis.com';
+    document.head.appendChild(pre);
+    var pre2 = document.createElement('link');
+    pre2.rel = 'preconnect';
+    pre2.href = 'https://fonts.gstatic.com';
+    pre2.crossOrigin = '';
+    document.head.appendChild(pre2);
+    var font = document.createElement('link');
+    font.id = 'onboard-widget-font';
+    font.rel = 'stylesheet';
+    font.href = 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap';
+    document.head.appendChild(font);
+  }
+
+  var robotSvg = '<svg class="ob-robot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.5" r="1.2" fill="currentColor" stroke="none"/><path d="M12 5.8v1.5"/><rect x="5.5" y="8" width="13" height="11" rx="2.5"/><circle cx="9.5" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="13" r="1" fill="currentColor" stroke="none"/><path d="M9 16.5h6"/></svg>';
+  var sendSvg = '<svg class="ob-send-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+
+  var css = ':host { display: block; } * { box-sizing: border-box; } .ob-root { font-family: Roboto, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; } #onboard-widget-btn { width: 60px; height: 60px; border-radius: 50%; border: none; background: #7B61FF; color: #fff; cursor: pointer; box-shadow: 0 4px 20px rgba(123,97,255,0.45); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.15s, transform 0.15s; } #onboard-widget-btn:hover { background: #6A52E8; transform: scale(1.03); } #onboard-widget-btn .ob-robot-svg { width: 28px; height: 28px; } #onboard-widget-panel { display: none; width: 400px; max-width: calc(100vw - 20px); height: 480px; max-height: calc(100vh - 100px); margin-bottom: 14px; background: #fff; border-radius: 16px; box-shadow: 0px 4px 24px 0px #0000001F; flex-direction: column; overflow: hidden; } #onboard-widget-panel.open { display: flex; } .ob-section-header { flex-shrink: 0; position: relative; padding: 12px 16px; background: #7B61FF; display: flex; align-items: center; justify-content: flex-start; } .ob-header-row { display: flex; align-items: center; text-align: left; } .ob-header-logo { width: 46px; height: 46px; border-radius: 50%; background: #FEFEFE4D; color: #FEFEFE; padding: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; } .ob-header-logo .ob-robot-svg { max-width: 26px; max-height: 26px; width: 100%; height: 100%; } .ob-header-copy { display: flex; flex-direction: column; align-items: flex-start; margin-left: 12px; min-width: 0; } .ob-header-title { font-family: Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 1.25; color: #FEFEFE; } .ob-header-status { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-family: Roboto, sans-serif; font-size: 12px; font-weight: 400; color: #FEFEFE; } .ob-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #00A94F; flex-shrink: 0; } .ob-close { position: absolute; top: 12px; right: 16px; background: transparent; border: none; color: #E9EAF2; font-size: 24px; line-height: 1; cursor: pointer; padding: 0; opacity: 0.9; border-radius: 9999px; display: flex; align-items: center; justify-content: center; } .ob-section-messages { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: #fff; padding: 16px; } .ob-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; } .ob-msg { display: flex; flex-direction: column; max-width: 88%; } .ob-msg-bot { align-self: flex-start; } .ob-msg-user { align-self: flex-end; max-width: 88%; } .ob-bubble { padding: 12px 14px; border-radius: 16px; word-break: break-word; line-height: 1.45; display: flex; flex-direction: column; gap: 10px; font-size: 14px; font-weight: 400; } .ob-msg-bot .ob-bubble { background: #F2EFFF; color: #7B61FF; border-radius: 16px 16px 16px 4px; } .ob-msg-user .ob-bubble { background: #7B61FF; color: #FEFEFE; border-radius: 16px 16px 4px 16px; } .ob-bubble-text { font-size: 14px; font-weight: 400; } .ob-msg-time { font-size: 12px; font-weight: 400; } .ob-msg-bot .ob-msg-time { color: #6974A6; } .ob-msg-user .ob-msg-time { color: #E7E7E7; text-align: right; } .ob-section-footer { flex-shrink: 0; padding: 16px; border-top: 1px solid #E5E7EB; background: #fff; } .ob-input-row { display: flex; align-items: center; gap: 10px; } .ob-input { flex: 1; height: 36px; padding: 8px; border: 1px solid #E5E7EB; border-radius: 4px; font-size: 14px; font-weight: 500; color: #1F307A; outline: none; transition: border-color 0.15s; box-sizing: border-box; } .ob-input::placeholder { color: #BABFD6; font-size: 14px; font-weight: 500; } .ob-input:focus { border-color: #7B61FF; } .ob-send { width: 36px; height: 36px; border: none; border-radius: 8px; background: #7B61FF; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; } .ob-send:hover { background: #6A52E8; } .ob-send .ob-send-svg { width: 20px; height: 20px; flex-shrink: 0; } .ob-powered { text-align: center; font-size: 12px; color: #9CA3AF; margin-top: 10px; } .ob-powered-brand { font-weight: 500; }';
+
+  var html =
+    '<style>' + css + '</style>' +
+    '<div class="ob-root">' +
+    '<div id="onboard-widget-panel">' +
+    '<header class="ob-section-header">' +
+    '<div class="ob-header-row">' +
+    '<div class="ob-header-logo">' + robotSvg + '</div>' +
+    '<div class="ob-header-copy">' +
+    '<div class="ob-header-title">Hi, how can I help?</div>' +
+    '<div class="ob-header-status"><span class="ob-status-dot" aria-hidden="true"></span><span>Online</span></div>' +
+    '</div></div>' +
+    '<button type="button" class="ob-close" aria-label="Close">&#215;</button>' +
+    '</header>' +
+    '<div class="ob-section-messages"><div class="ob-messages" role="log" aria-live="polite"></div></div>' +
+    '<div class="ob-section-footer">' +
+    '<div class="ob-input-row">' +
+    '<input type="text" class="ob-input" placeholder="Type your message..." autocomplete="off" />' +
+    '<button type="button" class="ob-send" aria-label="Send">' + sendSvg + '</button>' +
+    '</div>' +
+    '<div class="ob-powered">Powered by <span class="ob-powered-brand">Onboard io</span></div>' +
+    '</div></div>' +
+    '<button id="onboard-widget-btn" type="button" aria-label="Open chat">' + robotSvg + '</button>' +
+    '</div>';
+
+  var host = document.createElement('div');
+  host.id = 'onboard-widget-host';
+  host.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:2147483647;';
+  var shadow = host.attachShadow({ mode: 'open' });
+  shadow.innerHTML = html;
+
   var conversationId = null;
   var open = false;
-  var container = null;
-  var panel = null;
-  var messagesEl = null;
-  var inputEl = null;
+  var WELCOME = 'Welcome to Onboard Support! Ask me anything about our products.';
+
+  function q(sel) { return shadow.querySelector(sel); }
+
+  function formatTime(iso) {
+    try {
+      var d = iso ? new Date(iso) : new Date();
+      return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch (e) { return ''; }
+  }
 
   function api(path, opts) {
     opts = opts || {};
     var url = base + path;
-    var init = {
-      method: opts.method || 'GET',
-      headers: opts.headers || {}
-    };
+    var init = { method: opts.method || 'GET', headers: opts.headers || {} };
     init.headers['X-WIDGET-ACCESS-TOKEN'] = token;
     if (opts.body) {
       init.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
@@ -53,28 +108,20 @@ export const EMBED_SCRIPT = `
   }
 
   function createConversationOnLoad() {
-    return api('/conversations', {
-      method: 'POST',
-      body: { visitorId: visitorId }
-    }).then(function(c) {
-      // API is wrapped in { data: { ...conversation } }
+    return api('/conversations', { method: 'POST', body: { visitorId: visitorId } }).then(function(c) {
       var convo = c && c.data ? c.data : c;
       conversationId = convo && convo.id;
-      console.log('[Onboard widget] Conversation created on page load:', c);
       return c;
     });
   }
 
   function endConversation() {
-    if (!conversationId) return;
+    if (!conversationId || !token) return;
     var url = base + '/conversations/' + conversationId + '/end';
     try {
       fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-WIDGET-ACCESS-TOKEN': token
-        },
+        headers: { 'Content-Type': 'application/json', 'X-WIDGET-ACCESS-TOKEN': token },
         body: '{}',
         keepalive: true
       });
@@ -83,12 +130,9 @@ export const EMBED_SCRIPT = `
 
   function loadMessages() {
     if (!conversationId) return Promise.resolve([]);
-    return api('/conversations/' + conversationId + '/messages')
-      .then(function(res) {
-        // ApiResponse<{ messages[] }> but our controller returns Message[]
-        // so res.data is the array (or res itself without wrapper in non-wrapped envs)
-        return res && Array.isArray(res.data) ? res.data : (res.data || res || []);
-      });
+    return api('/conversations/' + conversationId + '/messages').then(function(res) {
+      return res && Array.isArray(res.data) ? res.data : (res.data || res || []);
+    });
   }
 
   function addMessageToConversation(text) {
@@ -99,16 +143,31 @@ export const EMBED_SCRIPT = `
     });
   }
 
+  function appendBubble(messagesEl, sender, text, timeIso) {
+    var wrap = document.createElement('div');
+    wrap.className = 'ob-msg ob-msg-' + (sender === 'USER' ? 'user' : 'bot');
+    var bubble = document.createElement('div');
+    bubble.className = 'ob-bubble';
+    var textSpan = document.createElement('span');
+    textSpan.className = 'ob-bubble-text';
+    textSpan.textContent = text;
+    var time = document.createElement('div');
+    time.className = 'ob-msg-time';
+    time.textContent = formatTime(timeIso);
+    bubble.appendChild(textSpan);
+    bubble.appendChild(time);
+    wrap.appendChild(bubble);
+    messagesEl.appendChild(wrap);
+  }
+
   function renderMessages(list) {
+    var messagesEl = q('.ob-messages');
     if (!messagesEl) return;
     messagesEl.innerHTML = '';
+    appendBubble(messagesEl, 'BOT', WELCOME, null);
     (list || []).forEach(function(m) {
-      var div = document.createElement('div');
-      div.className = 'ob-msg ob-msg-' + (m.sender === 'USER' ? 'user' : 'bot');
-      var p = document.createElement('p');
-      p.textContent = m.content;
-      div.appendChild(p);
-      messagesEl.appendChild(div);
+      var sender = m.sender === 'USER' ? 'USER' : 'BOT';
+      appendBubble(messagesEl, sender, m.content, m.createdAt);
     });
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -116,76 +175,48 @@ export const EMBED_SCRIPT = `
   function openPanel() {
     if (open) return;
     open = true;
-    if (!panel) buildPanel();
-    panel.style.display = 'block';
+    q('#onboard-widget-panel').classList.add('open');
   }
 
   function closePanel() {
     open = false;
-    if (panel) panel.style.display = 'none';
+    q('#onboard-widget-panel').classList.remove('open');
   }
 
   function togglePanel() {
     open ? closePanel() : openPanel();
   }
 
-  function buildPanel() {
-    container = document.createElement('div');
-    container.id = 'onboard-widget-root';
-    container.innerHTML = '<button id="onboard-widget-btn" type="button" aria-label="Open chat">Chat</button>' +
-      '<div id="onboard-widget-panel" style="display:none;">' +
-      '<div class="ob-header"><span>Chat</span><button type="button" class="ob-close" aria-label="Close">×</button></div>' +
-      '<div class="ob-messages"></div>' +
-      '<div class="ob-input-wrap"><input type="text" class="ob-input" placeholder="Type a message..." /><button type="button" class="ob-send">Send</button></div>' +
-      '</div>';
-    var s = document.createElement('style');
-    s.textContent = '#onboard-widget-root{position:fixed;bottom:20px;right:20px;font-family:system-ui,sans-serif;z-index:999999;}' +
-      '#onboard-widget-btn{width:56px;height:56px;border-radius:50%;border:none;background:#2563eb;color:#fff;font-size:20px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.2);}' +
-      '#onboard-widget-btn:hover{background:#1d4ed8;}' +
-      '#onboard-widget-panel{width:360px;max-width:calc(100vw - 40px);height:420px;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.15);display:flex;flex-direction:column;overflow:hidden;}' +
-      '.ob-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#2563eb;color:#fff;}' +
-      '.ob-close{background:transparent;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1;}' +
-      '.ob-messages{flex:1;overflow-y:auto;padding:12px;}' +
-      '.ob-msg{margin-bottom:8px;}' +
-      '.ob-msg p{margin:0;padding:8px 12px;border-radius:8px;max-width:85%;}' +
-      '.ob-msg-user p{margin-left:auto;background:#2563eb;color:#fff;}' +
-      '.ob-msg-bot p{background:#f1f5f9;color:#1e293b;}' +
-      '.ob-input-wrap{display:flex;gap:8px;padding:12px;border-top:1px solid #e2e8f0;}' +
-      '.ob-input{flex:1;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;}' +
-      '.ob-send{padding:10px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;}';
-    document.head.appendChild(s);
-    document.body.appendChild(container);
-    panel = document.getElementById('onboard-widget-panel');
-    messagesEl = panel.querySelector('.ob-messages');
-    inputEl = panel.querySelector('.ob-input');
-    document.getElementById('onboard-widget-btn').onclick = togglePanel;
+  function mount() {
+    var panel = q('#onboard-widget-panel');
+    var inputEl = panel.querySelector('.ob-input');
+    q('#onboard-widget-btn').onclick = togglePanel;
     panel.querySelector('.ob-close').onclick = closePanel;
     panel.querySelector('.ob-send').onclick = function() {
       var text = (inputEl.value || '').trim();
       if (!text) return;
       inputEl.value = '';
-      addMessageToConversation(text).then(function() {
-        return loadMessages();
-      }).then(renderMessages).catch(function(err) {
-        console.warn('[Onboard widget]', err);
-      });
+      addMessageToConversation(text)
+        .then(function() { return loadMessages(); })
+        .then(renderMessages)
+        .catch(function(err) { console.warn('[Onboard widget]', err); });
     };
     inputEl.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') panel.querySelector('.ob-send').click();
     });
-  }
-
-  function init() {
-    buildPanel();
-    createConversationOnLoad().catch(function(err) {
-      console.warn('[Onboard widget]', err);
-    });
+    createConversationOnLoad()
+      .then(function() { return loadMessages(); })
+      .then(renderMessages)
+      .catch(function(err) { console.warn('[Onboard widget]', err); });
     window.addEventListener('beforeunload', endConversation);
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+
+  function appendHost() {
+    if (document.body) document.body.appendChild(host);
+    else document.addEventListener('DOMContentLoaded', function() { document.body.appendChild(host); });
   }
+
+  appendHost();
+  mount();
 })();
 `.trim();
