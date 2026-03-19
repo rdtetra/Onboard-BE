@@ -268,14 +268,12 @@ export class ConversationsService {
       : await this.findOne(ctx, conversationId, {
           relations: ['messages', 'bot'],
         });
-    console.log(conversation, 'hi5');
     const message = this.messageRepository.create({
       conversationId: conversation.id,
       content: dto.content.trim(),
       sender: options?.forWidget ? MessageSender.USER : dto.sender,
     });
     const saved = await this.messageRepository.save(message);
-    console.log('hi2');
 
     if (
       conversation.bot?.organizationId &&
