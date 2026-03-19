@@ -3,7 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { Widget } from '../../common/entities/widget.entity';
-import { WidgetPosition, WidgetAppearance } from '../../types/widget';
+import { WidgetAppearance } from '../../types/widget';
+import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
 
 /**
  * Single place for bot ↔ widget link behavior. Each bot has two widgets (LIGHT and DARK mode).
@@ -20,30 +21,15 @@ export class BotWidgetLinkService {
    * Used by BotsService when a bot is created.
    */
   async createDefaultWidgetForBot(botId: string): Promise<Widget[]> {
-    const defaults = {
-      botLogoUrl: null as string | null,
-      position: WidgetPosition.BOTTOM_RIGHT,
-      primaryColor: '#7b61ff',
-      headerTextColor: '#fefefe',
-      background: '#fefefe',
-      botMessageBg: '#f2efff',
-      botMessageText: '#7b61ff',
-      userMessageBg: '#7b61ff',
-      userMessageText: '#fefefe',
-      headerText: 'Hi, how can I help?',
-      welcomeMessage:
-        'Welcome to Onboard Support! Ask me anything about our products.',
-      showPoweredBy: false,
-    };
     const lightWidget = this.widgetRepository.create({
       botId,
+      ...DEFAULT_WIDGET_CONFIG,
       mode: WidgetAppearance.LIGHT,
-      ...defaults,
     });
     const darkWidget = this.widgetRepository.create({
       botId,
+      ...DEFAULT_WIDGET_CONFIG,
       mode: WidgetAppearance.DARK,
-      ...defaults,
     });
     const savedLight = await this.widgetRepository.save(lightWidget);
     const savedDark = await this.widgetRepository.save(darkWidget);
