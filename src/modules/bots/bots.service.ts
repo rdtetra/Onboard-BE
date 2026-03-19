@@ -57,7 +57,7 @@ export class BotsService {
     const base = backendUrl.replace(/\/$/, '');
     const src = `${base}/embed/embed.js`;
     const escaped = widgetToken.replace(/"/g, '&quot;');
-    return `<script src="${src}" data-token="${escaped}"></script>`;
+    return `<script src="${src}" data-token="${escaped}" data-backend-url="${base}"></script>`;
   }
 
   async create(ctx: RequestContext, createBotDto: CreateBotDto): Promise<Bot> {
@@ -409,8 +409,9 @@ export class BotsService {
         name: options?.name ?? null,
       }),
     );
-    const backendUrl = this.configService.get<string>('API_URL') ?? '';
-    const baseUrl = (backendUrl ?? '').trim();
+    const baseUrl = (this.configService.get<string>('API_URL') ?? '')
+      .trim()
+      .replace(/\/$/, '');
     const scriptTag = this.getEmbedScriptTag(baseUrl, token);
     return {
       widgetToken: token,
@@ -428,7 +429,9 @@ export class BotsService {
       where: { botId },
       order: { createdAt: 'DESC' },
     });
-    const baseUrl = (this.configService.get<string>('API_URL') ?? '').trim();
+    const baseUrl = (this.configService.get<string>('API_URL') ?? '')
+      .trim()
+      .replace(/\/$/, '');
     return tokens.map((record) => ({
       ...record,
       scriptTag: this.getEmbedScriptTag(baseUrl, record.token),

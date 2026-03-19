@@ -1,13 +1,47 @@
 /**
  * Injects a host div with Shadow DOM so widget styles are isolated from the page.
- * Usage: <script src="https://your-api.com/embed/embed.js" data-token="JWT"></script>
+ * Usage: <script src="https://your-api.com/embed/embed.js" data-token="JWT" data-backend-url="https://your-api.com"></script>
  */
 export const EMBED_SCRIPT = `
 (function() {
   var script = document.currentScript;
   var token = script && script.getAttribute('data-token');
-  if (!token) return;
-  var base = script.src.replace(/\\/embed\\.js.*$/, '');
+  if (!token || !String(token).trim()) {
+    console.error('[Onboard widget] Missing required data-token on embed script tag');
+    return;
+  }
+  var backendUrlAttr = script && script.getAttribute('data-backend-url');
+  if (!backendUrlAttr || !String(backendUrlAttr).trim()) {
+    console.error('[Onboard widget] Missing required data-backend-url on embed script tag');
+    return;
+  }
+  function stripTrailingSlash(s) {
+    return String(s || '').replace(/\\/+$/, '');
+  }
+  function resolveBases(scriptEl) {
+    var src = (scriptEl && scriptEl.src) || '';
+    var srcUrl = null;
+    try { srcUrl = new URL(src, window.location.href); } catch (e) {}
+
+    var dataApiBase = scriptEl && scriptEl.getAttribute('data-api-base');
+    var dataSocketBase = scriptEl && scriptEl.getAttribute('data-socket-base');
+    var dataBackendUrl = backendUrlAttr;
+
+    var fallbackApiBase = src.replace(/\\/embed\\/embed\\.js.*$/, '/embed');
+    if (fallbackApiBase === src && srcUrl) fallbackApiBase = srcUrl.origin + '/embed';
+    var backendUrl = stripTrailingSlash(dataBackendUrl);
+    fallbackApiBase = backendUrl + '/embed';
+
+    var apiBase = stripTrailingSlash(dataApiBase || fallbackApiBase);
+    var socketBase = stripTrailingSlash(
+      dataSocketBase || backendUrl,
+    );
+
+    return { apiBase: apiBase, socketBase: socketBase };
+  }
+  var bases = resolveBases(script);
+  var apiBase = bases.apiBase;
+  var socketBase = bases.socketBase;
   var botId = (function() {
     try {
       var parts = token.split('.');
@@ -106,7 +140,7 @@ export const EMBED_SCRIPT = `
 
   function api(path, opts) {
     opts = opts || {};
-    var url = base + path;
+    var url = apiBase + path;
     var init = { method: opts.method || 'GET', headers: opts.headers || {} };
     init.headers['X-WIDGET-ACCESS-TOKEN'] = token;
     if (opts.body) {
@@ -129,7 +163,7 @@ export const EMBED_SCRIPT = `
       }
       var tag = existing || document.createElement('script');
       tag.id = 'onboard-socketio-client';
-      tag.src = base + '/socket.io/socket.io.js';
+      tag.src = socketBase + '/socket.io/socket.io.js';
       tag.async = true;
       tag.onload = function() {
         if (!window.io) return reject(new Error('socket.io client unavailable'));
@@ -144,7 +178,7 @@ export const EMBED_SCRIPT = `
   function connectSocket() {
     if (socket && socket.connected) return Promise.resolve(socket);
     return loadSocketIoClient().then(function(io) {
-      socket = io(base + '/chat', {
+      socket = io(socketBase + '/chat', {
         transports: ['websocket'],
         withCredentials: true,
       });
@@ -306,7 +340,7 @@ export const EMBED_SCRIPT = `
 
   function endConversation() {
     if (!conversationId || !token) return;
-    var url = base + '/conversations/' + conversationId + '/end';
+    var url = apiBase + '/conversations/' + conversationId + '/end';
     try {
       fetch(url, {
         method: 'POST',
