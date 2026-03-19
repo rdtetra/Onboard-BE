@@ -1,4 +1,5 @@
 import {
+  OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketGateway,
@@ -12,12 +13,16 @@ import { WebsocketEventsService } from './websocket.events.service';
   cors: { origin: true, credentials: true },
 })
 export class WidgetChatGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer()
   server: Server;
 
   constructor(private readonly websocketEventsService: WebsocketEventsService) {}
+
+  afterInit(server: Server): void {
+    this.websocketEventsService.bindServer(server);
+  }
 
   handleConnection(client: Socket): void {
     this.websocketEventsService.onConnect(client.id);

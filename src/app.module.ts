@@ -56,6 +56,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { EmbedModule } from './modules/embed/embed.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
+import { EventsModule } from './modules/events/events.module';
 
 @Module({
   imports: [
@@ -145,6 +146,7 @@ import { WebsocketModule } from './modules/websocket/websocket.module';
     BillingModule,
     AdminModule,
     EmbedModule,
+    EventsModule,
     WebsocketModule,
   ],
   controllers: [AppController],
