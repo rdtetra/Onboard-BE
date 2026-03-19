@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -40,8 +41,9 @@ export class EmbedController {
   @Get('config')
   getBotConfig(
     @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
+    @Query('mode') mode?: string,
   ) {
-    return this.embedService.getBotConfig(widgetAuthContext);
+    return this.embedService.getBotConfig(widgetAuthContext, mode);
   }
 
   @Get('conversations/:id/messages')

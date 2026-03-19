@@ -13,7 +13,8 @@ import { BotWidgetLinkService } from '../bot-widget-link/bot-widget-link.service
 import { StorageService } from '../storage/storage.service';
 import { CreateWidgetDto } from './dto/create-widget.dto';
 import { UpdateWidgetDto } from './dto/update-widget.dto';
-import { WidgetPosition, WidgetAppearance } from '../../types/widget';
+import { WidgetAppearance } from '../../types/widget';
+import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
@@ -48,21 +49,22 @@ export class WidgetsService {
       );
     }
 
+    const d = DEFAULT_WIDGET_CONFIG;
     const widget = this.widgetRepository.create({
       botId: dto.botId,
       mode: dto.mode,
-      botLogoUrl: dto.botLogoUrl ?? null,
-      position: dto.position ?? WidgetPosition.BOTTOM_RIGHT,
-      primaryColor: dto.primaryColor ?? '#000000',
-      headerTextColor: dto.headerTextColor ?? '#000000',
-      background: dto.background ?? '#ffffff',
-      botMessageBg: dto.botMessageBg ?? '#f0f0f0',
-      botMessageText: dto.botMessageText ?? '#000000',
-      userMessageBg: dto.userMessageBg ?? '#007bff',
-      userMessageText: dto.userMessageText ?? '#ffffff',
-      headerText: dto.headerText ?? null,
-      welcomeMessage: dto.welcomeMessage ?? null,
-      showPoweredBy: dto.showPoweredBy ?? true,
+      botLogoUrl: dto.botLogoUrl ?? d.botLogoUrl,
+      position: dto.position ?? d.position,
+      primaryColor: dto.primaryColor ?? d.primaryColor,
+      headerTextColor: dto.headerTextColor ?? d.headerTextColor,
+      background: dto.background ?? d.background,
+      botMessageBg: dto.botMessageBg ?? d.botMessageBg,
+      botMessageText: dto.botMessageText ?? d.botMessageText,
+      userMessageBg: dto.userMessageBg ?? d.userMessageBg,
+      userMessageText: dto.userMessageText ?? d.userMessageText,
+      headerText: dto.headerText ?? d.headerText,
+      welcomeMessage: dto.welcomeMessage ?? d.welcomeMessage,
+      showPoweredBy: dto.showPoweredBy ?? d.showPoweredBy,
     });
     const saved = await this.widgetRepository.save(widget);
     const withBot = await this.widgetRepository.findOne({
@@ -139,26 +141,39 @@ export class WidgetsService {
     return widget;
   }
 
-  /** Get the widget for a bot and mode. Returns null if none. */
+  /**
+   * Widget for a bot + appearance mode.
+   * With `{ forWidget: true }` (embed): no user; token verified upstream.
+   * Otherwise: authenticated; ensures org access to the bot.
+   */
   async findByBotIdAndMode(
     ctx: RequestContext,
     botId: string,
     mode: string,
+    options?: { forWidget?: boolean },
   ): Promise<Widget | null> {
+    const normalized = mode?.trim().toLowerCase();
+    if (
+      normalized !== WidgetAppearance.LIGHT &&
+      normalized !== WidgetAppearance.DARK
+    ) {
+      throw new BadRequestException('mode must be light or dark');
+    }
+    const appearance = normalized as WidgetAppearance;
+
+    if (options?.forWidget) {
+      return this.widgetRepository.findOne({
+        where: { botId, mode: appearance },
+        relations: ['bot'],
+      });
+    }
+
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
-    if (
-      !mode ||
-      (mode !== WidgetAppearance.LIGHT && mode !== WidgetAppearance.DARK)
-    ) {
-      throw new BadRequestException(
-        'Query param "mode" is required (light or dark)',
-      );
-    }
     await this.botsService.findOne(ctx, botId);
     return this.widgetRepository.findOne({
-      where: { botId, mode: mode as WidgetAppearance },
+      where: { botId, mode: appearance },
       relations: ['bot'],
     });
   }

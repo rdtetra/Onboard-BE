@@ -16,6 +16,7 @@ import { CreateWidgetConversationDto } from './dto/create-widget-conversation.dt
 import { AddWidgetMessageDto } from './dto/add-widget-message.dto';
 import type { BotConfigResponseDto } from './dto/bot-config.response';
 import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
+import { WidgetAppearance } from '../../types/widget';
 
 const widgetCtx: RequestContext = {
   user: null,
@@ -126,6 +127,7 @@ export class EmbedService {
 
   async getBotConfig(
     widgetAuthContext: WidgetAuthContext,
+    modeQuery?: string,
   ): Promise<BotConfigResponseDto> {
     const bot = await this.botRepository.findOne({
       where: { id: widgetAuthContext.botId },
@@ -135,8 +137,16 @@ export class EmbedService {
       throw new NotFoundException('Bot not found');
     }
 
-    const widget = await this.widgetsService.findOne(
+    const appearance =
+      modeQuery?.trim().toLowerCase() === WidgetAppearance.DARK
+        ? WidgetAppearance.DARK
+        : WidgetAppearance.LIGHT;
+
+    const widget = await this.widgetsService.findByBotIdAndMode(
+      widgetCtx,
       widgetAuthContext.botId,
+      appearance,
+      { forWidget: true },
     );
     const d = DEFAULT_WIDGET_CONFIG;
 

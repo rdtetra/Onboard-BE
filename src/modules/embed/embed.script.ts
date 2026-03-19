@@ -192,8 +192,20 @@ export const EMBED_SCRIPT = `
       '.ob-input:focus{border-color:' + primaryColor + ';}';
   }
 
+  function getPreferredColorSchemeMode() {
+    try {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+      return 'light';
+    } catch (e) {
+      return 'light';
+    }
+  }
+
   function loadConfig() {
-    return api('/config')
+    var scheme = getPreferredColorSchemeMode();
+    return api('/config?mode=' + encodeURIComponent(scheme))
       .then(function(res) {
         applyWidgetConfig(res);
         return res;
@@ -306,6 +318,17 @@ export const EMBED_SCRIPT = `
       .then(function() { return loadMessages(); })
       .then(renderMessages)
       .catch(function(err) { console.warn('[Onboard widget]', err); });
+    try {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var onSchemeChange = function() {
+        loadConfig()
+          .then(function() { return loadMessages(); })
+          .then(renderMessages)
+          .catch(function(err) { console.warn('[Onboard widget]', err); });
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onSchemeChange);
+      else if (mq.addListener) mq.addListener(onSchemeChange);
+    } catch (e) {}
     window.addEventListener('beforeunload', endConversation);
   }
 
