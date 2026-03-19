@@ -10,8 +10,8 @@ import {
 import type { Response } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
 import { WidgetAuthGuard } from '../../common/guards/widget-auth.guard';
-import { WidgetAuthContextDecorator } from '../../common/decorators/widget-auth-context.decorator';
-import type { WidgetAuthContext } from '../../types/widget-auth';
+import { WidgetAuthContext } from '../../common/decorators/widget-auth-context.decorator';
+import type { WidgetAuthContext as WidgetAuthContextType } from '../../types/widget-auth';
 import { EmbedService } from './embed.service';
 import { CreateWidgetConversationDto } from './dto/create-widget-conversation.dto';
 import { AddWidgetMessageDto } from './dto/add-widget-message.dto';
@@ -31,15 +31,22 @@ export class EmbedController {
 
   @Post('conversations')
   createConversation(
-    @WidgetAuthContextDecorator() widgetAuthContext: WidgetAuthContext,
+    @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Body() dto: CreateWidgetConversationDto,
   ) {
     return this.embedService.createConversation(widgetAuthContext, dto);
   }
 
+  @Get('config')
+  getBotConfig(
+    @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
+  ) {
+    return this.embedService.getBotConfig(widgetAuthContext);
+  }
+
   @Get('conversations/:id/messages')
   getMessages(
-    @WidgetAuthContextDecorator() widgetAuthContext: WidgetAuthContext,
+    @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Param('id') id: string,
   ) {
     return this.embedService.getMessages(widgetAuthContext, id);
@@ -47,7 +54,7 @@ export class EmbedController {
 
   @Post('conversations/:id/messages')
   addMessage(
-    @WidgetAuthContextDecorator() widgetAuthContext: WidgetAuthContext,
+    @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Param('id') id: string,
     @Body() dto: AddWidgetMessageDto,
   ) {
@@ -56,7 +63,7 @@ export class EmbedController {
 
   @Post('conversations/:id/end')
   endConversation(
-    @WidgetAuthContextDecorator() widgetAuthContext: WidgetAuthContext,
+    @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Param('id') id: string,
   ) {
     return this.embedService.endConversation(widgetAuthContext, id);

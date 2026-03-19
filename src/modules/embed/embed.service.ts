@@ -1,5 +1,11 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ConversationsService } from '../conversations/conversations.service';
+import { WidgetsService } from '../widgets/widgets.service';
+import { Bot } from '../../common/entities/bot.entity';
 import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { MessageSender } from '../../types/message';
@@ -8,6 +14,8 @@ import type { WidgetAuthContext } from '../../types/widget-auth';
 import { EMBED_SCRIPT } from './embed.script';
 import { CreateWidgetConversationDto } from './dto/create-widget-conversation.dto';
 import { AddWidgetMessageDto } from './dto/add-widget-message.dto';
+import type { BotConfigResponseDto } from './dto/bot-config.response';
+import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
 
 const widgetCtx: RequestContext = {
   user: null,
@@ -19,10 +27,46 @@ const widgetCtx: RequestContext = {
 
 @Injectable()
 export class EmbedService {
-  constructor(private readonly conversationsService: ConversationsService) {}
+  private readonly logger = new Logger(EmbedService.name);
+
+  constructor(
+    private readonly conversationsService: ConversationsService,
+    private readonly widgetsService: WidgetsService,
+    @InjectRepository(Bot) private readonly botRepository: Repository<Bot>,
+  ) {}
 
   getScript(): string {
-    return EMBED_SCRIPT;
+    const logoPath = join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'common',
+      'assets',
+      'default-widget-logo.svg',
+    );
+    let logoJson: string;
+    try {
+      logoJson = JSON.stringify(readFileSync(logoPath, 'utf8').trim());
+    } catch {
+      const srcFallback = join(
+        process.cwd(),
+        'src',
+        'common',
+        'assets',
+        'default-widget-logo.svg',
+      );
+      try {
+        logoJson = JSON.stringify(readFileSync(srcFallback, 'utf8').trim());
+      } catch (err) {
+        this.logger.warn(
+          `Could not read default widget logo (tried dist and src paths); embed logo will be empty.`,
+          err instanceof Error ? err.message : err,
+        );
+        logoJson = JSON.stringify('');
+      }
+    }
+    return EMBED_SCRIPT.replace(/___DEFAULT_WIDGET_LOGO_SVG_JSON___/g, logoJson);
   }
 
   async createConversation(
@@ -78,5 +122,45 @@ export class EmbedService {
       forWidget: true,
       botId: widgetAuthContext.botId,
     });
+  }
+
+  async getBotConfig(
+    widgetAuthContext: WidgetAuthContext,
+  ): Promise<BotConfigResponseDto> {
+    const bot = await this.botRepository.findOne({
+      where: { id: widgetAuthContext.botId },
+      select: ['name', 'introMessage', 'description', 'behavior'],
+    });
+    if (!bot) {
+      throw new NotFoundException('Bot not found');
+    }
+
+    const widget = await this.widgetsService.findOne(
+      widgetAuthContext.botId,
+    );
+    const d = DEFAULT_WIDGET_CONFIG;
+
+    return {
+      name: bot.name,
+      description: bot.description ?? null,
+      introMessage: bot.introMessage ?? null,
+      behavior: bot.behavior ?? null,
+
+      mode: widget?.mode ?? d.mode,
+      position: widget?.position ?? d.position,
+      primaryColor: widget?.primaryColor ?? d.primaryColor,
+      headerTextColor: widget?.headerTextColor ?? d.headerTextColor,
+      background: widget?.background ?? d.background,
+      botMessageBg: widget?.botMessageBg ?? d.botMessageBg,
+      botMessageText: widget?.botMessageText ?? d.botMessageText,
+      userMessageBg: widget?.userMessageBg ?? d.userMessageBg,
+      userMessageText: widget?.userMessageText ?? d.userMessageText,
+
+      headerText: widget?.headerText ?? d.headerText,
+      welcomeMessage:
+        widget?.welcomeMessage ?? bot.introMessage ?? d.welcomeMessage,
+      botLogoUrl: widget?.botLogoUrl ?? d.botLogoUrl,
+      showPoweredBy: widget?.showPoweredBy ?? d.showPoweredBy,
+    };
   }
 }
