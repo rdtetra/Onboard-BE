@@ -119,6 +119,7 @@ export const EMBED_SCRIPT = `
   var widgetConfig = null;
   var bootLoading = false;
   var socket = null;
+  var socketSendBound = false;
   var ioFactory = null;
 
   function q(sel) { return shadow.querySelector(sel); }
@@ -182,11 +183,24 @@ export const EMBED_SCRIPT = `
         transports: ['websocket'],
         withCredentials: true,
       });
+      if (!socketSendBound) {
+        socket.on('SEND_MESSAGE', function(payload) {
+          var data = payload && payload.message ? payload.message : null;
+          if (!data) return;
+          if (payload.conversationId !== conversationId) return;
+          var messagesEl = q('.ob-messages');
+          if (!messagesEl) return;
+          var sender = data.sender === 'USER' ? 'USER' : 'BOT';
+          appendBubble(messagesEl, sender, data.content, data.createdAt);
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        });
+        socketSendBound = true;
+      }
       return socket;
     });
   }
 
-  function joinConversationRoom() {
+  function joinRoom() {
     if (!conversationId || !token) return Promise.resolve();
     return connectSocket().then(function(s) {
       return new Promise(function(resolve) {
@@ -197,7 +211,7 @@ export const EMBED_SCRIPT = `
           resolve();
         }, 3000);
         try {
-          s.emit('joinConversation', { conversationId: conversationId, token: token }, function() {
+          s.emit('JOIN_ROOM', { conversationId: conversationId, token: token }, function() {
             if (done) return;
             done = true;
             clearTimeout(timer);
@@ -219,6 +233,7 @@ export const EMBED_SCRIPT = `
     try {
       if (socket) socket.disconnect();
       socket = null;
+      socketSendBound = false;
     } catch (e) {}
   }
 
@@ -421,8 +436,6 @@ export const EMBED_SCRIPT = `
       if (!text) return;
       inputEl.value = '';
       addMessageToConversation(text)
-        .then(function() { return loadMessages(); })
-        .then(renderMessages)
         .catch(function(err) { console.warn('[Onboard widget]', err); });
     };
     inputEl.addEventListener('keydown', function(e) {
@@ -431,9 +444,8 @@ export const EMBED_SCRIPT = `
     setBootLoading(true);
     loadConfig()
       .then(function() { return createConversationOnLoad(); })
-      .then(function() { return joinConversationRoom(); })
-      .then(function() { return loadMessages(); })
-      .then(renderMessages)
+      .then(function() { return joinRoom(); })
+      .then(function() { renderMessages([]); })
       .then(function() { setBootLoading(false); })
       .catch(function(err) {
         setBootLoading(false);
@@ -443,8 +455,6 @@ export const EMBED_SCRIPT = `
       var mq = window.matchMedia('(prefers-color-scheme: dark)');
       var onSchemeChange = function() {
         loadConfig()
-          .then(function() { return loadMessages(); })
-          .then(renderMessages)
           .catch(function(err) { console.warn('[Onboard widget]', err); });
       };
       if (mq.addEventListener) mq.addEventListener('change', onSchemeChange);

@@ -1,4 +1,4 @@
-export interface JoinConversationPayload {
+export interface JoinRoomPayload {
   conversationId: string;
   token: string;
 }

@@ -3,25 +3,39 @@ import {
   Logger,
   OnModuleInit,
 } from '@nestjs/common';
+import { WsException } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
+import type { Socket } from 'socket.io';
 import { InAppEventsService } from '../events/in-app-events.service';
+import { ConversationsService } from '../conversations/conversations.service';
 import {
   InAppEvents,
   WebSocketEvents,
   type InAppSendMessagePayload,
 } from '../../types/events';
+import type { WidgetAuthContext } from '../../types/widget-auth';
+import type { RequestContext } from '../../types/request';
+import type { JoinRoomPayload } from '../../types/websocket';
+import { JwtWrapperService } from '../jwt/jwt.service';
 
 @Injectable()
 export class WebsocketEventsService implements OnModuleInit {
   private readonly logger = new Logger(WebsocketEventsService.name);
   private server: Server | null = null;
 
-  constructor(private readonly inAppEventsService: InAppEventsService) {}
+  constructor(
+    private readonly inAppEventsService: InAppEventsService,
+    private readonly jwtWrapperService: JwtWrapperService,
+    private readonly conversationsService: ConversationsService,
+  ) {}
 
   onModuleInit(): void {
-    this.inAppEventsService.on(InAppEvents.SEND_MESSAGE, (payload) => {
+    this.inAppEventsService.on(
+      InAppEvents.SEND_MESSAGE,
+      (payload: InAppSendMessagePayload) => {
       this.handleSendMessage(payload);
-    });
+      },
+    );
   }
 
   bindServer(server: Server): void {
@@ -36,8 +50,54 @@ export class WebsocketEventsService implements OnModuleInit {
     this.logger.log(`Socket disconnected: ${clientId}`);
   }
 
-  private roomName(botId: string, visitorId: string): string {
+  getRoomName(botId: string, visitorId: string): string {
     return `room_${botId}_${visitorId}`;
+  }
+
+  async joinRoom(
+    payload: JoinRoomPayload,
+    client: Socket,
+  ): Promise<{ ok: true; room: string }> {
+    if (!payload?.conversationId?.trim() || !payload?.token?.trim()) {
+      throw new WsException('conversationId and token are required');
+    }
+
+    let authContext: WidgetAuthContext;
+    try {
+      authContext = this.jwtWrapperService.verify<WidgetAuthContext>(
+        payload.token.trim(),
+        'widget',
+      );
+    } catch {
+      throw new WsException('Invalid widget token');
+    }
+
+    const widgetCtx: RequestContext = {
+      user: null,
+      url: '/ws/chat',
+      method: 'WS',
+      timestamp: new Date().toISOString(),
+      requestId: 'ws-join-room',
+    };
+    const conversation = await this.conversationsService.findOne(
+      widgetCtx,
+      payload.conversationId.trim(),
+      {
+        relations: [],
+        forWidget: true,
+        botId: authContext.botId,
+      },
+    );
+    if (!conversation) {
+      throw new WsException('Conversation not found');
+    }
+    if (conversation.botId !== authContext.botId) {
+      throw new WsException('Conversation not found');
+    }
+
+    const room = this.getRoomName(conversation.botId, conversation.visitorId);
+    await client.join(room);
+    return { ok: true, room };
   }
 
   private handleSendMessage(payload: InAppSendMessagePayload): void {
@@ -47,7 +107,7 @@ export class WebsocketEventsService implements OnModuleInit {
       return;
     }
 
-    const room = this.roomName(payload.botId, payload.visitorId);
+    const room = this.getRoomName(payload.botId, payload.visitorId);
     server.to(room).emit(WebSocketEvents.SEND_MESSAGE, {
       conversationId: payload.conversationId,
       message: payload.message,

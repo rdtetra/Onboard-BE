@@ -19,7 +19,8 @@ import {
 import { ConversationStatus } from '../../types/conversation';
 import { MessageSender } from '../../types/message';
 import type { CreateMessageDto } from './dto/create-message.dto';
-import { WebsocketEventsService } from '../websocket/websocket.events.service';
+import { InAppEventsService } from '../events/in-app-events.service';
+import { InAppEvents } from '../../types/events';
 
 @Injectable()
 export class ConversationsService {
@@ -30,7 +31,7 @@ export class ConversationsService {
     private readonly messageRepository: Repository<Message>,
     private readonly botsService: BotsService,
     private readonly tokenUsageService: TokenUsageService,
-    private readonly websocketEventsService: WebsocketEventsService,
+    private readonly inAppEventsService: InAppEventsService,
   ) {}
 
   async create(
@@ -276,6 +277,12 @@ export class ConversationsService {
       sender: options?.forWidget ? MessageSender.USER : dto.sender,
     });
     const saved = await this.messageRepository.save(message);
+    this.inAppEventsService.emit(InAppEvents.SEND_MESSAGE, {
+      botId: conversation.botId,
+      visitorId: conversation.visitorId,
+      conversationId: conversation.id,
+      message: saved,
+    });
 
     if (
       conversation.bot?.organizationId &&

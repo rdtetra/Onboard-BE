@@ -1,11 +1,16 @@
 import {
-  OnGatewayInit,
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
+import { WebSocketEvents } from '../../types/events';
+import type { JoinRoomPayload } from '../../types/websocket';
 import { WebsocketEventsService } from './websocket.events.service';
 
 @WebSocketGateway({
@@ -30,5 +35,13 @@ export class WidgetChatGateway
 
   handleDisconnect(client: Socket): void {
     this.websocketEventsService.onDisconnect(client.id);
+  }
+
+  @SubscribeMessage(WebSocketEvents.JOIN_ROOM)
+  async joinRoom(
+    @MessageBody() payload: JoinRoomPayload,
+    @ConnectedSocket() client: Socket,
+  ): Promise<{ ok: true; room: string }> {
+    return this.websocketEventsService.joinRoom(payload, client);
   }
 }
