@@ -57,6 +57,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { EmbedModule } from './modules/embed/embed.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import { EventsModule } from './modules/events/events.module';
+import { OpenAiModule } from './modules/openai/openai.module';
 
 @Module({
   imports: [
@@ -148,6 +149,7 @@ import { EventsModule } from './modules/events/events.module';
     EmbedModule,
     EventsModule,
     WebsocketModule,
+    OpenAiModule,
   ],
   controllers: [AppController],
   providers: [

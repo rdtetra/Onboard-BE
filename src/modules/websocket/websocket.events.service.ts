@@ -9,8 +9,11 @@ import type { Socket } from 'socket.io';
 import { InAppEventsService } from '../events/in-app-events.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import {
+  BotReplyStatus,
   InAppEvents,
+  type InAppBotStatusPayload,
   WebSocketEvents,
+  type InAppMessageStatusPayload,
   type InAppSendMessagePayload,
 } from '../../types/events';
 import type { WidgetAuthContext } from '../../types/widget-auth';
@@ -33,7 +36,19 @@ export class WebsocketEventsService implements OnModuleInit {
     this.inAppEventsService.on(
       InAppEvents.SEND_MESSAGE,
       (payload: InAppSendMessagePayload) => {
-      this.handleSendMessage(payload);
+        this.handleSendMessage(payload);
+      },
+    );
+    this.inAppEventsService.on(
+      InAppEvents.MESSAGE_STATUS_UPDATED,
+      (payload: InAppMessageStatusPayload) => {
+        this.handleMessageStatusUpdated(payload);
+      },
+    );
+    this.inAppEventsService.on(
+      InAppEvents.BOT_STATUS_CHANGED,
+      (payload: InAppBotStatusPayload) => {
+        this.handleBotStatusChanged(payload);
       },
     );
   }
@@ -111,6 +126,37 @@ export class WebsocketEventsService implements OnModuleInit {
     server.to(room).emit(WebSocketEvents.SEND_MESSAGE, {
       conversationId: payload.conversationId,
       message: payload.message,
+    });
+  }
+
+  private handleMessageStatusUpdated(payload: InAppMessageStatusPayload): void {
+    const server = this.server;
+    if (!server) {
+      this.logger.warn('Websocket server not initialized; skipping emit');
+      return;
+    }
+    const room = this.getRoomName(payload.botId, payload.visitorId);
+    server.to(room).emit(WebSocketEvents.MESSAGE_STATUS_UPDATED, {
+      conversationId: payload.conversationId,
+      messageId: payload.messageId,
+      sender: payload.sender,
+      status: payload.status,
+      updatedAt: payload.updatedAt,
+    });
+  }
+
+  private handleBotStatusChanged(payload: InAppBotStatusPayload): void {
+    const server = this.server;
+    if (!server) {
+      this.logger.warn('Websocket server not initialized; skipping emit');
+      return;
+    }
+    const room = this.getRoomName(payload.botId, payload.visitorId);
+    server.to(room).emit(WebSocketEvents.BOT_STATUS_CHANGED, {
+      conversationId: payload.conversationId,
+      status: payload.status,
+      updatedAt: payload.updatedAt,
+      isDone: payload.status === BotReplyStatus.DONE,
     });
   }
 }

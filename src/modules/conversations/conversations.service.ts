@@ -17,7 +17,7 @@ import {
   toPaginatedResult,
 } from '../../utils/pagination.util';
 import { ConversationStatus } from '../../types/conversation';
-import { MessageSender } from '../../types/message';
+import { MessageSender, MessageStatus } from '../../types/message';
 import type { CreateMessageDto } from './dto/create-message.dto';
 import { InAppEventsService } from '../events/in-app-events.service';
 import { InAppEvents } from '../../types/events';
@@ -260,9 +260,16 @@ export class ConversationsService {
     ctx: RequestContext,
     conversationId: string,
     dto: CreateMessageDto,
-    options?: { forWidget?: boolean; botId?: string },
+    options?: {
+      forWidget?: boolean;
+      forSystem?: boolean;
+      botId?: string;
+      senderOverride?: MessageSender;
+      triggerBotReply?: boolean;
+    },
   ): Promise<Message> {
-    const conversation = options?.forWidget
+    const scopedForBot = options?.forWidget || options?.forSystem;
+    const conversation = scopedForBot
       ? await this.findOne(ctx, conversationId, {
           relations: ['messages', 'bot'],
           forWidget: true,
@@ -274,7 +281,10 @@ export class ConversationsService {
     const message = this.messageRepository.create({
       conversationId: conversation.id,
       content: dto.content.trim(),
-      sender: options?.forWidget ? MessageSender.USER : dto.sender,
+      sender:
+        options?.senderOverride ??
+        (options?.forWidget ? MessageSender.USER : dto.sender),
+      status: MessageStatus.SENT,
     });
     const saved = await this.messageRepository.save(message);
     this.inAppEventsService.emit(InAppEvents.SEND_MESSAGE, {
@@ -282,6 +292,15 @@ export class ConversationsService {
       visitorId: conversation.visitorId,
       conversationId: conversation.id,
       message: saved,
+    });
+    this.inAppEventsService.emit(InAppEvents.MESSAGE_STATUS_UPDATED, {
+      botId: conversation.botId,
+      visitorId: conversation.visitorId,
+      conversationId: conversation.id,
+      messageId: saved.id,
+      sender: saved.sender,
+      status: saved.status,
+      updatedAt: saved.updatedAt,
     });
 
     if (
@@ -294,6 +313,16 @@ export class ConversationsService {
         conversationId: conversation.id,
         amount: 1,
         metadata: { messageId: saved.id },
+      });
+    }
+
+    if (saved.sender === MessageSender.USER && options?.triggerBotReply !== false) {
+      this.inAppEventsService.emit(InAppEvents.BOT_REPLY_REQUIRED, {
+        conversationId: conversation.id,
+        botId: conversation.botId,
+        visitorId: conversation.visitorId,
+        userMessageId: saved.id,
+        userContent: saved.content,
       });
     }
 
