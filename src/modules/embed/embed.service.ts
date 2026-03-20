@@ -37,34 +37,45 @@ export class EmbedService {
   ) {}
 
   getScript(): string {
-    const logoPath = join(
+    // Compiled: dist/modules/embed/embed.service.js → dist/common/assets/...
+    const distRelative = join(
       __dirname,
-      '..',
       '..',
       '..',
       'common',
       'assets',
       'default-widget-logo.svg',
     );
+    const cwdDist = join(
+      process.cwd(),
+      'dist',
+      'common',
+      'assets',
+      'default-widget-logo.svg',
+    );
+    const cwdSrc = join(
+      process.cwd(),
+      'src',
+      'common',
+      'assets',
+      'default-widget-logo.svg',
+    );
     let logoJson: string;
     try {
-      logoJson = JSON.stringify(readFileSync(logoPath, 'utf8').trim());
+      logoJson = JSON.stringify(readFileSync(distRelative, 'utf8').trim());
     } catch {
-      const srcFallback = join(
-        process.cwd(),
-        'src',
-        'common',
-        'assets',
-        'default-widget-logo.svg',
-      );
       try {
-        logoJson = JSON.stringify(readFileSync(srcFallback, 'utf8').trim());
-      } catch (err) {
-        this.logger.warn(
-          `Could not read default widget logo (tried dist and src paths); embed logo will be empty.`,
-          err instanceof Error ? err.message : err,
-        );
-        logoJson = JSON.stringify('');
+        logoJson = JSON.stringify(readFileSync(cwdDist, 'utf8').trim());
+      } catch {
+        try {
+          logoJson = JSON.stringify(readFileSync(cwdSrc, 'utf8').trim());
+        } catch (err) {
+          this.logger.warn(
+            `Could not read default widget logo (tried dist-relative, cwd/dist, cwd/src); embed default logo will be empty.`,
+            err instanceof Error ? err.message : err,
+          );
+          logoJson = JSON.stringify('');
+        }
       }
     }
     return EMBED_SCRIPT.replace(/___DEFAULT_WIDGET_LOGO_SVG_JSON___/g, logoJson);

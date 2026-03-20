@@ -303,6 +303,47 @@ export const EMBED_SCRIPT = `
     return widgetConfig[key];
   }
 
+  function escapeAttr(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  function resolveLogoUrl(url) {
+    var s = url && String(url).trim();
+    if (!s) return '';
+    var lower = s.toLowerCase();
+    if (
+      lower.indexOf('http://') === 0 ||
+      lower.indexOf('https://') === 0 ||
+      s.indexOf('data:') === 0 ||
+      s.indexOf('//') === 0
+    ) {
+      return s;
+    }
+    var base = apiBase;
+    if (base.slice(-7) === '/embed/') base = base.slice(0, -7);
+    else if (base.slice(-6) === '/embed') base = base.slice(0, -6);
+    return base + (s.indexOf('/') === 0 ? s : '/' + s);
+  }
+
+  function applyLogoToElement(el, logoUrl, opts) {
+    if (!el) return;
+    var resolved = resolveLogoUrl(logoUrl);
+    var launcher = opts && opts.launcher;
+    var imgStyle = launcher
+      ? 'width:27px;height:27px;max-width:27px;max-height:27px;object-fit:cover;border-radius:50%;'
+      : 'width:21px;height:21px;object-fit:cover;border-radius:50%;';
+    if (resolved) {
+      el.innerHTML =
+        '<img src="' +
+        escapeAttr(resolved) +
+        '" alt="Bot logo" class="ob-header-logo-img" style="' +
+        imgStyle +
+        '" />';
+    } else {
+      el.innerHTML = defaultWidgetLogoSvg;
+    }
+  }
+
   function applyWidgetConfig(raw) {
     var cfg = raw && raw.data ? raw.data : raw;
     if (!cfg || typeof cfg !== 'object') return;
@@ -348,15 +389,9 @@ export const EMBED_SCRIPT = `
     if (headerStatus) headerStatus.style.color = headerTextColor;
     if (closeBtn) closeBtn.style.color = headerTextColor;
 
-    var logoWrap = q('.ob-header-logo');
-    if (logoWrap) {
-      var logoUrl = getConfigValue('botLogoUrl', null);
-      if (logoUrl) {
-        logoWrap.innerHTML = '<img src="' + logoUrl + '" alt="Bot logo" class="ob-header-logo-img" style="width:21px;height:21px;object-fit:cover;border-radius:50%;" />';
-      } else {
-        logoWrap.innerHTML = defaultWidgetLogoSvg;
-      }
-    }
+    var logoUrlRaw = getConfigValue('botLogoUrl', null);
+    applyLogoToElement(q('.ob-header-logo'), logoUrlRaw);
+    applyLogoToElement(q('#onboard-widget-btn'), logoUrlRaw, { launcher: true });
 
     if (poweredBy) {
       var showPoweredBy = !!getConfigValue('showPoweredBy', true);
