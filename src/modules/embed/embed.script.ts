@@ -129,6 +129,7 @@ export const EMBED_SCRIPT = `
   var botPendingBubble = null;
   var botPendingTimer = null;
   var botTypingInterval = null;
+  var conversationLoading = false;
 
   function q(sel) { return shadow.querySelector(sel); }
 
@@ -449,6 +450,20 @@ export const EMBED_SCRIPT = `
     });
   }
 
+  function ensureConversationReady() {
+    if (conversationId || conversationLoading) return Promise.resolve();
+    conversationLoading = true;
+    setBootLoading(true);
+    return createConversationOnLoad()
+      .then(function() { return joinRoom(); })
+      .then(function() { renderMessages([]); })
+      .catch(function(err) { console.warn('[Onboard widget]', err); })
+      .then(function() {
+        conversationLoading = false;
+        setBootLoading(false);
+      });
+  }
+
   function endConversation() {
     if (!conversationId || !token) return;
     var url = apiBase + '/conversations/' + conversationId + '/end';
@@ -598,6 +613,7 @@ export const EMBED_SCRIPT = `
     if (open) return;
     open = true;
     q('#onboard-widget-panel').classList.add('open');
+    ensureConversationReady();
   }
 
   function closePanel() {
@@ -618,7 +634,7 @@ export const EMBED_SCRIPT = `
     panel.querySelector('.ob-send').onclick = function() {
       var messagesEl = q('.ob-messages');
       var text = (inputEl.value || '').trim();
-      if (inputLocked || !text || !messagesEl) return;
+      if (inputLocked || !conversationId || !text || !messagesEl) return;
       inputEl.value = '';
       var pendingKey = 'tmp_' + (++pendingCounter);
       var pendingBubble = appendBubble(messagesEl, 'USER', text, null, 'PENDING');
@@ -649,9 +665,6 @@ export const EMBED_SCRIPT = `
     });
     setBootLoading(true);
     loadConfig()
-      .then(function() { return createConversationOnLoad(); })
-      .then(function() { return joinRoom(); })
-      .then(function() { renderMessages([]); })
       .then(function() { setBootLoading(false); })
       .catch(function(err) {
         setBootLoading(false);
