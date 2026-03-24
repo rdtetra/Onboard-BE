@@ -454,9 +454,17 @@ export const EMBED_SCRIPT = `
     if (conversationId || conversationLoading) return Promise.resolve();
     conversationLoading = true;
     setBootLoading(true);
+    var intro = (WELCOME || '').trim();
     return createConversationOnLoad()
       .then(function() { return joinRoom(); })
-      .then(function() { renderMessages([]); })
+      .then(function() {
+        if (!intro) return null;
+        return addMessageToConversation(intro, 'BOT').catch(function(err) {
+          console.warn('[Onboard widget] intro post failed', err);
+        });
+      })
+      .then(function() { return loadMessages(); })
+      .then(renderMessages)
       .catch(function(err) { console.warn('[Onboard widget]', err); })
       .then(function() {
         conversationLoading = false;
@@ -484,11 +492,11 @@ export const EMBED_SCRIPT = `
     });
   }
 
-  function addMessageToConversation(text) {
+  function addMessageToConversation(text, sender) {
     if (!conversationId) return Promise.reject(new Error('No conversation'));
     return api('/conversations/' + conversationId + '/messages', {
       method: 'POST',
-      body: { content: text }
+      body: sender ? { content: text, sender: sender } : { content: text }
     });
   }
 
@@ -598,7 +606,9 @@ export const EMBED_SCRIPT = `
     var messagesEl = q('.ob-messages');
     if (!messagesEl) return;
     messagesEl.innerHTML = '';
-    appendBubble(messagesEl, 'BOT', WELCOME, null);
+    if (!list || list.length === 0) {
+      appendBubble(messagesEl, 'BOT', WELCOME, null);
+    }
     pendingUserBubbles = {};
     pendingUserBubblesByMessageId = {};
     pendingUserQueue = [];

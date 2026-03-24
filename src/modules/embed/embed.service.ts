@@ -118,11 +118,19 @@ export class EmbedService {
     conversationId: string,
     dto: AddWidgetMessageDto,
   ): Promise<Message> {
+    const sender = dto.sender === MessageSender.BOT ? MessageSender.BOT : MessageSender.USER;
+    const isBot = sender === MessageSender.BOT;
     return this.conversationsService.addMessage(
       widgetCtx,
       conversationId,
-      { content: dto.content, sender: MessageSender.USER },
-      { forWidget: true, botId: widgetAuthContext.botId },
+      { content: dto.content, sender },
+      {
+        forWidget: !isBot,
+        forSystem: isBot,
+        botId: widgetAuthContext.botId,
+        senderOverride: isBot ? MessageSender.BOT : undefined,
+        triggerBotReply: !isBot,
+      },
     );
   }
 
