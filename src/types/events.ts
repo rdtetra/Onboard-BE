@@ -6,6 +6,7 @@ export enum InAppEvents {
   MESSAGE_STATUS_UPDATED = 'MESSAGE_STATUS_UPDATED',
   BOT_REPLY_REQUIRED = 'BOT_REPLY_REQUIRED',
   BOT_STATUS_CHANGED = 'BOT_STATUS_CHANGED',
+  BOT_STREAM_DELTA = 'BOT_STREAM_DELTA',
   JOIN_ROOM = 'JOIN_ROOM',
 }
 
@@ -13,6 +14,7 @@ export enum WebSocketEvents {
   SEND_MESSAGE = 'SEND_MESSAGE',
   MESSAGE_STATUS_UPDATED = 'MESSAGE_STATUS_UPDATED',
   BOT_STATUS_CHANGED = 'BOT_STATUS_CHANGED',
+  BOT_STREAM_DELTA = 'BOT_STREAM_DELTA',
   JOIN_ROOM = 'JOIN_ROOM',
 }
 
@@ -53,4 +55,11 @@ export interface InAppBotStatusPayload {
   conversationId: string;
   status: BotReplyStatus;
   updatedAt: Date;
+}
+
+export interface InAppBotStreamDeltaPayload {
+  botId: string;
+  visitorId: string;
+  conversationId: string;
+  delta: string;
 }

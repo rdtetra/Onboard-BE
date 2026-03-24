@@ -129,6 +129,8 @@ export const EMBED_SCRIPT = `
   var botPendingBubble = null;
   var botPendingTimer = null;
   var botTypingInterval = null;
+  var botStreamBubble = null;
+  var botStreamText = '';
   var conversationLoading = false;
 
   function q(sel) { return shadow.querySelector(sel); }
@@ -211,10 +213,21 @@ export const EMBED_SCRIPT = `
           if (!messagesEl) return;
           var sender = data.sender === 'USER' ? 'USER' : 'BOT';
           if (sender === 'USER') return;
+          if (botStreamBubble && botStreamBubble.parentNode) {
+            botStreamBubble.parentNode.removeChild(botStreamBubble);
+          }
+          botStreamBubble = null;
+          botStreamText = '';
           clearBotPending(false);
           var wrap = appendBubble(messagesEl, sender, data.content, data.createdAt, data.status || 'SENT');
           messagesEl.scrollTop = messagesEl.scrollHeight;
           setInputLocked(false);
+        });
+        socket.on('BOT_STREAM_DELTA', function(payload) {
+          if (!payload) return;
+          if (payload.conversationId !== conversationId) return;
+          if (!payload.delta) return;
+          applyBotStreamDelta(payload.delta);
         });
         socket.on('MESSAGE_STATUS_UPDATED', function(payload) {
           if (!payload) return;
@@ -588,6 +601,22 @@ export const EMBED_SCRIPT = `
     }, 25000);
   }
 
+  function applyBotStreamDelta(delta) {
+    var messagesEl = q('.ob-messages');
+    if (!messagesEl) return;
+    if (botPendingBubble) {
+      clearBotPending(false);
+    }
+    if (!botStreamBubble) {
+      botStreamText = '';
+      botStreamBubble = appendBubble(messagesEl, 'BOT', '', new Date().toISOString(), 'SENT');
+    }
+    botStreamText += String(delta);
+    var textEl = botStreamBubble.querySelector('.ob-bubble-text');
+    if (textEl) textEl.textContent = botStreamText;
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
   function clearBotPending(unlockInput) {
     var shouldUnlock = unlockInput !== false;
     if (botPendingTimer) {
@@ -602,6 +631,11 @@ export const EMBED_SCRIPT = `
       botPendingBubble.parentNode.removeChild(botPendingBubble);
     }
     botPendingBubble = null;
+    if (botStreamBubble && botStreamBubble.parentNode) {
+      botStreamBubble.parentNode.removeChild(botStreamBubble);
+    }
+    botStreamBubble = null;
+    botStreamText = '';
     if (shouldUnlock) setInputLocked(false);
   }
 

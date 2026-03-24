@@ -11,6 +11,7 @@ import { ConversationsService } from '../conversations/conversations.service';
 import {
   BotReplyStatus,
   InAppEvents,
+  type InAppBotStreamDeltaPayload,
   type InAppBotStatusPayload,
   WebSocketEvents,
   type InAppMessageStatusPayload,
@@ -49,6 +50,12 @@ export class WebsocketEventsService implements OnModuleInit {
       InAppEvents.BOT_STATUS_CHANGED,
       (payload: InAppBotStatusPayload) => {
         this.handleBotStatusChanged(payload);
+      },
+    );
+    this.inAppEventsService.on(
+      InAppEvents.BOT_STREAM_DELTA,
+      (payload: InAppBotStreamDeltaPayload) => {
+        this.handleBotStreamDelta(payload);
       },
     );
   }
@@ -157,6 +164,19 @@ export class WebsocketEventsService implements OnModuleInit {
       status: payload.status,
       updatedAt: payload.updatedAt,
       isDone: payload.status === BotReplyStatus.DONE,
+    });
+  }
+
+  private handleBotStreamDelta(payload: InAppBotStreamDeltaPayload): void {
+    const server = this.server;
+    if (!server) {
+      this.logger.warn('Websocket server not initialized; skipping emit');
+      return;
+    }
+    const room = this.getRoomName(payload.botId, payload.visitorId);
+    server.to(room).emit(WebSocketEvents.BOT_STREAM_DELTA, {
+      conversationId: payload.conversationId,
+      delta: payload.delta,
     });
   }
 }

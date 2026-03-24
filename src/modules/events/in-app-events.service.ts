@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter } from 'events';
 import {
   type InAppBotReplyRequiredPayload,
+  type InAppBotStreamDeltaPayload,
   type InAppBotStatusPayload,
   InAppEvents,
   type InAppMessageStatusPayload,
@@ -13,6 +14,7 @@ type EventPayloadMap = {
   [InAppEvents.MESSAGE_STATUS_UPDATED]: InAppMessageStatusPayload;
   [InAppEvents.BOT_REPLY_REQUIRED]: InAppBotReplyRequiredPayload;
   [InAppEvents.BOT_STATUS_CHANGED]: InAppBotStatusPayload;
+  [InAppEvents.BOT_STREAM_DELTA]: InAppBotStreamDeltaPayload;
   [InAppEvents.JOIN_ROOM]: { room: string };
 };
 

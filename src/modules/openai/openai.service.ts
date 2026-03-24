@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { Readable } from 'stream';
 import {
   BotReplyStatus,
   InAppEvents,
@@ -116,28 +117,25 @@ export class OpenAiService implements OnModuleInit {
         ? `Question:\n${userContent}\n\nUse the context below to answer.\n\n${context}`
         : `Question:\n${userContent}\n\nNo new KB context was retrieved for this turn. If the conversation history already contains enough information, answer from that. Otherwise, say you are not sure.`;
 
-      const response = await axios.post<{
-        choices?: Array<{ message?: { content?: string } }>;
-      }>(
-        `${baseUrl}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`,
-        {
-          model,
-          messages: [
-            { role: 'system', content: OpenAiService.SYSTEM_PROMPT },
-            ...recentHistory,
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
+      const botText = await this.streamChatCompletion({
+        apiKey,
+        model,
+        baseUrl,
+        apiVersion,
+        messages: [
+          { role: 'system', content: OpenAiService.SYSTEM_PROMPT },
+          ...recentHistory,
+          { role: 'user', content: userPrompt },
+        ],
+        onDelta: (delta) => {
+          this.inAppEventsService.emit(InAppEvents.BOT_STREAM_DELTA, {
+            botId,
+            visitorId,
+            conversationId,
+            delta,
+          });
         },
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
-      const data = response.data;
-      const botText = data?.choices?.[0]?.message?.content?.trim();
+      });
       if (!botText) {
         throw new Error('OpenAI returned empty response');
       }
@@ -181,5 +179,71 @@ export class OpenAiService implements OnModuleInit {
       throw new Error(`${name} is missing`);
     }
     return value.trim();
+  }
+
+  private async streamChatCompletion(params: {
+    apiKey: string;
+    model: string;
+    baseUrl: string;
+    apiVersion: string;
+    messages: Array<{ role: string; content: string }>;
+    onDelta: (delta: string) => void;
+  }): Promise<string> {
+    const response = await axios.post<Readable>(
+      `${params.baseUrl}/chat/completions?api-version=${encodeURIComponent(params.apiVersion)}`,
+      {
+        model: params.model,
+        messages: params.messages,
+        temperature: 0.7,
+        stream: true,
+      },
+      {
+        responseType: 'stream',
+        headers: {
+          Authorization: `Bearer ${params.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    const stream = response.data;
+    let buffer = '';
+    let fullText = '';
+
+    for await (const chunk of stream) {
+      buffer += chunk.toString('utf8');
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line || !line.startsWith('data:')) {
+          continue;
+        }
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') {
+          continue;
+        }
+        try {
+          const parsed = JSON.parse(payload) as {
+            choices?: Array<{
+              delta?: { content?: string };
+              text?: string;
+            }>;
+          };
+          const delta =
+            parsed?.choices?.[0]?.delta?.content ?? parsed?.choices?.[0]?.text ?? '';
+          if (!delta) {
+            continue;
+          }
+          fullText += delta;
+          params.onDelta(delta);
+        } catch {
+          continue;
+        }
+      }
+    }
+
+    return fullText.trim();
   }
 }
