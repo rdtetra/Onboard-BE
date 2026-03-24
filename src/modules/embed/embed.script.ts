@@ -129,6 +129,8 @@ export const EMBED_SCRIPT = `
   var botPendingBubble = null;
   var botPendingTimer = null;
   var botTypingInterval = null;
+  var botReplyTypingInterval = null;
+  var botReplyAnimating = false;
   var conversationLoading = false;
 
   function q(sel) { return shadow.querySelector(sel); }
@@ -211,9 +213,35 @@ export const EMBED_SCRIPT = `
           if (!messagesEl) return;
           var sender = data.sender === 'USER' ? 'USER' : 'BOT';
           if (sender === 'USER') return;
-          clearBotPending();
-          appendBubble(messagesEl, sender, data.content, data.createdAt, data.status || 'SENT');
+          clearBotPending(false);
+          setInputLocked(true);
+          var wrap = appendBubble(messagesEl, sender, '', data.createdAt, data.status || 'SENT');
           messagesEl.scrollTop = messagesEl.scrollHeight;
+          var textEl = wrap && wrap.querySelector('.ob-bubble-text');
+          var fullText = (data.content || '').toString();
+          if (!textEl || !fullText) {
+            if (textEl) textEl.textContent = fullText;
+            setInputLocked(false);
+            return;
+          }
+          if (botReplyTypingInterval) {
+            clearInterval(botReplyTypingInterval);
+            botReplyTypingInterval = null;
+          }
+          botReplyAnimating = true;
+          var words = fullText.trim() ? fullText.split(/\s+/) : [];
+          var idx = 0;
+          botReplyTypingInterval = setInterval(function() {
+            idx += 1;
+            textEl.textContent = words.slice(0, idx).join(' ');
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            if (idx >= words.length) {
+              clearInterval(botReplyTypingInterval);
+              botReplyTypingInterval = null;
+              botReplyAnimating = false;
+              setInputLocked(false);
+            }
+          }, 70);
         });
         socket.on('MESSAGE_STATUS_UPDATED', function(payload) {
           if (!payload) return;
@@ -239,7 +267,8 @@ export const EMBED_SCRIPT = `
             return;
           }
           if (payload.status === 'DONE') {
-            clearBotPending();
+            clearBotPending(false);
+            if (!botReplyAnimating) setInputLocked(false);
             return;
           }
           if (payload.status === 'ERROR') {
@@ -586,7 +615,8 @@ export const EMBED_SCRIPT = `
     }, 25000);
   }
 
-  function clearBotPending() {
+  function clearBotPending(unlockInput) {
+    var shouldUnlock = unlockInput !== false;
     if (botPendingTimer) {
       clearTimeout(botPendingTimer);
       botPendingTimer = null;
@@ -599,7 +629,7 @@ export const EMBED_SCRIPT = `
       botPendingBubble.parentNode.removeChild(botPendingBubble);
     }
     botPendingBubble = null;
-    setInputLocked(false);
+    if (shouldUnlock) setInputLocked(false);
   }
 
   function renderMessages(list) {
