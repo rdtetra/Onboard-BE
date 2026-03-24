@@ -25,6 +25,7 @@ import { Chip } from './common/entities/chip.entity';
 import { Widget } from './common/entities/widget.entity';
 import { Conversation } from './common/entities/conversation.entity';
 import { Message } from './common/entities/message.entity';
+import { KBChunk } from './common/entities/kb-chunk.entity';
 import { Organization } from './common/entities/organization.entity';
 import { AuditLog } from './common/entities/audit-log.entity';
 import { Plan } from './common/entities/plan.entity';
@@ -58,6 +59,7 @@ import { EmbedModule } from './modules/embed/embed.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import { EventsModule } from './modules/events/events.module';
 import { OpenAiModule } from './modules/openai/openai.module';
+import { KbRetrievalModule } from './modules/kb-retrieval/kb-retrieval.module';
 
 @Module({
   imports: [
@@ -103,6 +105,7 @@ import { OpenAiModule } from './modules/openai/openai.module';
             Widget,
             Conversation,
             Message,
+            KBChunk,
             Plan,
             Subscription,
             TokenWallet,
@@ -150,6 +153,7 @@ import { OpenAiModule } from './modules/openai/openai.module';
     EventsModule,
     WebsocketModule,
     OpenAiModule,
+    KbRetrievalModule,
   ],
   controllers: [AppController],
   providers: [

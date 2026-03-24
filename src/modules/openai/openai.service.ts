@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
 import {
   BotReplyStatus,
   InAppEvents,
@@ -8,6 +9,7 @@ import {
 import { InAppEventsService } from '../events/in-app-events.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { MessageSender } from '../../types/message';
+import { KbRetrievalService } from '../kb-retrieval/kb-retrieval.service';
 
 @Injectable()
 export class OpenAiService implements OnModuleInit {
@@ -23,6 +25,7 @@ export class OpenAiService implements OnModuleInit {
     private readonly inAppEventsService: InAppEventsService,
     private readonly conversationsService: ConversationsService,
     private readonly configService: ConfigService,
+    private readonly kbRetrievalService: KbRetrievalService,
   ) {}
 
   onModuleInit(): void {
@@ -49,29 +52,65 @@ export class OpenAiService implements OnModuleInit {
       const model = this.getRequiredEnv('OPENAI_MODEL');
       const baseUrl = this.getRequiredEnv('OPENAI_BASE_URL').replace(/\/+$/, '');
       const apiVersion = this.getRequiredEnv('OPENAI_API_VERSION');
+      const context = await this.kbRetrievalService.retrieveContext(
+        botId,
+        userContent,
+      );
+      if (!context.trim()) {
+        await this.conversationsService.addMessage(
+          {
+            user: null,
+            url: '/system/openai',
+            method: 'SYSTEM',
+            timestamp: new Date().toISOString(),
+            requestId: 'openai-bot-reply',
+          },
+          conversationId,
+          {
+            content:
+              "I’m sorry, I can’t answer that right now. Please try asking in a different way.",
+            sender: MessageSender.BOT,
+          },
+          {
+            forSystem: true,
+            botId,
+            senderOverride: MessageSender.BOT,
+            triggerBotReply: false,
+          },
+        );
+        this.inAppEventsService.emit(InAppEvents.BOT_STATUS_CHANGED, {
+          botId,
+          visitorId,
+          conversationId,
+          status: BotReplyStatus.DONE,
+          updatedAt: new Date(),
+        });
+        return;
+      }
+      const userPrompt = context
+        ? `Question:\n${userContent}\n\nUse the context below to answer.\n\n${context}`
+        : `Question:\n${userContent}\n\nNo supporting context is available. If uncertain, say so clearly and politely.`;
 
-      const response = await fetch(`${baseUrl}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await axios.post<{
+        choices?: Array<{ message?: { content?: string } }>;
+      }>(
+        `${baseUrl}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`,
+        {
           model,
           messages: [
             { role: 'system', content: OpenAiService.SYSTEM_PROMPT },
-            { role: 'user', content: userContent },
+            { role: 'user', content: userPrompt },
           ],
           temperature: 0.7,
-        }),
-      });
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`OpenAI request failed: ${response.status} ${errText}`);
-      }
-      const data = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-      };
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      const data = response.data;
       const botText = data?.choices?.[0]?.message?.content?.trim();
       if (!botText) {
         throw new Error('OpenAI returned empty response');

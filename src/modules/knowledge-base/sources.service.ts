@@ -21,6 +21,7 @@ import type { RequestContext } from '../../types/request';
 import { getAbsolutePathForDownload } from './multer-options';
 import { fileExists, createFileReadStream } from '../../utils/file.util';
 import { StorageService } from '../storage/storage.service';
+import { KbRetrievalService } from '../kb-retrieval/kb-retrieval.service';
 import type { PaginatedResult } from '../../types/pagination';
 import {
   parsePagination,
@@ -34,7 +35,12 @@ export class SourcesService {
     private readonly kbSourceRepository: Repository<KBSource>,
     private readonly botKbLinkService: BotKbLinkService,
     private readonly storageService: StorageService,
+    private readonly kbRetrievalService: KbRetrievalService,
   ) {}
+
+  private reindexSource(ctx: RequestContext, source: KBSource): void {
+    this.kbRetrievalService.enqueueIndexForSource(ctx, source);
+  }
 
   /** Total KB source count for current scope (all for super admin, org for tenant). Excludes soft-deleted. */
   async countAll(ctx: RequestContext): Promise<number> {
@@ -128,7 +134,13 @@ export class SourcesService {
         lastRefreshed: null,
         nextRefreshScheduledAt: null,
       });
-      return this.kbSourceRepository.save(source);
+      const saved = await this.kbSourceRepository.save(source);
+      const withBots = await this.kbSourceRepository.findOne({
+        where: { id: saved.id },
+        relations: ['bots'],
+      });
+      if (withBots) this.reindexSource(ctx, withBots);
+      return saved;
     }
 
     if (
@@ -163,7 +175,13 @@ export class SourcesService {
       lastRefreshed: null,
       nextRefreshScheduledAt,
     });
-    return this.kbSourceRepository.save(source);
+    const saved = await this.kbSourceRepository.save(source);
+    const withBots = await this.kbSourceRepository.findOne({
+      where: { id: saved.id },
+      relations: ['bots'],
+    });
+    if (withBots) this.reindexSource(ctx, withBots);
+    return saved;
   }
 
   async findAll(
@@ -352,7 +370,13 @@ export class SourcesService {
     }
 
     Object.assign(source, payload);
-    return this.kbSourceRepository.save(source);
+    const saved = await this.kbSourceRepository.save(source);
+    const withBots = await this.kbSourceRepository.findOne({
+      where: { id: saved.id },
+      relations: ['bots'],
+    });
+    if (withBots) this.reindexSource(ctx, withBots);
+    return saved;
   }
 
   async refresh(ctx: RequestContext, id: string): Promise<KBSource> {
