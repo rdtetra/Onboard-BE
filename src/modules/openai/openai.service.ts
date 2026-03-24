@@ -10,6 +10,7 @@ import { InAppEventsService } from '../events/in-app-events.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { MessageSender } from '../../types/message';
 import { KbRetrievalService } from '../kb-retrieval/kb-retrieval.service';
+import type { RequestContext } from '../../types/request';
 
 @Injectable()
 export class OpenAiService implements OnModuleInit {
@@ -20,6 +21,7 @@ export class OpenAiService implements OnModuleInit {
     'If you are not certain or do not have enough information, say that clearly and politely, ' +
     'for example: "I’m not sure based on the information I have right now." ' +
     'Prefer correctness over completeness. Keep responses concise and clear.';
+  private static readonly HISTORY_LIMIT = 5;
 
   constructor(
     private readonly inAppEventsService: InAppEventsService,
@@ -38,7 +40,8 @@ export class OpenAiService implements OnModuleInit {
   }
 
   async processBotReply(payload: InAppBotReplyRequiredPayload): Promise<void> {
-    const { conversationId, botId, visitorId, userContent } = payload;
+    const { conversationId, botId, visitorId, userContent, userMessageId } =
+      payload;
     try {
       this.inAppEventsService.emit(InAppEvents.BOT_STATUS_CHANGED, {
         botId,
@@ -56,15 +59,37 @@ export class OpenAiService implements OnModuleInit {
         botId,
         userContent,
       );
-      if (!context.trim()) {
+      const systemCtx: RequestContext = {
+        user: null,
+        url: '/system/openai',
+        method: 'SYSTEM',
+        timestamp: new Date().toISOString(),
+        requestId: 'openai-bot-reply',
+      };
+      const convo = await this.conversationsService.findOne(
+        systemCtx,
+        conversationId,
+        {
+          forWidget: true,
+          botId,
+          relations: [],
+          orderMessages: 'ASC',
+        },
+      );
+      const recentHistory = (convo.messages || [])
+        .filter((m) => m.id !== userMessageId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .slice(-OpenAiService.HISTORY_LIMIT)
+        .map((m) => ({
+          role: m.sender === MessageSender.USER ? 'user' : 'assistant',
+          content: m.content,
+        }));
+      const hasAssistantHistory = recentHistory.some(
+        (m) => m.role === 'assistant' && m.content && m.content.trim() !== '',
+      );
+      if (!context.trim() && !hasAssistantHistory) {
         await this.conversationsService.addMessage(
-          {
-            user: null,
-            url: '/system/openai',
-            method: 'SYSTEM',
-            timestamp: new Date().toISOString(),
-            requestId: 'openai-bot-reply',
-          },
+          systemCtx,
           conversationId,
           {
             content:
@@ -87,9 +112,9 @@ export class OpenAiService implements OnModuleInit {
         });
         return;
       }
-      const userPrompt = context
+      const userPrompt = context.trim()
         ? `Question:\n${userContent}\n\nUse the context below to answer.\n\n${context}`
-        : `Question:\n${userContent}\n\nNo supporting context is available. If uncertain, say so clearly and politely.`;
+        : `Question:\n${userContent}\n\nNo new KB context was retrieved for this turn. If the conversation history already contains enough information, answer from that. Otherwise, say you are not sure.`;
 
       const response = await axios.post<{
         choices?: Array<{ message?: { content?: string } }>;
@@ -99,6 +124,7 @@ export class OpenAiService implements OnModuleInit {
           model,
           messages: [
             { role: 'system', content: OpenAiService.SYSTEM_PROMPT },
+            ...recentHistory,
             { role: 'user', content: userPrompt },
           ],
           temperature: 0.7,
@@ -116,13 +142,7 @@ export class OpenAiService implements OnModuleInit {
         throw new Error('OpenAI returned empty response');
       }
       await this.conversationsService.addMessage(
-        {
-          user: null,
-          url: '/system/openai',
-          method: 'SYSTEM',
-          timestamp: new Date().toISOString(),
-          requestId: 'openai-bot-reply',
-        },
+        systemCtx,
         conversationId,
         { content: botText, sender: MessageSender.BOT },
         {
