@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
+import { SourceStatus } from '../../types/knowledge-base';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
 
@@ -84,6 +85,11 @@ export class BotKbLinkService {
     botId: string,
   ): Promise<KBSource> {
     const source = await this.findSource(ctx, sourceId);
+    if (source.status !== SourceStatus.READY) {
+      throw new BadRequestException(
+        `Source is ${source.status.toLowerCase()} and cannot be linked`,
+      );
+    }
     const bot = await this.findBot(ctx, botId, { withKbSources: true });
     if (source.organizationId !== bot.organizationId) {
       throw new BadRequestException(

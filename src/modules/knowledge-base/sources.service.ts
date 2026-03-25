@@ -42,6 +42,14 @@ export class SourcesService {
     this.kbRetrievalService.enqueueIndexForSource(ctx, source);
   }
 
+  private isIndexableSourceType(sourceType: SourceType): boolean {
+    return (
+      sourceType === SourceType.TXT ||
+      sourceType === SourceType.PDF ||
+      sourceType === SourceType.DOCX
+    );
+  }
+
   /** Total KB source count for current scope (all for super admin, org for tenant). Excludes soft-deleted. */
   async countAll(ctx: RequestContext): Promise<number> {
     if (!ctx.user?.userId) {
@@ -128,7 +136,7 @@ export class SourcesService {
         sourceType: dto.sourceType,
         sourceValue: s3Key,
         fileSizeBytes: file.size ?? null,
-        status: SourceStatus.READY,
+        status: SourceStatus.PROCESSING,
         refreshSchedule: null,
         linkedBots: 0,
         lastRefreshed: null,
@@ -169,7 +177,9 @@ export class SourcesService {
       organizationId: ctx.user.organizationId,
       sourceType: dto.sourceType,
       sourceValue: sourceValue.trim(),
-      status: SourceStatus.READY,
+      status: this.isIndexableSourceType(dto.sourceType)
+        ? SourceStatus.PROCESSING
+        : SourceStatus.READY,
       refreshSchedule,
       linkedBots: 0,
       lastRefreshed: null,
@@ -370,6 +380,9 @@ export class SourcesService {
     }
 
     Object.assign(source, payload);
+    if (this.isIndexableSourceType(source.sourceType)) {
+      source.status = SourceStatus.PROCESSING;
+    }
     const saved = await this.kbSourceRepository.save(source);
     const withBots = await this.kbSourceRepository.findOne({
       where: { id: saved.id },
@@ -459,6 +472,13 @@ export class SourcesService {
       }
     }
     await this.kbSourceRepository.softRemove(source);
+  }
+
+  async markIndexedNow(sourceId: string): Promise<void> {
+    await this.kbSourceRepository.update(
+      { id: sourceId },
+      { lastRefreshed: new Date() },
+    );
   }
 
   private getUpdatePayload(

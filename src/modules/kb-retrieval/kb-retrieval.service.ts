@@ -1,15 +1,20 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { readFile } from 'fs/promises';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PDFParse } from 'pdf-parse';
+import mammoth from 'mammoth';
 import { KBChunk } from '../../common/entities/kb-chunk.entity';
-import { SourceType } from '../../types/knowledge-base';
+import { KBSource } from '../../common/entities/kb-source.entity';
+import { SourceStatus, SourceType } from '../../types/knowledge-base';
 import type { RetrievedChunk } from '../../types/kb-retrieval';
 import { BotsService } from '../bots/bots.service';
 import { RequestContextId, type RequestContext } from '../../types/request';
-import type { KBSource } from '../../common/entities/kb-source.entity';
 import { createInternalContext } from '../../common/utils/request-context.util';
+import { StorageService } from '../storage/storage.service';
+import { getAbsolutePathForDownload } from '../knowledge-base/multer-options';
 
 @Injectable()
 export class KbRetrievalService implements OnModuleInit {
@@ -19,8 +24,13 @@ export class KbRetrievalService implements OnModuleInit {
   constructor(
     @InjectRepository(KBChunk)
     private readonly kbChunkRepository: Repository<KBChunk>,
+    // Keep direct repo access here to update lastRefreshed
+    // without introducing a circular service dependency with SourcesService.
+    @InjectRepository(KBSource)
+    private readonly kbSourceRepository: Repository<KBSource>,
     private readonly configService: ConfigService,
     private readonly botsService: BotsService,
+    private readonly storageService: StorageService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -88,6 +98,9 @@ export class KbRetrievalService implements OnModuleInit {
 
   enqueueIndexForSource(ctx: RequestContext, source: KBSource): void {
     void this.indexSource(ctx, source).catch((err) => {
+      void this.kbSourceRepository
+        .update({ id: source.id }, { status: SourceStatus.FAILED })
+        .catch(() => undefined);
       this.logger.warn(
         `Background KB indexing failed for source=${source.id}`,
         err instanceof Error ? err.message : String(err),
@@ -100,10 +113,17 @@ export class KbRetrievalService implements OnModuleInit {
     source: KBSource,
   ): Promise<void> {
     void ctx;
-    if (!this.vectorEnabled) return;
-    if (source.sourceType !== SourceType.TXT) return;
-    const text = (source.sourceValue || '').trim();
-    if (!text) return;
+    if (!this.vectorEnabled) {
+      throw new Error('Vector extension is not enabled');
+    }
+    await this.kbSourceRepository.update(
+      { id: source.id },
+      { status: SourceStatus.PROCESSING },
+    );
+    const text = await this.extractSourceText(source);
+    if (!text) {
+      throw new Error('No extractable text found for indexing');
+    }
 
     await this.kbChunkRepository.delete({ kbSourceId: source.id });
     const chunks = this.chunkText(text);
@@ -121,7 +141,58 @@ export class KbRetrievalService implements OnModuleInit {
     }
     if (toSave.length > 0) {
       await this.kbChunkRepository.save(toSave);
+      await this.kbSourceRepository.update(
+        { id: source.id },
+        { status: SourceStatus.READY, lastRefreshed: new Date() },
+      );
+      return;
     }
+    throw new Error('No chunks generated for indexing');
+  }
+
+  private async extractSourceText(source: KBSource): Promise<string> {
+    if (source.sourceType === SourceType.TXT) {
+      return (source.sourceValue || '').trim();
+    }
+    if (source.sourceType === SourceType.PDF) {
+      return this.extractPdfText(source.sourceValue);
+    }
+    if (source.sourceType === SourceType.DOCX) {
+      return this.extractDocxText(source.sourceValue);
+    }
+    return '';
+  }
+
+  private async extractPdfText(sourceValue: string): Promise<string> {
+    const buffer = await this.loadSourceBinary(sourceValue);
+    if (!buffer || buffer.length === 0) return '';
+    const parser = new PDFParse({ data: buffer });
+    const parsed = await parser.getText();
+    return (parsed.text || '').replace(/\s+/g, ' ').trim();
+  }
+
+  private async extractDocxText(sourceValue: string): Promise<string> {
+    const buffer = await this.loadSourceBinary(sourceValue);
+    if (!buffer || buffer.length === 0) return '';
+    const parsed = await mammoth.extractRawText({ buffer });
+    return (parsed.value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  private async loadSourceBinary(sourceValue: string): Promise<Buffer> {
+    if (this.storageService.isKbSourceS3Key(sourceValue)) {
+      const { stream } = await this.storageService.getKbSourceFileStream(sourceValue);
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      return Buffer.concat(chunks);
+    }
+
+    const localPath = getAbsolutePathForDownload(sourceValue);
+    if (!localPath) {
+      return Buffer.alloc(0);
+    }
+    return readFile(localPath);
   }
 
   private chunkText(input: string, size = 140, overlap = 30): string[] {
