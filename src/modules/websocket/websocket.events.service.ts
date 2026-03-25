@@ -6,6 +6,7 @@ import {
 import { WsException } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
 import type { Socket } from 'socket.io';
+import { BotsService } from '../bots/bots.service';
 import { InAppEventsService } from '../events/in-app-events.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import {
@@ -18,9 +19,10 @@ import {
   type InAppSendMessagePayload,
 } from '../../types/events';
 import type { WidgetAuthContext } from '../../types/widget-auth';
-import type { RequestContext } from '../../types/request';
+import { RequestContextId, type RequestContext } from '../../types/request';
 import type { JoinRoomPayload } from '../../types/websocket';
 import { JwtWrapperService } from '../jwt/jwt.service';
+import { createRequestContext } from '../../common/utils/request-context.util';
 
 @Injectable()
 export class WebsocketEventsService implements OnModuleInit {
@@ -31,6 +33,7 @@ export class WebsocketEventsService implements OnModuleInit {
     private readonly inAppEventsService: InAppEventsService,
     private readonly jwtWrapperService: JwtWrapperService,
     private readonly conversationsService: ConversationsService,
+    private readonly botsService: BotsService,
   ) {}
 
   onModuleInit(): void {
@@ -81,6 +84,11 @@ export class WebsocketEventsService implements OnModuleInit {
     client: Socket,
   ): Promise<{ ok: true; room: string }> {
     if (!payload?.conversationId?.trim() || !payload?.token?.trim()) {
+      this.emitWidgetError(
+        client,
+        'conversationId and token are required',
+        payload?.conversationId,
+      );
       throw new WsException('conversationId and token are required');
     }
 
@@ -91,16 +99,32 @@ export class WebsocketEventsService implements OnModuleInit {
         'widget',
       );
     } catch {
+      this.emitWidgetError(client, 'Invalid widget token', payload.conversationId);
       throw new WsException('Invalid widget token');
     }
 
-    const widgetCtx: RequestContext = {
+    const botCheckCtx: RequestContext = createRequestContext({
+      requestId: RequestContextId.WS_BOT_AUTH,
       user: null,
       url: '/ws/chat',
       method: 'WS',
-      timestamp: new Date().toISOString(),
-      requestId: 'ws-join-room',
-    };
+    });
+    try {
+      await this.botsService.findOne(botCheckCtx, authContext.botId, {
+        forWidget: true,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      this.emitWidgetError(client, msg || 'Bot is not available', payload.conversationId);
+      throw new WsException(msg || 'Bot is not available');
+    }
+
+    const widgetCtx: RequestContext = createRequestContext({
+      requestId: RequestContextId.WS_JOIN_ROOM,
+      user: null,
+      url: '/ws/chat',
+      method: 'WS',
+    });
     const conversation = await this.conversationsService.findOne(
       widgetCtx,
       payload.conversationId.trim(),
@@ -111,9 +135,11 @@ export class WebsocketEventsService implements OnModuleInit {
       },
     );
     if (!conversation) {
+      this.emitWidgetError(client, 'Conversation not found', payload.conversationId);
       throw new WsException('Conversation not found');
     }
     if (conversation.botId !== authContext.botId) {
+      this.emitWidgetError(client, 'Conversation not found', payload.conversationId);
       throw new WsException('Conversation not found');
     }
 
@@ -177,6 +203,18 @@ export class WebsocketEventsService implements OnModuleInit {
     server.to(room).emit(WebSocketEvents.BOT_STREAM_DELTA, {
       conversationId: payload.conversationId,
       delta: payload.delta,
+    });
+  }
+
+  private emitWidgetError(
+    client: Socket,
+    message: string,
+    conversationId?: string | null,
+  ): void {
+    client.emit(WebSocketEvents.WIDGET_ERROR, {
+      message,
+      ...(conversationId ? { conversationId } : {}),
+      updatedAt: new Date().toISOString(),
     });
   }
 }

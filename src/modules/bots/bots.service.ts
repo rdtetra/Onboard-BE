@@ -286,21 +286,18 @@ export class BotsService {
     id: string,
     options?: { relations?: string[]; forWidget?: boolean },
   ): Promise<Bot> {
+    if (options?.forWidget) {
+      const bot = await this.findOneForWidget(ctx, id, options);
+      return bot;
+    }
+
     const bot = await this.botRepository.findOne({
-      where: options?.forWidget ? { id, isActive: true } : { id },
+      where: { id },
       ...(options?.relations && { relations: options.relations }),
     });
 
     if (!bot) {
-      throw new NotFoundException(
-        options?.forWidget
-          ? 'Bot not found or not available'
-          : `Bot with ID ${id} not found`,
-      );
-    }
-
-    if (options?.forWidget) {
-      return bot;
+      throw new NotFoundException(`Bot with ID ${id} not found`);
     }
 
     if (!ctx.user?.userId) {
@@ -311,6 +308,34 @@ export class BotsService {
       bot.organizationId !== ctx.user.organizationId
     ) {
       throw new NotFoundException(`Bot with ID ${id} not found`);
+    }
+
+    return bot;
+  }
+
+  private async findOneForWidget(
+    ctx: RequestContext,
+    id: string,
+    options?: { relations?: string[] },
+  ): Promise<Bot> {
+    void ctx;
+    const bot = await this.botRepository.findOne({
+      where: { id },
+      ...(options?.relations && { relations: options.relations }),
+      withDeleted: true,
+    });
+
+    if (!bot) {
+      throw new NotFoundException('Bot not found');
+    }
+    if (bot.deletedAt) {
+      throw new UnauthorizedException('Bot is deleted');
+    }
+    if (bot.isArchived) {
+      throw new UnauthorizedException('Bot is archived');
+    }
+    if (!bot.isActive) {
+      throw new UnauthorizedException('Bot is disabled');
     }
 
     return bot;

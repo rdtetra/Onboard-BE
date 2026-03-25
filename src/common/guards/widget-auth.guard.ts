@@ -4,16 +4,22 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
+import { BotsService } from '../../modules/bots/bots.service';
 import { JwtWrapperService } from '../../modules/jwt/jwt.service';
+import { RequestContextId, type RequestContext } from '../../types/request';
 import type { WidgetAuthContext } from '../../types/widget-auth';
+import { createRequestContext } from '../utils/request-context.util';
 
 export const WIDGET_AUTH_CONTEXT_KEY = 'widgetAuthContext';
 
 @Injectable()
 export class WidgetAuthGuard implements CanActivate {
-  constructor(private readonly jwtWrapperService: JwtWrapperService) {}
+  constructor(
+    private readonly jwtWrapperService: JwtWrapperService,
+    private readonly botsService: BotsService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const path = request.path ?? request.url ?? '';
 
@@ -52,6 +58,23 @@ export class WidgetAuthGuard implements CanActivate {
       throw new UnauthorizedException(
         'Invalid widget token: missing or invalid botId',
       );
+    }
+
+    const widgetCtx: RequestContext = createRequestContext({
+      requestId: RequestContextId.WIDGET_AUTH_GUARD,
+      user: null,
+      url: request.path ?? request.url ?? '/embed',
+      method: request.method ?? 'HTTP',
+      ip: request.ip,
+      userAgent: request.headers?.['user-agent'],
+    });
+    try {
+      await this.botsService.findOne(widgetCtx, authContext.botId.trim(), {
+        forWidget: true,
+      });
+    } catch (err) {
+      if (err instanceof UnauthorizedException) throw err;
+      throw new UnauthorizedException('Bot is not available');
     }
 
     request[WIDGET_AUTH_CONTEXT_KEY] = authContext;

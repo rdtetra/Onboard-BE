@@ -170,8 +170,27 @@ export const EMBED_SCRIPT = `
       if (!init.headers['Content-Type']) init.headers['Content-Type'] = 'application/json';
     }
     return fetch(url, init).then(function(r) {
-      if (!r.ok) throw new Error('Request failed');
-      return r.json();
+      return r.text().then(function(t) {
+        var data = null;
+        try { data = t ? JSON.parse(t) : null; } catch (e) {}
+        if (!r.ok) {
+          var msg =
+            (data && (data.message || data.error) && String(data.message || data.error)) ||
+            (r.status === 401 ? 'Unauthorized' : r.status >= 500 ? 'Server error' : 'Request failed');
+          var err = new Error(msg);
+          err.status = r.status;
+          err.data = data;
+          throw err;
+        }
+        return data;
+      });
+    }).catch(function(err) {
+      if (err && err.name === 'TypeError') {
+        var e2 = new Error('Network error');
+        e2.cause = err;
+        throw e2;
+      }
+      throw err;
     });
   }
 
@@ -205,6 +224,10 @@ export const EMBED_SCRIPT = `
         withCredentials: true,
       });
       if (!socketSendBound) {
+        socket.on('connect_error', function(err) {
+          showWidgetError(humanizeError(err, 'Connection issue. Please try again.'));
+          console.warn('[Onboard widget] socket connect error', err);
+        });
         socket.on('SEND_MESSAGE', function(payload) {
           var data = payload && payload.message ? payload.message : null;
           if (!data) return;
@@ -228,6 +251,11 @@ export const EMBED_SCRIPT = `
           if (payload.conversationId !== conversationId) return;
           if (!payload.delta) return;
           applyBotStreamDelta(payload.delta);
+        });
+        socket.on('WIDGET_ERROR', function(payload) {
+          if (!payload) return;
+          if (payload.conversationId && payload.conversationId !== conversationId) return;
+          showWidgetError(humanizeError(payload, 'Something went wrong. Please try again.'));
         });
         socket.on('MESSAGE_STATUS_UPDATED', function(payload) {
           if (!payload) return;
@@ -258,16 +286,7 @@ export const EMBED_SCRIPT = `
             return;
           }
           if (payload.status === 'ERROR') {
-            if (!botPendingBubble) {
-              startBotPending();
-            }
-            if (botPendingTimer) {
-              clearTimeout(botPendingTimer);
-              botPendingTimer = null;
-            }
-            var textEl = botPendingBubble && botPendingBubble.querySelector('.ob-bubble-text');
-            if (textEl) textEl.textContent = 'Bot response failed. Please try again.';
-            setInputLocked(false);
+            showWidgetError('Bot response failed. Please try again.');
           }
         });
         socketSendBound = true;
@@ -301,6 +320,7 @@ export const EMBED_SCRIPT = `
         }
       });
     }).catch(function(err) {
+      showWidgetError(humanizeError(err, 'Unable to connect right now. Please try again.'));
       console.warn('[Onboard widget] socket connect failed', err);
     });
   }
@@ -475,12 +495,16 @@ export const EMBED_SCRIPT = `
       .then(function() {
         if (!intro) return null;
         return addMessageToConversation(intro, 'BOT').catch(function(err) {
+          showWidgetError(humanizeError(err, 'Unable to start chat intro right now. Please try again.'));
           console.warn('[Onboard widget] intro post failed', err);
         });
       })
       .then(function() { return loadMessages(); })
       .then(renderMessages)
-      .catch(function(err) { console.warn('[Onboard widget]', err); })
+      .catch(function(err) {
+        showWidgetError(humanizeError(err, 'Unable to start chat right now. Please try again.'));
+        console.warn('[Onboard widget]', err);
+      })
       .then(function() {
         conversationLoading = false;
         setBootLoading(false);
@@ -548,6 +572,34 @@ export const EMBED_SCRIPT = `
     wrap.appendChild(bubble);
     messagesEl.appendChild(wrap);
     return wrap;
+  }
+
+  function showWidgetError(message) {
+    var messagesEl = q('.ob-messages');
+    if (!messagesEl) return;
+    clearBotPending(false);
+    appendBubble(
+      messagesEl,
+      'BOT',
+      message || 'Something went wrong. Please try again.',
+      new Date().toISOString(),
+      'SENT'
+    );
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    setInputLocked(false);
+  }
+
+  function humanizeError(err, fallback) {
+    var msg = (err && err.message) ? String(err.message) : '';
+    var lower = msg.toLowerCase();
+    if (lower.indexOf('bot is disabled') >= 0) return 'Bot is disabled.';
+    if (lower.indexOf('bot is archived') >= 0) return 'Bot is archived.';
+    if (lower.indexOf('bot is deleted') >= 0) return 'Bot is deleted.';
+    if (lower.indexOf('invalid widget token') >= 0 || lower.indexOf('widget token') >= 0) return 'Unauthorized widget token.';
+    if (lower.indexOf('network error') >= 0) return 'Network error. Please check your connection and try again.';
+    if (lower.indexOf('server error') >= 0) return 'Server error. Please try again.';
+    if (msg) return msg;
+    return fallback || 'Something went wrong. Please try again.';
   }
 
   function updateUserBubbleStatus(wrap, status, timeIso) {
@@ -704,6 +756,7 @@ export const EMBED_SCRIPT = `
           }
           delete pendingUserBubbles[pendingKey];
           clearBotPending();
+          showWidgetError(humanizeError(err, 'Message failed to send. Please try again.'));
           console.warn('[Onboard widget]', err);
         });
     };
@@ -715,13 +768,17 @@ export const EMBED_SCRIPT = `
       .then(function() { setBootLoading(false); })
       .catch(function(err) {
         setBootLoading(false);
+        showWidgetError(humanizeError(err, 'Unable to load chat config. Please refresh and try again.'));
         console.warn('[Onboard widget]', err);
       });
     try {
       var mq = window.matchMedia('(prefers-color-scheme: dark)');
       var onSchemeChange = function() {
         loadConfig()
-          .catch(function(err) { console.warn('[Onboard widget]', err); });
+          .catch(function(err) {
+            showWidgetError('Unable to refresh chat config right now.');
+            console.warn('[Onboard widget]', err);
+          });
       };
       if (mq.addEventListener) mq.addEventListener('change', onSchemeChange);
       else if (mq.addListener) mq.addListener(onSchemeChange);

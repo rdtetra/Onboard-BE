@@ -1,15 +1,13 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ConversationsService } from '../conversations/conversations.service';
 import { WidgetsService } from '../widgets/widgets.service';
-import { Bot } from '../../common/entities/bot.entity';
+import { BotsService } from '../bots/bots.service';
 import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { MessageSender } from '../../types/message';
-import type { RequestContext } from '../../types/request';
+import { RequestContextId, type RequestContext } from '../../types/request';
 import type { WidgetAuthContext } from '../../types/widget-auth';
 import { EMBED_SCRIPT } from './embed.script';
 import { CreateWidgetConversationDto } from './dto/create-widget-conversation.dto';
@@ -17,14 +15,11 @@ import { AddWidgetMessageDto } from './dto/add-widget-message.dto';
 import type { BotConfigResponseDto } from './dto/bot-config.response';
 import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
 import { WidgetAppearance } from '../../types/widget';
+import { createInternalContext } from '../../common/utils/request-context.util';
 
-const widgetCtx: RequestContext = {
-  user: null,
-  url: '',
-  method: 'GET',
-  timestamp: new Date().toISOString(),
-  requestId: 'embed-widget',
-};
+const widgetCtx: RequestContext = createInternalContext(
+  RequestContextId.EMBED_WIDGET,
+);
 
 @Injectable()
 export class EmbedService {
@@ -33,7 +28,7 @@ export class EmbedService {
   constructor(
     private readonly conversationsService: ConversationsService,
     private readonly widgetsService: WidgetsService,
-    @InjectRepository(Bot) private readonly botRepository: Repository<Bot>,
+    private readonly botsService: BotsService,
   ) {}
 
   getScript(): string {
@@ -148,13 +143,9 @@ export class EmbedService {
     widgetAuthContext: WidgetAuthContext,
     modeQuery?: string,
   ): Promise<BotConfigResponseDto> {
-    const bot = await this.botRepository.findOne({
-      where: { id: widgetAuthContext.botId },
-      select: ['name', 'introMessage', 'description', 'behavior'],
+    const bot = await this.botsService.findOne(widgetCtx, widgetAuthContext.botId, {
+      forWidget: true,
     });
-    if (!bot) {
-      throw new NotFoundException('Bot not found');
-    }
 
     const appearance =
       modeQuery?.trim().toLowerCase() === WidgetAppearance.DARK
