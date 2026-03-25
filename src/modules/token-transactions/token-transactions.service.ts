@@ -10,22 +10,19 @@ import { TokenTransaction } from '../../common/entities/token-transaction.entity
 import { CreateTokenTransactionDto } from './dto/create-token-transaction.dto';
 import { TokenWalletService } from '../token-wallet/token-wallet.service';
 import { TokenTransactionType } from '../../types/token-transaction-type';
-import type { RequestContext } from '../../types/request';
+import { RequestContextId, type RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
 import { RoleName } from '../../types/roles';
+import { createInternalContext } from '../../common/utils/request-context.util';
 
 /** Used for usage/grant paths where there is no HTTP request (widget, jobs, etc.). */
-const internalTokenTransactionsCtx: RequestContext = {
-  user: null,
-  url: '',
-  method: 'INTERNAL',
-  timestamp: new Date().toISOString(),
-  requestId: 'token-transactions-internal',
-};
+const internalTokenTransactionsCtx: RequestContext = createInternalContext(
+  RequestContextId.TOKEN_TRANSACTIONS_INTERNAL,
+);
 
 @Injectable()
 export class TokenTransactionsService {

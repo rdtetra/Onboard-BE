@@ -11,7 +11,8 @@ import { InAppEventsService } from '../events/in-app-events.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { MessageSender } from '../../types/message';
 import { KbRetrievalService } from '../kb-retrieval/kb-retrieval.service';
-import type { RequestContext } from '../../types/request';
+import { RequestContextId, type RequestContext } from '../../types/request';
+import { createInternalContext } from '../../common/utils/request-context.util';
 
 @Injectable()
 export class OpenAiService implements OnModuleInit {
@@ -58,13 +59,9 @@ export class OpenAiService implements OnModuleInit {
         botId,
         userContent,
       );
-      const systemCtx: RequestContext = {
-        user: null,
-        url: '/system/openai',
-        method: 'SYSTEM',
-        timestamp: new Date().toISOString(),
-        requestId: 'openai-bot-reply',
-      };
+      const systemCtx: RequestContext = createInternalContext(
+        RequestContextId.OPENAI_BOT_REPLY,
+      );
       if (!context.trim()) {
         await this.conversationsService.addMessage(
           systemCtx,

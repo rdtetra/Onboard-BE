@@ -7,8 +7,9 @@ import { KBChunk } from '../../common/entities/kb-chunk.entity';
 import { SourceType } from '../../types/knowledge-base';
 import type { RetrievedChunk } from '../../types/kb-retrieval';
 import { BotsService } from '../bots/bots.service';
-import type { RequestContext } from '../../types/request';
+import { RequestContextId, type RequestContext } from '../../types/request';
 import type { KBSource } from '../../common/entities/kb-source.entity';
+import { createInternalContext } from '../../common/utils/request-context.util';
 
 @Injectable()
 export class KbRetrievalService implements OnModuleInit {
@@ -44,13 +45,9 @@ export class KbRetrievalService implements OnModuleInit {
 
     let rows: Array<{ content: string; score: string | number }> = [];
     try {
-      const widgetCtx: RequestContext = {
-        user: null,
-        url: '/system/kb-retrieval',
-        method: 'SYSTEM',
-        timestamp: new Date().toISOString(),
-        requestId: 'kb-retrieval-bot',
-      };
+      const widgetCtx: RequestContext = createInternalContext(
+        RequestContextId.KB_RETRIEVAL_BOT,
+      );
       const bot = await this.botsService.findOne(widgetCtx, botId, {
         forWidget: true,
         relations: ['kbSources'],
