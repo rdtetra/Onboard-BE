@@ -22,7 +22,6 @@ export class OpenAiService implements OnModuleInit {
     'If you are not certain or do not have enough information, say that clearly and politely, ' +
     'for example: "I’m not sure based on the information I have right now." ' +
     'Prefer correctness over completeness. Keep responses concise and clear.';
-  private static readonly HISTORY_LIMIT = 5;
 
   constructor(
     private readonly inAppEventsService: InAppEventsService,
@@ -41,8 +40,7 @@ export class OpenAiService implements OnModuleInit {
   }
 
   async processBotReply(payload: InAppBotReplyRequiredPayload): Promise<void> {
-    const { conversationId, botId, visitorId, userContent, userMessageId } =
-      payload;
+    const { conversationId, botId, visitorId, userContent } = payload;
     try {
       this.inAppEventsService.emit(InAppEvents.BOT_STATUS_CHANGED, {
         botId,
@@ -67,28 +65,7 @@ export class OpenAiService implements OnModuleInit {
         timestamp: new Date().toISOString(),
         requestId: 'openai-bot-reply',
       };
-      const convo = await this.conversationsService.findOne(
-        systemCtx,
-        conversationId,
-        {
-          forWidget: true,
-          botId,
-          relations: [],
-          orderMessages: 'ASC',
-        },
-      );
-      const recentHistory = (convo.messages || [])
-        .filter((m) => m.id !== userMessageId)
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        .slice(-OpenAiService.HISTORY_LIMIT)
-        .map((m) => ({
-          role: m.sender === MessageSender.USER ? 'user' : 'assistant',
-          content: m.content,
-        }));
-      const hasAssistantHistory = recentHistory.some(
-        (m) => m.role === 'assistant' && m.content && m.content.trim() !== '',
-      );
-      if (!context.trim() && !hasAssistantHistory) {
+      if (!context.trim()) {
         await this.conversationsService.addMessage(
           systemCtx,
           conversationId,
@@ -113,9 +90,7 @@ export class OpenAiService implements OnModuleInit {
         });
         return;
       }
-      const userPrompt = context.trim()
-        ? `Question:\n${userContent}\n\nUse the context below to answer.\n\n${context}`
-        : `Question:\n${userContent}\n\nNo new KB context was retrieved for this turn. If the conversation history already contains enough information, answer from that. Otherwise, say you are not sure.`;
+      const userPrompt = `Question:\n${userContent}\n\nUse ONLY the context below. Do not use prior memory or outside knowledge.\nIf the answer is not in this context, respond: "I’m sorry, I can’t answer that right now. Please try asking in a different way."\n\n${context}`;
 
       const botText = await this.streamChatCompletion({
         apiKey,
@@ -124,7 +99,6 @@ export class OpenAiService implements OnModuleInit {
         apiVersion,
         messages: [
           { role: 'system', content: OpenAiService.SYSTEM_PROMPT },
-          ...recentHistory,
           { role: 'user', content: userPrompt },
         ],
         onDelta: (delta) => {
