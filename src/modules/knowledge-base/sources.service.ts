@@ -459,7 +459,6 @@ export class SourcesService {
       .createQueryBuilder('kb')
       .select('COALESCE(SUM(kb.file_size_bytes), 0)', 'sum')
       .where('kb.organization_id = :orgId', { orgId })
-      .andWhere('kb.deleted_at IS NULL')
       .getRawOne<{ sum: string }>();
     return Math.floor(parseFloat(result?.sum ?? '0'));
   }
@@ -480,7 +479,7 @@ export class SourcesService {
         // Continue with soft-remove even if S3 delete fails (e.g. file already gone)
       }
     }
-    await this.kbSourceRepository.softRemove(source);
+    await this.kbSourceRepository.remove(source);
   }
 
   async markIndexedNow(sourceId: string): Promise<void> {

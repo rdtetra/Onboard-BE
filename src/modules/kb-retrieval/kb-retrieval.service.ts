@@ -81,7 +81,6 @@ export class KbRetrievalService implements OnModuleInit {
          INNER JOIN kb_sources s ON s.id = c.kb_source_id
          WHERE c.kb_source_id = ANY($2::uuid[])
            AND s.status = $3
-           AND s.deleted_at IS NULL
          ORDER BY c.embedding <=> $1::vector
          LIMIT $4`,
         [vectorLiteral, sourceIds, SourceStatus.READY, topK],

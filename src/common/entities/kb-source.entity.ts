@@ -1,7 +1,6 @@
 import {
   Entity,
   Column,
-  DeleteDateColumn,
   ManyToOne,
   JoinColumn,
   ManyToMany,
@@ -72,9 +71,6 @@ export class KBSource extends BaseEntity {
     nullable: true,
   })
   nextRefreshScheduledAt: Date | null;
-
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date | null;
 
   @ManyToMany(() => Task, (task) => task.kbSources)
   tasks: Task[];
