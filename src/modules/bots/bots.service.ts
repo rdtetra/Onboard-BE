@@ -12,7 +12,6 @@ import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { BotKbLinkService } from '../bot-kb-link/bot-kb-link.service';
-import { BotTaskLinkService } from '../bot-task-link/bot-task-link.service';
 import { BotWidgetLinkService } from '../bot-widget-link/bot-widget-link.service';
 import { TokenWalletService } from '../token-wallet/token-wallet.service';
 import { TokenTransactionsService } from '../token-transactions/token-transactions.service';
@@ -45,7 +44,6 @@ export class BotsService {
     @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
     private readonly botKbLinkService: BotKbLinkService,
-    private readonly botTaskLinkService: BotTaskLinkService,
     private readonly botWidgetLinkService: BotWidgetLinkService,
     private readonly tokenWalletService: TokenWalletService,
     private readonly tokenTransactionsService: TokenTransactionsService,
@@ -382,9 +380,7 @@ export class BotsService {
   }
 
   async remove(ctx: RequestContext, id: string): Promise<void> {
-    const bot = await this.findOne(ctx, id, { relations: ['widgets'] });
-    await this.botWidgetLinkService.removeWidgetsForBot(bot);
-    await this.botTaskLinkService.removeTasksForBot(bot.id);
+    const bot = await this.findOne(ctx, id);
     await this.botRepository.remove(bot);
   }
 
