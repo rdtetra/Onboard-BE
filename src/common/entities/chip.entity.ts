@@ -1,7 +1,6 @@
 import {
   Entity,
   Column,
-  DeleteDateColumn,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
@@ -35,6 +34,4 @@ export class Chip extends BaseEntity {
   @Column({ type: 'boolean', name: 'new_tab', default: false })
   newTab: boolean;
 
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date | null;
 }

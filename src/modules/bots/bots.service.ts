@@ -322,14 +322,10 @@ export class BotsService {
     const bot = await this.botRepository.findOne({
       where: { id },
       ...(options?.relations && { relations: options.relations }),
-      withDeleted: true,
     });
 
     if (!bot) {
       throw new NotFoundException('Bot not found');
-    }
-    if (bot.deletedAt) {
-      throw new UnauthorizedException('Bot is deleted');
     }
     if (bot.isArchived) {
       throw new UnauthorizedException('Bot is archived');
@@ -388,8 +384,8 @@ export class BotsService {
   async remove(ctx: RequestContext, id: string): Promise<void> {
     const bot = await this.findOne(ctx, id, { relations: ['widgets'] });
     await this.botWidgetLinkService.removeWidgetsForBot(bot);
-    await this.botTaskLinkService.softRemoveTasksForBot(bot.id);
-    await this.botRepository.softRemove(bot);
+    await this.botTaskLinkService.removeTasksForBot(bot.id);
+    await this.botRepository.remove(bot);
   }
 
   async archive(ctx: RequestContext, id: string): Promise<Bot> {

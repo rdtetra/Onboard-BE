@@ -1,7 +1,6 @@
 import {
   Entity,
   Column,
-  DeleteDateColumn,
   ManyToOne,
   JoinColumn,
   OneToMany,
@@ -48,6 +47,4 @@ export class Task extends BaseEntity {
   })
   kbSources: KBSource[];
 
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date | null;
 }

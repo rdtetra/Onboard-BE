@@ -229,7 +229,6 @@ export class WidgetsService {
 
   async remove(ctx: RequestContext, id: string): Promise<void> {
     const widget = await this.findOne(ctx, id);
-    await this.botWidgetLinkService.unlinkWidget(widget);
-    await this.widgetRepository.softRemove(widget);
+    await this.widgetRepository.remove(widget);
   }
 }

@@ -3,7 +3,6 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  DeleteDateColumn,
   Unique,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
@@ -13,9 +12,6 @@ import { WidgetPosition, WidgetAppearance } from '../../types/widget';
 @Entity('widgets')
 @Unique(['botId', 'mode'])
 export class Widget extends BaseEntity {
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date | null;
-
   @Column({ type: 'uuid', name: 'bot_id', nullable: true })
   botId: string | null;
 

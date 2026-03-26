@@ -6,9 +6,6 @@ import { Widget } from '../../common/entities/widget.entity';
 import { WidgetAppearance } from '../../types/widget';
 import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
 
-/**
- * Single place for bot ↔ widget link behavior. Each bot has two widgets (LIGHT and DARK mode).
- */
 @Injectable()
 export class BotWidgetLinkService {
   constructor(
@@ -16,10 +13,6 @@ export class BotWidgetLinkService {
     private readonly widgetRepository: Repository<Widget>,
   ) {}
 
-  /**
-   * Create default LIGHT and DARK widgets for a bot and link them. Caller is responsible for access checks.
-   * Used by BotsService when a bot is created.
-   */
   async createDefaultWidgetForBot(botId: string): Promise<Widget[]> {
     const lightWidget = this.widgetRepository.create({
       botId,
@@ -36,27 +29,10 @@ export class BotWidgetLinkService {
     return [savedLight, savedDark];
   }
 
-  /**
-   * Soft-delete all widgets for the given bot. Caller must pass bot with widgets relation loaded.
-   * Used by BotsService when a bot is removed.
-   */
   async removeWidgetsForBot(bot: Bot & { widgets?: Widget[] }): Promise<void> {
     const widgets =
       bot.widgets ??
       (await this.widgetRepository.find({ where: { botId: bot.id } }));
-    for (const widget of widgets) {
-      await this.widgetRepository.softRemove(widget);
-    }
-  }
-
-  /**
-   * Unlink a widget from its bot (set botId = null). Used when soft-deleting a single widget.
-   */
-  async unlinkWidget(widget: Widget): Promise<void> {
-    if (widget.botId) {
-      widget.botId = null;
-      widget.bot = null;
-      await this.widgetRepository.save(widget);
-    }
+    if (widgets.length > 0) await this.widgetRepository.remove(widgets);
   }
 }

@@ -1,7 +1,6 @@
 import {
   Entity,
   Column,
-  DeleteDateColumn,
   ManyToOne,
   JoinColumn,
   ManyToMany,
@@ -24,9 +23,6 @@ export class Bot extends BaseEntity {
   @ManyToOne(() => Organization, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'organization_id' })
   organization: Organization | null;
-
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date | null;
 
   @Column({ type: 'enum', enum: BotType, name: 'bot_type' })
   botType: BotType;

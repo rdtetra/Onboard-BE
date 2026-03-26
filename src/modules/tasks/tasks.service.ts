@@ -194,8 +194,8 @@ export class TasksService {
       where: { taskId: task.id },
     });
     if (chips.length > 0) {
-      await this.chipRepository.softRemove(chips);
+      await this.chipRepository.remove(chips);
     }
-    await this.taskRepository.softRemove(task);
+    await this.taskRepository.remove(task);
   }
 }
