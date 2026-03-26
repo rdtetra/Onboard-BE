@@ -76,13 +76,13 @@ export class KbRetrievalService implements OnModuleInit {
       const vectorLiteral = this.toVectorLiteral(queryEmbedding);
       const topK = 5;
       rows = (await this.kbChunkRepository.query(
-        `SELECT c.content, (1 - (c.embedding::vector <=> $1::vector)) AS score
+        `SELECT c.content, (1 - (c.embedding <=> $1::vector)) AS score
          FROM kb_chunks c
          INNER JOIN kb_sources s ON s.id = c.kb_source_id
          WHERE c.kb_source_id = ANY($2::uuid[])
            AND s.status = $3
            AND s.deleted_at IS NULL
-         ORDER BY c.embedding::vector <=> $1::vector
+         ORDER BY c.embedding <=> $1::vector
          LIMIT $4`,
         [vectorLiteral, sourceIds, SourceStatus.READY, topK],
       )) as Array<{ content: string; score: string | number }>;

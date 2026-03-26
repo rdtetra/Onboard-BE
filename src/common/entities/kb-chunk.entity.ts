@@ -1,8 +1,10 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index, Unique } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { KBSource } from './kb-source.entity';
 
 @Entity('kb_chunks')
+@Index('idx_kb_chunks_source_id', ['kbSourceId'])
+@Unique('uq_kb_chunks_source_chunk', ['kbSourceId', 'chunkIndex'])
 export class KBChunk extends BaseEntity {
   @Column({ type: 'uuid', name: 'kb_source_id' })
   kbSourceId: string;
