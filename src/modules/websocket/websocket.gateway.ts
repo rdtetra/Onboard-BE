@@ -10,7 +10,7 @@ import {
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import { WebSocketEvents } from '../../types/events';
-import type { JoinRoomPayload } from '../../types/websocket';
+import type { JoinRoomAck, JoinRoomPayload } from '../../types/websocket';
 import { WebsocketEventsService } from './websocket.events.service';
 
 @WebSocketGateway({
@@ -41,7 +41,7 @@ export class WidgetChatGateway
   async joinRoom(
     @MessageBody() payload: JoinRoomPayload,
     @ConnectedSocket() client: Socket,
-  ): Promise<{ ok: true; room: string }> {
+  ): Promise<JoinRoomAck> {
     return this.websocketEventsService.joinRoom(payload, client);
   }
 }

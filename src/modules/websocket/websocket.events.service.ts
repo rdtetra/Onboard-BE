@@ -3,7 +3,6 @@ import {
   Logger,
   OnModuleInit,
 } from '@nestjs/common';
-import { WsException } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
 import type { Socket } from 'socket.io';
 import { BotsService } from '../bots/bots.service';
@@ -20,7 +19,7 @@ import {
 } from '../../types/events';
 import type { WidgetAuthContext } from '../../types/widget-auth';
 import { RequestContextId, type RequestContext } from '../../types/request';
-import type { JoinRoomPayload } from '../../types/websocket';
+import type { JoinRoomAck, JoinRoomPayload } from '../../types/websocket';
 import { JwtWrapperService } from '../jwt/jwt.service';
 import { createRequestContext } from '../../common/utils/request-context.util';
 
@@ -82,14 +81,9 @@ export class WebsocketEventsService implements OnModuleInit {
   async joinRoom(
     payload: JoinRoomPayload,
     client: Socket,
-  ): Promise<{ ok: true; room: string }> {
+  ): Promise<JoinRoomAck> {
     if (!payload?.conversationId?.trim() || !payload?.token?.trim()) {
-      this.emitWidgetError(
-        client,
-        'conversationId and token are required',
-        payload?.conversationId,
-      );
-      throw new WsException('conversationId and token are required');
+      return { ok: false, error: 'conversationId and token are required' };
     }
 
     let authContext: WidgetAuthContext;
@@ -99,8 +93,7 @@ export class WebsocketEventsService implements OnModuleInit {
         'widget',
       );
     } catch {
-      this.emitWidgetError(client, 'Invalid widget token', payload.conversationId);
-      throw new WsException('Invalid widget token');
+      return { ok: false, error: 'Invalid widget token' };
     }
 
     const botCheckCtx: RequestContext = createRequestContext({
@@ -115,8 +108,7 @@ export class WebsocketEventsService implements OnModuleInit {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      this.emitWidgetError(client, msg || 'Bot is not available', payload.conversationId);
-      throw new WsException(msg || 'Bot is not available');
+      return { ok: false, error: msg || 'Bot is not available' };
     }
 
     const widgetCtx: RequestContext = createRequestContext({
@@ -135,12 +127,10 @@ export class WebsocketEventsService implements OnModuleInit {
       },
     );
     if (!conversation) {
-      this.emitWidgetError(client, 'Conversation not found', payload.conversationId);
-      throw new WsException('Conversation not found');
+      return { ok: false, error: 'Conversation not found' };
     }
     if (conversation.botId !== authContext.botId) {
-      this.emitWidgetError(client, 'Conversation not found', payload.conversationId);
-      throw new WsException('Conversation not found');
+      return { ok: false, error: 'Conversation not found' };
     }
 
     const room = this.getRoomName(conversation.botId, conversation.visitorId);
@@ -206,15 +196,5 @@ export class WebsocketEventsService implements OnModuleInit {
     });
   }
 
-  private emitWidgetError(
-    client: Socket,
-    message: string,
-    conversationId?: string | null,
-  ): void {
-    client.emit(WebSocketEvents.WIDGET_ERROR, {
-      message,
-      ...(conversationId ? { conversationId } : {}),
-      updatedAt: new Date().toISOString(),
-    });
-  }
+  // WIDGET_ERROR remains reserved for async/runtime failures, not JOIN_ROOM ack failures.
 }

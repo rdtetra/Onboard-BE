@@ -298,25 +298,29 @@ export const EMBED_SCRIPT = `
   function joinRoom() {
     if (!conversationId || !token) return Promise.resolve();
     return connectSocket().then(function(s) {
-      return new Promise(function(resolve) {
+      return new Promise(function(resolve, reject) {
         var done = false;
         var timer = setTimeout(function() {
           if (done) return;
           done = true;
-          resolve();
+          reject(new Error('Join room timeout'));
         }, 3000);
         try {
-          s.emit('JOIN_ROOM', { conversationId: conversationId, token: token }, function() {
+          s.emit('JOIN_ROOM', { conversationId: conversationId, token: token }, function(ack) {
             if (done) return;
             done = true;
             clearTimeout(timer);
+            if (ack && ack.ok === false) {
+              reject(new Error(ack.error || 'Unable to join chat room'));
+              return;
+            }
             resolve();
           });
         } catch (e) {
           if (done) return;
           done = true;
           clearTimeout(timer);
-          resolve();
+          reject(e);
         }
       });
     }).catch(function(err) {
