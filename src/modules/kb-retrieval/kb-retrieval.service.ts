@@ -15,6 +15,7 @@ import { RequestContextId, type RequestContext } from '../../types/request';
 import { createInternalContext } from '../../common/utils/request-context.util';
 import { StorageService } from '../storage/storage.service';
 import { getAbsolutePathForDownload } from '../knowledge-base/multer-options';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class KbRetrievalService implements OnModuleInit {
@@ -31,6 +32,7 @@ export class KbRetrievalService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly botsService: BotsService,
     private readonly storageService: StorageService,
+    private readonly auditService: AuditService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -49,6 +51,7 @@ export class KbRetrievalService implements OnModuleInit {
   }
 
   async retrieveContext(botId: string, query: string): Promise<string> {
+    const startedAt = Date.now();
     const trimmed = query.trim();
     if (!trimmed) return '';
     if (!this.vectorEnabled) return '';
@@ -63,7 +66,12 @@ export class KbRetrievalService implements OnModuleInit {
         relations: ['kbSources'],
       });
       const sourceIds = (bot.kbSources || []).map((s) => s.id);
-      if (sourceIds.length === 0) return '';
+      if (sourceIds.length === 0) {
+        this.logger.log(
+          `KB retrieval skipped: no linked sources (botId=${botId})`,
+        );
+        return '';
+      }
       const queryEmbedding = await this.createEmbedding(trimmed);
       const vectorLiteral = this.toVectorLiteral(queryEmbedding);
       const topK = 5;
@@ -80,7 +88,7 @@ export class KbRetrievalService implements OnModuleInit {
       )) as Array<{ content: string; score: string | number }>;
     } catch (err) {
       this.logger.warn(
-        'Vector retrieval unavailable; answering without KB context.',
+        `Vector retrieval unavailable for botId=${botId}; answering without KB context.`,
         err instanceof Error ? err.message : String(err),
       );
       return '';
@@ -93,19 +101,54 @@ export class KbRetrievalService implements OnModuleInit {
       }))
       .filter((r) => Number.isFinite(r.score) && r.score > 0.45);
 
-    if (usable.length === 0) return '';
+    if (usable.length === 0) {
+      this.logger.log(
+        `KB retrieval returned no usable context (botId=${botId}, candidates=${rows.length}, elapsedMs=${Date.now() - startedAt})`,
+      );
+      return '';
+    }
+    this.logger.log(
+      `KB retrieval succeeded (botId=${botId}, candidates=${rows.length}, usable=${usable.length}, elapsedMs=${Date.now() - startedAt})`,
+    );
     return usable
       .map((r, i) => `Context ${i + 1}:\n${r.content}`)
       .join('\n\n');
   }
 
   enqueueIndexForSource(ctx: RequestContext, source: KBSource): void {
+    const auditCtx = createInternalContext(RequestContextId.KB_INDEXING);
+    void this.auditService
+      .log(auditCtx, {
+        action: 'KB_INDEXING_QUEUED',
+        resource: 'kb-source',
+        resourceId: source.id,
+        details: {
+          sourceType: source.sourceType,
+          organizationId: source.organizationId,
+        },
+      })
+      .catch(() => {});
+    this.logger.log(
+      `KB indexing queued (sourceId=${source.id}, sourceType=${source.sourceType})`,
+    );
     void this.indexSource(ctx, source).catch((err) => {
       void this.kbSourceRepository
         .update({ id: source.id }, { status: SourceStatus.FAILED })
         .catch(() => undefined);
+      void this.auditService
+        .log(auditCtx, {
+          action: 'KB_INDEXING_FAILED',
+          resource: 'kb-source',
+          resourceId: source.id,
+          details: {
+            sourceType: source.sourceType,
+            organizationId: source.organizationId,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        })
+        .catch(() => {});
       this.logger.warn(
-        `Background KB indexing failed for source=${source.id}`,
+        `Background KB indexing failed (sourceId=${source.id}, sourceType=${source.sourceType})`,
         err instanceof Error ? err.message : String(err),
       );
     });
@@ -116,6 +159,7 @@ export class KbRetrievalService implements OnModuleInit {
     source: KBSource,
   ): Promise<void> {
     void ctx;
+    const startedAt = Date.now();
     if (!this.vectorEnabled) {
       throw new Error('Vector extension is not enabled');
     }
@@ -147,6 +191,23 @@ export class KbRetrievalService implements OnModuleInit {
       await this.kbSourceRepository.update(
         { id: source.id },
         { status: SourceStatus.READY, lastRefreshed: new Date() },
+      );
+      const auditCtx = createInternalContext(RequestContextId.KB_INDEXING);
+      void this.auditService
+        .log(auditCtx, {
+          action: 'KB_INDEXING_SUCCEEDED',
+          resource: 'kb-source',
+          resourceId: source.id,
+          details: {
+            sourceType: source.sourceType,
+            organizationId: source.organizationId,
+            chunks: toSave.length,
+            elapsedMs: Date.now() - startedAt,
+          },
+        })
+        .catch(() => {});
+      this.logger.log(
+        `KB indexing completed (sourceId=${source.id}, sourceType=${source.sourceType}, chunks=${toSave.length}, elapsedMs=${Date.now() - startedAt})`,
       );
       return;
     }

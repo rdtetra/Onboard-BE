@@ -24,5 +24,6 @@ export enum RequestContextId {
   WS_JOIN_ROOM = 'ws-join-room',
   OPENAI_BOT_REPLY = 'openai-bot-reply',
   KB_RETRIEVAL_BOT = 'kb-retrieval-bot',
+  KB_INDEXING = 'kb-indexing',
   TOKEN_TRANSACTIONS_INTERNAL = 'token-transactions-internal',
 }

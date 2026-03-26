@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { KBChunk } from '../../common/entities/kb-chunk.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { BotsModule } from '../bots/bots.module';
+import { AuditModule } from '../audit/audit.module';
 import { StorageModule } from '../storage/storage.module';
 import { KbRetrievalService } from './kb-retrieval.service';
 
@@ -10,6 +11,7 @@ import { KbRetrievalService } from './kb-retrieval.service';
   imports: [
     TypeOrmModule.forFeature([KBChunk, KBSource]),
     BotsModule,
+    AuditModule,
     StorageModule,
   ],
   providers: [KbRetrievalService],
