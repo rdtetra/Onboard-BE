@@ -11,7 +11,7 @@ import { JwtWrapperService } from '../jwt/jwt.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { comparePassword } from '../../utils/crypto.util';
-import { UsersService } from '../users/users.service';
+import { UserService } from '../user/user.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -30,7 +30,7 @@ import { StorageService } from '../storage/storage.service';
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
+    private usersService: UserService,
     private jwtWrapperService: JwtWrapperService,
     private configService: ConfigService,
     private auditService: AuditService,

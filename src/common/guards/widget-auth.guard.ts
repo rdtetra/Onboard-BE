@@ -4,7 +4,7 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { BotsService } from '../../modules/bots/bots.service';
+import { BotService } from '../../modules/bot/bot.service';
 import { JwtWrapperService } from '../../modules/jwt/jwt.service';
 import { RequestContextId, type RequestContext } from '../../types/request';
 import type { WidgetAuthContext } from '../../types/widget-auth';
@@ -16,7 +16,7 @@ export const WIDGET_AUTH_CONTEXT_KEY = 'widgetAuthContext';
 export class WidgetAuthGuard implements CanActivate {
   constructor(
     private readonly jwtWrapperService: JwtWrapperService,
-    private readonly botsService: BotsService,
+    private readonly botsService: BotService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

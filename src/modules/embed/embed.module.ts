@@ -1,17 +1,17 @@
 import { Module } from '@nestjs/common';
 import { EmbedController } from './embed.controller';
 import { EmbedService } from './embed.service';
-import { ConversationsModule } from '../conversations/conversations.module';
+import { ConversationModule } from '../conversation/conversation.module';
 import { JwtWrapperModule } from '../jwt/jwt.module';
 import { WidgetAuthGuard } from '../../common/guards/widget-auth.guard';
-import { BotsModule } from '../bots/bots.module';
-import { WidgetsModule } from '../widgets/widgets.module';
+import { BotModule } from '../bot/bot.module';
+import { WidgetModule } from '../widget/widget.module';
 
 @Module({
   imports: [
-    BotsModule,
-    WidgetsModule,
-    ConversationsModule,
+    BotModule,
+    WidgetModule,
+    ConversationModule,
     JwtWrapperModule,
   ],
   controllers: [EmbedController],

@@ -5,7 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './modules/users/users.module';
+import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
@@ -37,22 +37,22 @@ import { Invoice } from './common/entities/invoice.entity';
 import { SeedModule } from './modules/seed/seed.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
-import { BotsModule } from './modules/bots/bots.module';
+import { BotModule } from './modules/bot/bot.module';
 import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.module';
-import { TasksModule } from './modules/tasks/tasks.module';
-import { WidgetsModule } from './modules/widgets/widgets.module';
-import { CollectionsModule } from './modules/collections/collections.module';
-import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { TaskModule } from './modules/task/task.module';
+import { WidgetModule } from './modules/widget/widget.module';
+import { CollectionModule } from './modules/collection/collection.module';
+import { OrganizationModule } from './modules/organization/organization.module';
 import { EmailModule } from './modules/email/email.module';
 import { StorageModule } from './modules/storage/storage.module';
-import { ConversationsModule } from './modules/conversations/conversations.module';
-import { PlansModule } from './modules/plans/plans.module';
-import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { ConversationModule } from './modules/conversation/conversation.module';
+import { PlanModule } from './modules/plan/plan.module';
+import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { TokenWalletModule } from './modules/token-wallet/token-wallet.module';
-import { TokenTransactionsModule } from './modules/token-transactions/token-transactions.module';
-import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
-import { InvoicesModule } from './modules/invoices/invoices.module';
-import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { TokenTransactionModule } from './modules/token-transaction/token-transaction.module';
+import { PaymentMethodModule } from './modules/payment-method/payment-method.module';
+import { InvoiceModule } from './modules/invoice/invoice.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { EmbedModule } from './modules/embed/embed.module';
@@ -128,25 +128,25 @@ import { KbRetrievalModule } from './modules/kb-retrieval/kb-retrieval.module';
       inject: [ConfigService],
     }),
     SeedModule,
-    UsersModule,
+    UserModule,
     AuthModule,
-    BotsModule,
+    BotModule,
     KnowledgeBaseModule,
-    TasksModule,
-    WidgetsModule,
-    CollectionsModule,
-    OrganizationsModule,
+    TaskModule,
+    WidgetModule,
+    CollectionModule,
+    OrganizationModule,
     AuditModule,
     EmailModule,
     StorageModule,
-    ConversationsModule,
-    PlansModule,
-    SubscriptionsModule,
+    ConversationModule,
+    PlanModule,
+    SubscriptionModule,
     TokenWalletModule,
-    TokenTransactionsModule,
-    PaymentMethodsModule,
-    InvoicesModule,
-    WebhooksModule,
+    TokenTransactionModule,
+    PaymentMethodModule,
+    InvoiceModule,
+    WebhookModule,
     BillingModule,
     AdminModule,
     EmbedModule,

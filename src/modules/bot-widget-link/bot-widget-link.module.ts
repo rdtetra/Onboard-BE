@@ -5,7 +5,7 @@ import { BotWidgetLinkService } from './bot-widget-link.service';
 
 /**
  * Single place for bot ↔ widget link behavior (e.g. remove widget when a bot is removed).
- * Depends only on entities; BotsModule imports this, never WidgetsModule — no circular deps.
+ * Depends only on entities; BotModule imports this, never WidgetModule — no circular deps.
  */
 @Module({
   imports: [TypeOrmModule.forFeature([Widget])],

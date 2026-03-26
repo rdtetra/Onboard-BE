@@ -1,9 +1,9 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { ConversationsService } from '../conversations/conversations.service';
-import { WidgetsService } from '../widgets/widgets.service';
-import { BotsService } from '../bots/bots.service';
+import { ConversationService } from '../conversation/conversation.service';
+import { WidgetService } from '../widget/widget.service';
+import { BotService } from '../bot/bot.service';
 import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { MessageSender } from '../../types/message';
@@ -26,9 +26,9 @@ export class EmbedService {
   private readonly logger = new Logger(EmbedService.name);
 
   constructor(
-    private readonly conversationsService: ConversationsService,
-    private readonly widgetsService: WidgetsService,
-    private readonly botsService: BotsService,
+    private readonly conversationsService: ConversationService,
+    private readonly widgetsService: WidgetService,
+    private readonly botsService: BotService,
   ) {}
 
   getScript(): string {

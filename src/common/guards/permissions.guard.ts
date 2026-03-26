@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ALLOW_KEY } from '../decorators/allow.decorator';
 import { Permission } from '../../types/permissions';
-import { UsersService } from '../../modules/users/users.service';
+import { UserService } from '../../modules/user/user.service';
 import type { RequestContext } from '../../types/request';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 export class PermissionsGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private usersService: UsersService,
+    private usersService: UserService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

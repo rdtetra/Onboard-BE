@@ -10,7 +10,7 @@ import { KBChunk } from '../../common/entities/kb-chunk.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { SourceStatus, SourceType } from '../../types/knowledge-base';
 import type { RetrievedChunk } from '../../types/kb-retrieval';
-import { BotsService } from '../bots/bots.service';
+import { BotService } from '../bot/bot.service';
 import { RequestContextId, type RequestContext } from '../../types/request';
 import { createInternalContext } from '../../common/utils/request-context.util';
 import { StorageService } from '../storage/storage.service';
@@ -30,7 +30,7 @@ export class KbRetrievalService implements OnModuleInit {
     @InjectRepository(KBSource)
     private readonly kbSourceRepository: Repository<KBSource>,
     private readonly configService: ConfigService,
-    private readonly botsService: BotsService,
+    private readonly botsService: BotService,
     private readonly storageService: StorageService,
     private readonly auditService: AuditService,
   ) {}

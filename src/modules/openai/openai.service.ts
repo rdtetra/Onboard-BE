@@ -8,7 +8,7 @@ import {
   type InAppBotReplyRequiredPayload,
 } from '../../types/events';
 import { InAppEventsService } from '../events/in-app-events.service';
-import { ConversationsService } from '../conversations/conversations.service';
+import { ConversationService } from '../conversation/conversation.service';
 import { MessageSender } from '../../types/message';
 import { KbRetrievalService } from '../kb-retrieval/kb-retrieval.service';
 import { RequestContextId, type RequestContext } from '../../types/request';
@@ -26,7 +26,7 @@ export class OpenAiService implements OnModuleInit {
 
   constructor(
     private readonly inAppEventsService: InAppEventsService,
-    private readonly conversationsService: ConversationsService,
+    private readonly conversationsService: ConversationService,
     private readonly configService: ConfigService,
     private readonly kbRetrievalService: KbRetrievalService,
   ) {}

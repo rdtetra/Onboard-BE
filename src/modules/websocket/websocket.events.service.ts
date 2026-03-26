@@ -5,9 +5,9 @@ import {
 } from '@nestjs/common';
 import type { Server } from 'socket.io';
 import type { Socket } from 'socket.io';
-import { BotsService } from '../bots/bots.service';
+import { BotService } from '../bot/bot.service';
 import { InAppEventsService } from '../events/in-app-events.service';
-import { ConversationsService } from '../conversations/conversations.service';
+import { ConversationService } from '../conversation/conversation.service';
 import {
   BotReplyStatus,
   InAppEvents,
@@ -31,8 +31,8 @@ export class WebsocketEventsService implements OnModuleInit {
   constructor(
     private readonly inAppEventsService: InAppEventsService,
     private readonly jwtWrapperService: JwtWrapperService,
-    private readonly conversationsService: ConversationsService,
-    private readonly botsService: BotsService,
+    private readonly conversationsService: ConversationService,
+    private readonly botsService: BotService,
   ) {}
 
   onModuleInit(): void {

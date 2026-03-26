@@ -3,9 +3,9 @@ import {
   ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
-import { BotsService } from '../bots/bots.service';
-import { ConversationsService } from '../conversations/conversations.service';
+import { UserService } from '../user/user.service';
+import { BotService } from '../bot/bot.service';
+import { ConversationService } from '../conversation/conversation.service';
 import { SourcesService } from '../knowledge-base/sources.service';
 import { RoleName } from '../../types/roles';
 import type { RequestContext } from '../../types/request';
@@ -14,9 +14,9 @@ import type { SuperAdminOverview } from '../../types/super-admin-overview';
 @Injectable()
 export class AdminService {
   constructor(
-    private readonly usersService: UsersService,
-    private readonly botsService: BotsService,
-    private readonly conversationsService: ConversationsService,
+    private readonly usersService: UserService,
+    private readonly botsService: BotService,
+    private readonly conversationsService: ConversationService,
     private readonly sourcesService: SourcesService,
   ) {}
 

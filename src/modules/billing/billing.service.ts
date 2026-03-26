@@ -1,9 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { SubscriptionService } from '../subscription/subscription.service';
 import { TokenWalletService } from '../token-wallet/token-wallet.service';
-import { TokenTransactionsService } from '../token-transactions/token-transactions.service';
+import { TokenTransactionService } from '../token-transaction/token-transaction.service';
 import { SourcesService } from '../knowledge-base/sources.service';
-import { BotsService } from '../bots/bots.service';
+import { BotService } from '../bot/bot.service';
 import type { BillingCycle } from '../../types/billing-cycle';
 import type { RequestContext } from '../../types/request';
 import type {
@@ -16,11 +16,11 @@ import type {
 @Injectable()
 export class BillingService {
   constructor(
-    private readonly subscriptionsService: SubscriptionsService,
+    private readonly subscriptionsService: SubscriptionService,
     private readonly tokenWalletService: TokenWalletService,
-    private readonly tokenTransactionsService: TokenTransactionsService,
+    private readonly tokenTransactionsService: TokenTransactionService,
     private readonly sourcesService: SourcesService,
-    private readonly botsService: BotsService,
+    private readonly botsService: BotService,
   ) {}
 
   async getOverview(ctx: RequestContext): Promise<BillingOverview> {

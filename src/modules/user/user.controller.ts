@@ -1,0 +1,106 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
+import { UserService } from './user.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { User } from '../../common/entities/user.entity';
+import { RequestContext } from '../../common/decorators/request-context.decorator';
+import { Allow } from '../../common/decorators/allow.decorator';
+import { Permission } from '../../types/permissions';
+import type { RequestContext as RequestContextType } from '../../types/request';
+import type { PaginatedResult } from '../../types/pagination';
+
+@Controller('users')
+export class UserController {
+  constructor(private readonly usersService: UserService) {}
+
+  @Post()
+  @Allow(Permission.CREATE_USER)
+  create(
+    @RequestContext() ctx: RequestContextType,
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<User> {
+    return this.usersService.create(ctx, createUserDto);
+  }
+
+  @Post('invite')
+  @Allow(Permission.CREATE_USER)
+  invite(
+    @RequestContext() ctx: RequestContextType,
+    @Body() inviteUserDto: InviteUserDto,
+  ): Promise<User> {
+    return this.usersService.inviteUser(ctx, inviteUserDto);
+  }
+
+  @Get()
+  @Allow(Permission.READ_USER)
+  findAll(
+    @RequestContext() ctx: RequestContextType,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('role') role?: string,
+  ): Promise<PaginatedResult<User>> {
+    return this.usersService.findAll(
+      ctx,
+      { page, limit },
+      { search, status, role },
+    );
+  }
+
+  @Get(':id')
+  @Allow(Permission.READ_USER)
+  findOne(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<User> {
+    return this.usersService.findOne(ctx, id);
+  }
+
+  @Patch(':id/activate')
+  @Allow(Permission.UPDATE_USER)
+  activate(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<User> {
+    return this.usersService.activate(ctx, id);
+  }
+
+  @Patch(':id/deactivate')
+  @Allow(Permission.UPDATE_USER)
+  deactivate(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<User> {
+    return this.usersService.deactivate(ctx, id);
+  }
+
+  @Patch(':id')
+  @Allow(Permission.UPDATE_USER)
+  update(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    return this.usersService.update(ctx, id, updateUserDto);
+  }
+
+  @Delete(':id')
+  @Allow(Permission.DELETE_USER)
+  remove(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.usersService.remove(ctx, id);
+  }
+}

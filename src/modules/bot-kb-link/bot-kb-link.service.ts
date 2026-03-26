@@ -15,7 +15,7 @@ import type { RequestContext } from '../../types/request';
  * Single source of truth for bot ↔ KB source link/unlink. Takes sourceId and botId,
  * enforces access (same rules as Bots/Sources findOne), then updates the relation.
  * Bot owns the relation so we load the bot (with kbSources) and save it.
- * No dependency on BotsModule or KnowledgeBaseModule — no circular deps.
+ * No dependency on BotModule or KnowledgeBaseModule — no circular deps.
  */
 @Injectable()
 export class BotKbLinkService {
