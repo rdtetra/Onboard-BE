@@ -132,6 +132,7 @@ export const EMBED_SCRIPT = `
   var botStreamBubble = null;
   var botStreamText = '';
   var conversationLoading = false;
+  var panelCloseTimer = null;
 
   function q(sel) { return shadow.querySelector(sel); }
 
@@ -707,13 +708,28 @@ export const EMBED_SCRIPT = `
   function openPanel() {
     if (open) return;
     open = true;
-    q('#onboard-widget-panel').classList.add('open');
+    var panel = q('#onboard-widget-panel');
+    if (!panel) return;
+    if (panelCloseTimer) {
+      clearTimeout(panelCloseTimer);
+      panelCloseTimer = null;
+    }
+    panel.classList.remove('closing');
+    panel.classList.add('open');
     ensureConversationReady();
   }
 
   function closePanel() {
     open = false;
-    q('#onboard-widget-panel').classList.remove('open');
+    var panel = q('#onboard-widget-panel');
+    if (!panel || !panel.classList.contains('open')) return;
+    panel.classList.add('closing');
+    if (panelCloseTimer) clearTimeout(panelCloseTimer);
+    panelCloseTimer = setTimeout(function() {
+      panel.classList.remove('open');
+      panel.classList.remove('closing');
+      panelCloseTimer = null;
+    }, 170);
   }
 
   function togglePanel() {
@@ -723,6 +739,17 @@ export const EMBED_SCRIPT = `
 
   function mount() {
     var panel = q('#onboard-widget-panel');
+    var transitionStyle = shadow.getElementById('onboard-widget-transition-style');
+    if (!transitionStyle) {
+      transitionStyle = document.createElement('style');
+      transitionStyle.id = 'onboard-widget-transition-style';
+      transitionStyle.textContent =
+        '#onboard-widget-panel.open{display:flex;animation:ob-panel-in 180ms ease-out both;transform-origin:bottom right;}' +
+        '#onboard-widget-panel.open.closing{animation:ob-panel-out 160ms ease-in both;pointer-events:none;}' +
+        '@keyframes ob-panel-in{from{opacity:0;transform:translateY(10px) scale(0.98);}to{opacity:1;transform:translateY(0) scale(1);}}' +
+        '@keyframes ob-panel-out{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(10px) scale(0.98);}}';
+      shadow.appendChild(transitionStyle);
+    }
     var inputEl = panel.querySelector('.ob-input');
     q('#onboard-widget-btn').onclick = togglePanel;
     panel.querySelector('.ob-close').onclick = closePanel;
