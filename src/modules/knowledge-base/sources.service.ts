@@ -138,7 +138,6 @@ export class SourcesService {
         fileSizeBytes: file.size ?? null,
         status: SourceStatus.PROCESSING,
         refreshSchedule: null,
-        linkedBots: 0,
         lastRefreshed: null,
         nextRefreshScheduledAt: null,
       });
@@ -147,7 +146,10 @@ export class SourcesService {
         where: { id: saved.id },
         relations: ['bots'],
       });
-      if (withBots) this.reindexSource(ctx, withBots);
+      if (withBots) {
+        this.reindexSource(ctx, withBots);
+        return withBots;
+      }
       return saved;
     }
 
@@ -181,7 +183,6 @@ export class SourcesService {
         ? SourceStatus.PROCESSING
         : SourceStatus.READY,
       refreshSchedule,
-      linkedBots: 0,
       lastRefreshed: null,
       nextRefreshScheduledAt,
     });
@@ -190,7 +191,10 @@ export class SourcesService {
       where: { id: saved.id },
       relations: ['bots'],
     });
-    if (withBots) this.reindexSource(ctx, withBots);
+    if (withBots) {
+      this.reindexSource(ctx, withBots);
+      return withBots;
+    }
     return saved;
   }
 
@@ -388,7 +392,10 @@ export class SourcesService {
       where: { id: saved.id },
       relations: ['bots'],
     });
-    if (withBots) this.reindexSource(ctx, withBots);
+    if (withBots) {
+      this.reindexSource(ctx, withBots);
+      return withBots;
+    }
     return saved;
   }
 
@@ -408,7 +415,8 @@ export class SourcesService {
     sourceId: string,
     botId: string,
   ): Promise<KBSource> {
-    return this.botKbLinkService.linkByIds(ctx, sourceId, botId);
+    await this.botKbLinkService.linkByIds(ctx, sourceId, botId);
+    return this.findOne(ctx, sourceId);
   }
 
   async unlinkBot(
@@ -416,7 +424,8 @@ export class SourcesService {
     sourceId: string,
     botId: string,
   ): Promise<KBSource> {
-    return this.botKbLinkService.unlinkByIds(ctx, sourceId, botId);
+    await this.botKbLinkService.unlinkByIds(ctx, sourceId, botId);
+    return this.findOne(ctx, sourceId);
   }
 
   async setCollection(

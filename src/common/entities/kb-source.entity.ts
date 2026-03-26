@@ -63,9 +63,6 @@ export class KBSource extends BaseEntity {
   })
   refreshSchedule: RefreshSchedule | null;
 
-  @Column({ type: 'int', name: 'linked_bots', default: 0 })
-  linkedBots: number;
-
   @Column({ type: 'timestamp', name: 'last_refreshed', nullable: true })
   lastRefreshed: Date | null;
 
