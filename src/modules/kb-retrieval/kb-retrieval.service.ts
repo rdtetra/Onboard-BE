@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import * as cheerio from 'cheerio';
 import { readFile } from 'fs/promises';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -67,9 +68,6 @@ export class KbRetrievalService implements OnModuleInit {
       });
       const sourceIds = (bot.kbSources || []).map((s) => s.id);
       if (sourceIds.length === 0) {
-        this.logger.log(
-          `KB retrieval skipped: no linked sources (botId=${botId})`,
-        );
         return '';
       }
       const queryEmbedding = await this.createEmbedding(trimmed);
@@ -100,15 +98,7 @@ export class KbRetrievalService implements OnModuleInit {
       }))
       .filter((r) => Number.isFinite(r.score) && r.score > 0.45);
 
-    if (usable.length === 0) {
-      this.logger.log(
-        `KB retrieval returned no usable context (botId=${botId}, candidates=${rows.length}, elapsedMs=${Date.now() - startedAt})`,
-      );
-      return '';
-    }
-    this.logger.log(
-      `KB retrieval succeeded (botId=${botId}, candidates=${rows.length}, usable=${usable.length}, elapsedMs=${Date.now() - startedAt})`,
-    );
+    if (usable.length === 0) return '';
     return usable
       .map((r, i) => `Context ${i + 1}:\n${r.content}`)
       .join('\n\n');
@@ -217,6 +207,9 @@ export class KbRetrievalService implements OnModuleInit {
     if (source.sourceType === SourceType.TXT) {
       return (source.sourceValue || '').trim();
     }
+    if (source.sourceType === SourceType.URL) {
+      return this.extractUrlText(source.sourceValue);
+    }
     if (source.sourceType === SourceType.PDF) {
       return this.extractPdfText(source.sourceValue);
     }
@@ -226,19 +219,46 @@ export class KbRetrievalService implements OnModuleInit {
     return '';
   }
 
+  private async extractUrlText(sourceValue: string): Promise<string> {
+    const url = (sourceValue || '').trim();
+    if (!url) return '';
+
+    const response = await axios.get<string>(url, {
+      timeout: 10000,
+      responseType: 'text',
+      maxContentLength: 5 * 1024 * 1024,
+      headers: {
+        'User-Agent': 'Onboard-KB-Indexer/1.0',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      validateStatus: (status) => status >= 200 && status < 300,
+    });
+
+    const html = response.data || '';
+    if (!html.trim()) return '';
+
+    const $ = cheerio.load(html);
+    $(
+      'script, style, noscript, svg, iframe, canvas, template, meta, link, head, nav, header, footer, aside',
+    ).remove();
+
+    const bodyText = $('body').text() || $.root().text();
+    return this.normalizeExtractedText(bodyText);
+  }
+
   private async extractPdfText(sourceValue: string): Promise<string> {
     const buffer = await this.loadSourceBinary(sourceValue);
     if (!buffer || buffer.length === 0) return '';
     const parser = new PDFParse({ data: buffer });
     const parsed = await parser.getText();
-    return (parsed.text || '').replace(/\s+/g, ' ').trim();
+    return this.normalizeExtractedText(parsed.text || '');
   }
 
   private async extractDocxText(sourceValue: string): Promise<string> {
     const buffer = await this.loadSourceBinary(sourceValue);
     if (!buffer || buffer.length === 0) return '';
     const parsed = await mammoth.extractRawText({ buffer });
-    return (parsed.value || '').replace(/\s+/g, ' ').trim();
+    return this.normalizeExtractedText(parsed.value || '');
   }
 
   private async loadSourceBinary(sourceValue: string): Promise<Buffer> {
@@ -293,6 +313,15 @@ export class KbRetrievalService implements OnModuleInit {
     }
   
     return chunks;
+  }
+
+  private normalizeExtractedText(input: string): string {
+    return (input || '')
+      .replace(/\r/g, ' ')
+      .replace(/\n+/g, ' ')
+      .replace(/\t+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private async createEmbedding(text: string): Promise<number[]> {
