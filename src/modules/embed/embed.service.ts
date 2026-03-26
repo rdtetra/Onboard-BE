@@ -83,12 +83,32 @@ export class EmbedService {
     if (!dto.visitorId?.trim()) {
       throw new BadRequestException('visitorId is required');
     }
-    return this.conversationsService.create(
+    const conversation = await this.conversationsService.create(
       widgetCtx,
       widgetAuthContext.botId,
       dto.visitorId,
       { forWidget: true },
     );
+    const bot = await this.botsService.findOne(widgetCtx, widgetAuthContext.botId, {
+      forWidget: true,
+    });
+    const welcome = (
+      bot.introMessage ?? DEFAULT_WIDGET_CONFIG.welcomeMessage
+    )?.trim();
+    if (welcome) {
+      await this.conversationsService.addMessage(
+        widgetCtx,
+        conversation.id,
+        { content: welcome, sender: MessageSender.BOT },
+        {
+          forSystem: true,
+          botId: widgetAuthContext.botId,
+          senderOverride: MessageSender.BOT,
+          triggerBotReply: false,
+        },
+      );
+    }
+    return conversation;
   }
 
   async getMessages(
@@ -113,18 +133,19 @@ export class EmbedService {
     conversationId: string,
     dto: AddWidgetMessageDto,
   ): Promise<Message> {
-    const sender = dto.sender === MessageSender.BOT ? MessageSender.BOT : MessageSender.USER;
-    const isBot = sender === MessageSender.BOT;
+    if (dto.sender != null && dto.sender !== MessageSender.USER) {
+      throw new BadRequestException('Widget clients can only send USER messages');
+    }
     return this.conversationsService.addMessage(
       widgetCtx,
       conversationId,
-      { content: dto.content, sender },
+      { content: dto.content, sender: MessageSender.USER },
       {
-        forWidget: !isBot,
-        forSystem: isBot,
+        forWidget: true,
+        forSystem: false,
         botId: widgetAuthContext.botId,
-        senderOverride: isBot ? MessageSender.BOT : undefined,
-        triggerBotReply: !isBot,
+        senderOverride: undefined,
+        triggerBotReply: true,
       },
     );
   }

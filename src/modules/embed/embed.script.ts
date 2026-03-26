@@ -489,16 +489,8 @@ export const EMBED_SCRIPT = `
     if (conversationId || conversationLoading) return Promise.resolve();
     conversationLoading = true;
     setBootLoading(true);
-    var intro = (WELCOME || '').trim();
     return createConversationOnLoad()
       .then(function() { return joinRoom(); })
-      .then(function() {
-        if (!intro) return null;
-        return addMessageToConversation(intro, 'BOT').catch(function(err) {
-          showWidgetError(humanizeError(err, 'Unable to start chat intro right now. Please try again.'));
-          console.warn('[Onboard widget] intro post failed', err);
-        });
-      })
       .then(function() { return loadMessages(); })
       .then(renderMessages)
       .catch(function(err) {
