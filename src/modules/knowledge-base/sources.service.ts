@@ -44,6 +44,7 @@ export class SourcesService {
 
   private isIndexableSourceType(sourceType: SourceType): boolean {
     return (
+      sourceType === SourceType.URL ||
       sourceType === SourceType.TXT ||
       sourceType === SourceType.PDF ||
       sourceType === SourceType.DOCX
@@ -406,8 +407,17 @@ export class SourcesService {
         'Refresh is only supported for URL sources',
       );
     }
-    source.lastRefreshed = new Date();
-    return this.kbSourceRepository.save(source);
+    source.status = SourceStatus.PROCESSING;
+    const saved = await this.kbSourceRepository.save(source);
+    const withBots = await this.kbSourceRepository.findOne({
+      where: { id: saved.id },
+      relations: ['bots'],
+    });
+    if (withBots) {
+      this.reindexSource(ctx, withBots);
+      return withBots;
+    }
+    return saved;
   }
 
   async linkBot(
