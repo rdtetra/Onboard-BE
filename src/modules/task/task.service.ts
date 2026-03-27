@@ -8,9 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { Task } from '../../common/entities/task.entity';
 import { Chip } from '../../common/entities/chip.entity';
-import { KBSource } from '../../common/entities/kb-source.entity';
 import { BotService } from '../bot/bot.service';
-import { SourcesService } from '../knowledge-base/sources.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ChipType } from '../../types/task';
@@ -30,7 +28,6 @@ export class TaskService {
     @InjectRepository(Chip)
     private readonly chipRepository: Repository<Chip>,
     private readonly botsService: BotService,
-    private readonly sourcesService: SourcesService,
   ) {}
 
   async create(ctx: RequestContext, dto: CreateTaskDto): Promise<Task> {
@@ -43,25 +40,13 @@ export class TaskService {
     //   throw new BadRequestException('Only project bots can have tasks');
     // }
 
-    const kbSources: KBSource[] = [];
-    for (const sourceId of dto.kbSourceIds) {
-      const source = await this.sourcesService.findOne(ctx, sourceId);
-      kbSources.push(source);
-    }
-
     const task = this.taskRepository.create({
       name: dto.name.trim(),
-      introMessage: dto.introMessage.trim(),
-      instruction: dto.instruction.trim(),
       targetUrls: dto.targetUrls,
       isActive: dto.isActive,
       botId: dto.botId,
     });
     const saved = await this.taskRepository.save(task);
-    if (kbSources.length > 0) {
-      saved.kbSources = kbSources;
-      await this.taskRepository.save(saved);
-    }
     if (dto.chips?.length) {
       const chips = this.chipRepository.create(
         dto.chips.map((c) => ({
@@ -115,7 +100,7 @@ export class TaskService {
 
     const [data, total] = await this.taskRepository.findAndCount({
       where,
-      relations: ['kbSources', 'chips'],
+      relations: ['chips'],
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
@@ -130,7 +115,7 @@ export class TaskService {
     }
     const task = await this.taskRepository.findOne({
       where: { id },
-      relations: ['kbSources', 'chips'],
+      relations: ['chips'],
     });
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
@@ -146,10 +131,6 @@ export class TaskService {
   ): Promise<Task> {
     const task = await this.findOne(ctx, id);
     if (dto.name !== undefined) task.name = dto.name.trim();
-    if (dto.introMessage !== undefined)
-      task.introMessage = dto.introMessage.trim();
-    if (dto.instruction !== undefined)
-      task.instruction = dto.instruction.trim();
     if (dto.targetUrls !== undefined) task.targetUrls = dto.targetUrls;
     if (dto.isActive !== undefined) task.isActive = dto.isActive;
     if (dto.botId !== undefined) {
@@ -159,14 +140,6 @@ export class TaskService {
       //   throw new BadRequestException('Only project bots can have tasks');
       // }
       task.botId = dto.botId;
-    }
-    if (dto.kbSourceIds !== undefined) {
-      const kbSources: KBSource[] = [];
-      for (const sourceId of dto.kbSourceIds) {
-        const source = await this.sourcesService.findOne(ctx, sourceId);
-        kbSources.push(source);
-      }
-      task.kbSources = kbSources;
     }
     await this.taskRepository.save(task);
     if (dto.chips !== undefined) {

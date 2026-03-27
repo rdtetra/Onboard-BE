@@ -20,16 +20,6 @@ export class CreateTaskDto {
   @MaxLength(200)
   name: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(5000)
-  introMessage: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(10000)
-  instruction: string;
-
   @IsArray()
   @IsString({ each: true })
   @Matches(TARGET_URL_REGEX, {
@@ -44,10 +34,6 @@ export class CreateTaskDto {
   @IsUUID()
   @IsNotEmpty()
   botId: string;
-
-  @IsArray()
-  @IsUUID('4', { each: true })
-  kbSourceIds: string[];
 
   @IsOptional()
   @IsArray()
