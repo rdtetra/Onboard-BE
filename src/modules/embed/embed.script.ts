@@ -81,7 +81,7 @@ export const EMBED_SCRIPT = `
   var defaultWidgetLogoSvg = ___DEFAULT_WIDGET_LOGO_SVG_JSON___;
   var sendSvg = '<svg class="ob-send-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
 
-  var css = ':host { display: block; } * { box-sizing: border-box; } .ob-root { font-family: Roboto, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 10px; } #onboard-widget-btn { width: 56px; height: 56px; padding: 12px; box-sizing: border-box; border-radius: 50%; border: none; background: #7B61FF; color: #fff; cursor: pointer; box-shadow: 0 4px 20px rgba(123,97,255,0.45); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.15s, transform 0.15s; } #onboard-widget-btn:hover { background: #6A52E8; transform: scale(1.03); } #onboard-widget-btn.loading { cursor: wait; } #onboard-widget-btn.loading .ob-widget-logo-svg { animation: ob-spin 1s linear infinite; } @keyframes ob-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } #onboard-widget-btn .ob-widget-logo-svg { width: 100%; height: 100%; max-width: 27px; max-height: 27px; } #onboard-widget-panel { display: none; width: 400px; max-width: calc(100vw - 20px); height: 480px; max-height: calc(100vh - 100px); background: #fff; border-radius: 16px; box-shadow: 0px 4px 24px 0px #0000001F; flex-direction: column; overflow: hidden; } #onboard-widget-panel.open { display: flex; } .ob-section-header { flex-shrink: 0; position: relative; padding: 12px 16px; background: #7B61FF; display: flex; align-items: center; justify-content: flex-start; } .ob-header-row { display: flex; align-items: center; text-align: left; } .ob-header-logo { width: 46px; height: 46px; border-radius: 50%; background: #FEFEFE4D; color: #FEFEFE; padding: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; } .ob-header-logo .ob-widget-logo-svg { max-width: 21px; max-height: 21px; width: 100%; height: 100%; } .ob-header-copy { display: flex; flex-direction: column; align-items: flex-start; margin-left: 12px; min-width: 0; } .ob-header-title { font-family: Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 1.25; color: #FEFEFE; } .ob-header-status { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-family: Roboto, sans-serif; font-size: 12px; font-weight: 400; color: #FEFEFE; } .ob-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #00A94F; flex-shrink: 0; } .ob-close { position: absolute; top: 12px; right: 16px; background: transparent; border: none; color: #E9EAF2; font-size: 24px; line-height: 1; cursor: pointer; padding: 0; opacity: 0.9; border-radius: 9999px; display: flex; align-items: center; justify-content: center; } .ob-section-messages { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: #fff; padding: 16px; } .ob-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; } .ob-msg { display: flex; flex-direction: column; max-width: 88%; } .ob-msg-bot { align-self: flex-start; } .ob-msg-user { align-self: flex-end; max-width: 88%; } .ob-bubble { padding: 12px 14px; border-radius: 16px; word-break: break-word; line-height: 1.45; display: flex; flex-direction: column; gap: 10px; font-size: 14px; font-weight: 400; } .ob-msg-bot .ob-bubble { background: #F2EFFF; color: #7B61FF; border-radius: 16px 16px 16px 4px; } .ob-msg-user .ob-bubble { background: #7B61FF; color: #FEFEFE; border-radius: 16px 16px 4px 16px; } .ob-bubble-text { font-size: 14px; font-weight: 400; } .ob-msg-meta { display: flex; align-items: center; gap: 6px; justify-content: flex-end; } .ob-msg-bot .ob-msg-meta { justify-content: flex-start; } .ob-msg-time { font-size: 12px; font-weight: 400; } .ob-msg-status { font-size: 11px; font-weight: 500; opacity: 0.95; } .ob-msg-status-pending { color: #E7E7E7; } .ob-msg-status-sent { color: #E7E7E7; } .ob-msg-status-error { color: #FFD2D2; } .ob-msg-bot .ob-msg-time { color: #6974A6; } .ob-msg-user .ob-msg-time { color: #E7E7E7; text-align: right; } .ob-msg-user.pending .ob-bubble { opacity: 0.85; } .ob-msg-bot-loading .ob-bubble { width: 52px; min-width: 52px; align-items: center; } .ob-msg-bot-loading .ob-bubble-text { width: 24px; text-align: left; letter-spacing: 1px; } .ob-section-footer { flex-shrink: 0; padding: 16px; border-top: 1px solid #E5E7EB; background: #fff; } .ob-input-row { display: flex; align-items: center; gap: 10px; } .ob-input { flex: 1; height: 36px; padding: 8px; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #1F307A; outline: none; transition: border-color 0.15s; box-sizing: border-box; } .ob-input::placeholder { color: #BABFD6; font-size: 14px; font-weight: 500; } .ob-input:focus { border-color: #7B61FF; } .ob-send { width: 36px; height: 36px; border: none; border-radius: 8px; background: #7B61FF; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; } .ob-send:hover { background: #6A52E8; } .ob-send .ob-send-svg { width: 20px; height: 20px; flex-shrink: 0; } .ob-powered { text-align: center; font-size: 12px; color: #9CA3AF; margin-top: 10px; } .ob-powered-brand { font-weight: 500; }';
+  var css = ':host { display: block; } * { box-sizing: border-box; } .ob-root { font-family: Roboto, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 10px; } #onboard-widget-btn { width: 56px; height: 56px; padding: 12px; box-sizing: border-box; border-radius: 50%; border: none; background: #7B61FF; color: #fff; cursor: pointer; box-shadow: 0 4px 20px rgba(123,97,255,0.45); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.15s, transform 0.15s; } #onboard-widget-btn:hover { background: #6A52E8; transform: scale(1.03); } #onboard-widget-btn.loading { cursor: wait; } #onboard-widget-btn.loading .ob-widget-logo-svg { animation: ob-spin 1s linear infinite; } @keyframes ob-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } #onboard-widget-btn .ob-widget-logo-svg { width: 100%; height: 100%; max-width: 27px; max-height: 27px; } #onboard-widget-panel { display: none; width: 400px; max-width: calc(100vw - 20px); height: 480px; max-height: calc(100vh - 100px); background: #fff; border-radius: 16px; box-shadow: 0px 4px 24px 0px #0000001F; flex-direction: column; overflow: hidden; } #onboard-widget-panel.open { display: flex; } .ob-section-header { flex-shrink: 0; position: relative; padding: 12px 16px; background: #7B61FF; display: flex; align-items: center; justify-content: flex-start; } .ob-header-row { display: flex; align-items: center; text-align: left; } .ob-header-logo { width: 46px; height: 46px; border-radius: 50%; background: #FEFEFE4D; color: #FEFEFE; padding: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; } .ob-header-logo .ob-widget-logo-svg { max-width: 21px; max-height: 21px; width: 100%; height: 100%; } .ob-header-copy { display: flex; flex-direction: column; align-items: flex-start; margin-left: 12px; min-width: 0; } .ob-header-title { font-family: Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 1.25; color: #FEFEFE; } .ob-header-status { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-family: Roboto, sans-serif; font-size: 12px; font-weight: 400; color: #FEFEFE; } .ob-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #00A94F; flex-shrink: 0; } .ob-close { position: absolute; top: 12px; right: 16px; background: transparent; border: none; color: #E9EAF2; font-size: 24px; line-height: 1; cursor: pointer; padding: 0; opacity: 0.9; border-radius: 9999px; display: flex; align-items: center; justify-content: center; } .ob-section-messages { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: #fff; padding: 16px; } .ob-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; } .ob-msg { display: flex; flex-direction: column; max-width: 88%; } .ob-msg-bot { align-self: flex-start; } .ob-msg-user { align-self: flex-end; max-width: 88%; } .ob-bubble { padding: 12px 14px; border-radius: 16px; word-break: break-word; line-height: 1.45; display: flex; flex-direction: column; gap: 10px; font-size: 14px; font-weight: 400; } .ob-msg-bot .ob-bubble { background: #F2EFFF; color: #7B61FF; border-radius: 16px 16px 16px 4px; } .ob-msg-user .ob-bubble { background: #7B61FF; color: #FEFEFE; border-radius: 16px 16px 4px 16px; } .ob-bubble-text { font-size: 14px; font-weight: 400; } .ob-msg-meta { display: flex; align-items: center; gap: 6px; justify-content: flex-end; } .ob-msg-bot .ob-msg-meta { justify-content: flex-start; } .ob-msg-time { font-size: 12px; font-weight: 400; } .ob-msg-status { font-size: 11px; font-weight: 500; opacity: 0.95; } .ob-msg-status-pending { color: #E7E7E7; } .ob-msg-status-sent { color: #E7E7E7; } .ob-msg-status-error { color: #FFD2D2; } .ob-msg-bot .ob-msg-time { color: #6974A6; } .ob-msg-user .ob-msg-time { color: #E7E7E7; text-align: right; } .ob-msg-user.pending .ob-bubble { opacity: 0.85; } .ob-msg-bot-loading .ob-bubble { width: 52px; min-width: 52px; align-items: center; } .ob-msg-bot-loading .ob-bubble-text { width: 24px; text-align: left; letter-spacing: 1px; } .ob-section-footer { flex-shrink: 0; padding: 16px; border-top: 1px solid #E5E7EB; background: #fff; } .ob-task-chips-wrap { width: 75%; margin-left: auto; } .ob-task-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 8px; } .ob-task-chip { border: 1px solid #DCD7FF; background: #F7F5FF; color: #6C57DA; border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 1; padding: 8px 12px; cursor: pointer; transition: filter 0.15s; } .ob-task-chip:hover { filter: brightness(0.97); } .ob-task-chip:disabled { opacity: 0.65; cursor: not-allowed; } .ob-input-row { display: flex; align-items: center; gap: 10px; } .ob-input { flex: 1; height: 36px; padding: 8px; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #1F307A; outline: none; transition: border-color 0.15s; box-sizing: border-box; } .ob-input::placeholder { color: #BABFD6; font-size: 14px; font-weight: 500; } .ob-input:focus { border-color: #7B61FF; } .ob-send { width: 36px; height: 36px; border: none; border-radius: 8px; background: #7B61FF; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; } .ob-send:hover { background: #6A52E8; } .ob-send .ob-send-svg { width: 20px; height: 20px; flex-shrink: 0; } .ob-powered { text-align: center; font-size: 12px; color: #9CA3AF; margin-top: 10px; } .ob-powered-brand { font-weight: 500; }';
 
   var html =
     '<style>' + css + '</style>' +
@@ -96,7 +96,7 @@ export const EMBED_SCRIPT = `
     '</div></div>' +
     '<button type="button" class="ob-close" aria-label="Close">&#215;</button>' +
     '</header>' +
-    '<div class="ob-section-messages"><div class="ob-messages" role="log" aria-live="polite"></div></div>' +
+    '<div class="ob-section-messages"><div class="ob-messages" role="log" aria-live="polite"></div><div class="ob-task-chips-wrap"><div class="ob-task-chips" role="list"></div></div></div>' +
     '<div class="ob-section-footer">' +
     '<div class="ob-input-row">' +
     '<input type="text" class="ob-input" placeholder="Type your message..." autocomplete="off" />' +
@@ -133,6 +133,7 @@ export const EMBED_SCRIPT = `
   var botStreamText = '';
   var conversationLoading = false;
   var panelCloseTimer = null;
+  var taskChips = [];
 
   function q(sel) { return shadow.querySelector(sel); }
 
@@ -152,6 +153,67 @@ export const EMBED_SCRIPT = `
     var sendBtn = panel.querySelector('.ob-send');
     if (inputEl) inputEl.disabled = inputLocked;
     if (sendBtn) sendBtn.disabled = inputLocked;
+    var chips = panel.querySelectorAll('.ob-task-chip');
+    if (chips && chips.length) {
+      for (var i = 0; i < chips.length; i++) chips[i].disabled = inputLocked;
+    }
+  }
+
+  function sendUserMessage(text) {
+    var messagesEl = q('.ob-messages');
+    var inputEl = q('.ob-input');
+    var value = (text || '').trim();
+    if (inputLocked || !conversationId || !value || !messagesEl) return;
+    if (inputEl && (!text || text === inputEl.value)) inputEl.value = '';
+    var pendingKey = 'tmp_' + (++pendingCounter);
+    var pendingBubble = appendBubble(messagesEl, 'USER', value, null, 'PENDING');
+    pendingUserBubbles[pendingKey] = pendingBubble;
+    pendingUserQueue.push(pendingBubble);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    addMessageToConversation(value)
+      .then(function(res) {
+        var data = res && res.data ? res.data : res;
+        if (data && data.id) pendingUserBubblesByMessageId[data.id] = pendingBubble;
+        delete pendingUserBubbles[pendingKey];
+      })
+      .catch(function(err) {
+        updateUserBubbleStatus(pendingBubble, 'ERROR', new Date().toISOString());
+        var idx = pendingUserQueue.indexOf(pendingBubble);
+        if (idx >= 0) {
+          pendingUserQueue.splice(idx, 1);
+        }
+        delete pendingUserBubbles[pendingKey];
+        clearBotPending();
+        showWidgetError(humanizeError(err, 'Message failed to send. Please try again.'));
+        console.warn('[Onboard widget]', err);
+      });
+  }
+
+  function renderTaskChips() {
+    var container = q('.ob-task-chips');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!taskChips || !taskChips.length) {
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = 'flex';
+    taskChips.forEach(function(chip) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ob-task-chip';
+      btn.textContent = chip.label;
+      btn.disabled = inputLocked;
+      btn.onclick = function() {
+        if (chip.type === 'link' && chip.url) {
+          if (chip.newTab) window.open(chip.url, '_blank', 'noopener,noreferrer');
+          else window.location.href = chip.url;
+          return;
+        }
+        if (chip.question) sendUserMessage(chip.question);
+      };
+      container.appendChild(btn);
+    });
   }
 
   function formatTime(iso) {
@@ -244,6 +306,7 @@ export const EMBED_SCRIPT = `
           botStreamText = '';
           clearBotPending(false);
           var wrap = appendBubble(messagesEl, sender, data.content, data.createdAt, data.status || 'SENT');
+          renderTaskChips();
           messagesEl.scrollTop = messagesEl.scrollHeight;
           setInputLocked(false);
         });
@@ -389,6 +452,23 @@ export const EMBED_SCRIPT = `
     var cfg = raw && raw.data ? raw.data : raw;
     if (!cfg || typeof cfg !== 'object') return;
     widgetConfig = cfg;
+    taskChips = Array.isArray(cfg.taskChips) ? cfg.taskChips
+      .filter(function(c) {
+        if (!c || !c.label) return false;
+        if (c.type === 'link') return !!c.url;
+        return !!c.question;
+      })
+      .map(function(c) {
+        return {
+          id: c.id || '',
+          type: c.type === 'link' ? 'link' : 'query',
+          label: String(c.label),
+          question: c.question ? String(c.question) : null,
+          url: c.url ? String(c.url) : null,
+          newTab: !!c.newTab
+        };
+      })
+      : [];
 
     var hostPos = String(getConfigValue('position', 'bottom_right')).toLowerCase();
     host.style.left = '';
@@ -456,6 +536,7 @@ export const EMBED_SCRIPT = `
       '.ob-send:hover{filter:brightness(0.95);background:' + primaryColor + ';}' +
       '#onboard-widget-btn:hover{filter:brightness(0.95);background:' + primaryColor + ';}' +
       '.ob-input:focus{border-color:' + primaryColor + ';}';
+    renderTaskChips();
   }
 
   function getPreferredColorSchemeMode() {
@@ -754,34 +835,7 @@ export const EMBED_SCRIPT = `
     q('#onboard-widget-btn').onclick = togglePanel;
     panel.querySelector('.ob-close').onclick = closePanel;
     panel.querySelector('.ob-send').onclick = function() {
-      var messagesEl = q('.ob-messages');
-      var text = (inputEl.value || '').trim();
-      if (inputLocked || !conversationId || !text || !messagesEl) return;
-      inputEl.value = '';
-      var pendingKey = 'tmp_' + (++pendingCounter);
-      var pendingBubble = appendBubble(messagesEl, 'USER', text, null, 'PENDING');
-      pendingUserBubbles[pendingKey] = pendingBubble;
-      pendingUserQueue.push(pendingBubble);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-      addMessageToConversation(text)
-        .then(function(res) {
-          // Status update now comes from websocket MESSAGE_STATUS_UPDATED.
-          // We only map server message id to this pending bubble.
-          var data = res && res.data ? res.data : res;
-          if (data && data.id) pendingUserBubblesByMessageId[data.id] = pendingBubble;
-          delete pendingUserBubbles[pendingKey];
-        })
-        .catch(function(err) {
-          updateUserBubbleStatus(pendingBubble, 'ERROR', new Date().toISOString());
-          var idx = pendingUserQueue.indexOf(pendingBubble);
-          if (idx >= 0) {
-            pendingUserQueue.splice(idx, 1);
-          }
-          delete pendingUserBubbles[pendingKey];
-          clearBotPending();
-          showWidgetError(humanizeError(err, 'Message failed to send. Please try again.'));
-          console.warn('[Onboard widget]', err);
-        });
+      sendUserMessage(inputEl.value || '');
     };
     inputEl.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') panel.querySelector('.ob-send').click();

@@ -25,4 +25,12 @@ export class BotConfigResponseDto {
   welcomeMessage: string | null;
   botLogoUrl: string | null;
   showPoweredBy: boolean;
+  taskChips: Array<{
+    id: string;
+    type: 'query' | 'link';
+    label: string;
+    question: string | null;
+    url: string | null;
+    newTab: boolean;
+  }>;
 }

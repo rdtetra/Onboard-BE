@@ -198,4 +198,40 @@ export class TaskService {
     }
     await this.taskRepository.remove(task);
   }
+
+  async findWidgetChipsByBotId(
+    botId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      type: ChipType;
+      label: string;
+      question: string | null;
+      url: string | null;
+      newTab: boolean;
+    }>
+  > {
+    const tasks = await this.taskRepository.find({
+      where: { botId, isActive: true },
+      relations: ['chips'],
+      order: { createdAt: 'ASC' },
+    });
+
+    return tasks
+      .flatMap((task) => task.chips ?? [])
+      .filter(
+        (chip) =>
+          !!chip.chipName?.trim() &&
+          ((chip.type === ChipType.QUERY && !!chip.chipText?.trim()) ||
+            (chip.type === ChipType.LINK && !!chip.url?.trim())),
+      )
+      .map((chip) => ({
+        id: chip.id,
+        type: chip.type,
+        label: chip.chipName.trim(),
+        question: chip.type === ChipType.QUERY ? chip.chipText.trim() : null,
+        url: chip.type === ChipType.LINK ? (chip.url || '').trim() : null,
+        newTab: chip.type === ChipType.LINK ? !!chip.newTab : false,
+      }));
+  }
 }

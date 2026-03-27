@@ -16,6 +16,7 @@ import type { BotConfigResponseDto } from './dto/bot-config.response';
 import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
 import { WidgetAppearance } from '../../types/widget';
 import { createInternalContext } from '../../common/utils/request-context.util';
+import { TaskService } from '../task/task.service';
 
 const widgetCtx: RequestContext = createInternalContext(
   RequestContextId.EMBED_WIDGET,
@@ -29,6 +30,7 @@ export class EmbedService {
     private readonly conversationsService: ConversationService,
     private readonly widgetsService: WidgetService,
     private readonly botsService: BotService,
+    private readonly tasksService: TaskService,
   ) {}
 
   getScript(): string {
@@ -180,6 +182,9 @@ export class EmbedService {
       { forWidget: true },
     );
     const d = DEFAULT_WIDGET_CONFIG;
+    const taskChips = await this.tasksService.findWidgetChipsByBotId(
+      widgetAuthContext.botId,
+    );
 
     return {
       name: bot.name,
@@ -202,6 +207,7 @@ export class EmbedService {
         widget?.welcomeMessage ?? bot.introMessage ?? d.welcomeMessage,
       botLogoUrl: widget?.botLogoUrl ?? d.botLogoUrl,
       showPoweredBy: widget?.showPoweredBy ?? d.showPoweredBy,
+      taskChips,
     };
   }
 }
