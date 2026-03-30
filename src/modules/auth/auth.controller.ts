@@ -6,6 +6,7 @@ import {
   Patch,
   Query,
   Headers,
+  Param,
   UseInterceptors,
   UploadedFile,
   UseFilters,
@@ -19,7 +20,11 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
-import { AuthResponse, SessionResponse } from '../../types/auth';
+import {
+  AuthResponse,
+  SessionResponse,
+  ImpersonateResponse,
+} from '../../types/auth';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import { User } from '../../common/entities/user.entity';
 import { profilePictureUploadOptions } from './profile-upload.options';
@@ -51,6 +56,14 @@ export class AuthController {
     @Body() loginDto: LoginDto,
   ): Promise<AuthResponse> {
     return this.authService.login(ctx, loginDto);
+  }
+
+  @Post('impersonate/:id')
+  impersonate(
+    @RequestContext() ctx: RequestContextType,
+    @Param('id') userId: string,
+  ): Promise<ImpersonateResponse> {
+    return this.authService.impersonate(ctx, userId);
   }
 
   @Public()

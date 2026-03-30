@@ -5,6 +5,7 @@ export type RequestUser = {
   email: string;
   organizationId?: string | null;
   roleName?: RoleName;
+  impersonatedByUserId?: string;
 };
 
 export type RequestContext = {

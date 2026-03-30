@@ -57,6 +57,20 @@ export class JwtWrapperService {
     return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
   }
 
+  /**
+   * Super-admin impersonation access token. Same secret as `auth` so existing JWT validation applies;
+   * fixed 15-minute lifetime.
+   */
+  signImpersonationToken<T extends object>(payload: T): string {
+    const secret = this.configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new InternalServerErrorException(
+        'JWT_SECRET is not defined in environment variables',
+      );
+    }
+    return jwt.sign(payload, secret, { expiresIn: '15m' } as jwt.SignOptions);
+  }
+
   /** Sign and return token plus expiresAt (ISO string). Useful for widget token response. */
   signWithExpiresAt<T extends object>(
     payload: T,

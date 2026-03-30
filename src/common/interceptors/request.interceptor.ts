@@ -29,6 +29,9 @@ export class RequestInterceptor implements NestInterceptor {
         email: request.user.email,
         organizationId: request.user.organizationId,
         roleName: request.user.roleName,
+        ...(request.user.impersonatedByUserId != null && {
+          impersonatedByUserId: request.user.impersonatedByUserId,
+        }),
       };
     }
 

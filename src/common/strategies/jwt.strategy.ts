@@ -40,6 +40,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       roleName: user.role?.name,
       organizationId: user.organizationId ?? undefined,
+      ...(payload.isImpersonation &&
+        payload.impersonatedBy && {
+          impersonatedByUserId: payload.impersonatedBy,
+        }),
     };
   }
 }

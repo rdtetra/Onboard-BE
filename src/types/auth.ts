@@ -1,8 +1,11 @@
 import type { RoleName } from './roles';
 
 export type JwtPayload = {
-  email: string;
   sub: string;
+  email?: string;
+  isImpersonation?: boolean;
+  impersonatedBy?: string;
+  role?: { id: string; name: RoleName };
 };
 
 export type JwtUser = {
@@ -10,6 +13,7 @@ export type JwtUser = {
   email: string;
   roleName?: RoleName;
   organizationId?: string | null;
+  impersonatedByUserId?: string;
 };
 
 export type AuthResponse = {
@@ -31,4 +35,8 @@ export type SessionResponse = {
     roleName: RoleName;
     passwordChangeRequired: boolean;
   };
+};
+
+export type ImpersonateResponse = {
+  access_token: string;
 };

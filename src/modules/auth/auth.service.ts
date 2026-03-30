@@ -17,9 +17,15 @@ import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { JwtPayload, AuthResponse, SessionResponse } from '../../types/auth';
+import {
+  JwtPayload,
+  AuthResponse,
+  SessionResponse,
+  ImpersonateResponse,
+} from '../../types/auth';
 import { User } from '../../common/entities/user.entity';
 import { UserStatus } from '../../types/user-status';
+import { RoleName } from '../../types/roles';
 import { UsedToken } from '../../common/entities/used-token.entity';
 import type { RequestContext } from '../../types/request';
 import { AuditService } from '../audit/audit.service';
@@ -125,6 +131,43 @@ export class AuthService {
         fullName: user.fullName,
         passwordChangeRequired: user.passwordChangeRequired,
       },
+    };
+  }
+
+  async impersonate(
+    ctx: RequestContext,
+    targetUserId: string,
+  ): Promise<ImpersonateResponse> {
+    const adminUserId = ctx.user?.userId;
+    if (!adminUserId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    if (ctx.user?.roleName !== RoleName.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin access required');
+    }
+
+    const targetUser = await this.usersService.findOne(ctx, targetUserId, {
+      role: true,
+    });
+
+    if (targetUser.status === UserStatus.DISABLED) {
+      throw new BadRequestException('Cannot impersonate a disabled user');
+    }
+
+    if (targetUser.role.name === RoleName.SUPER_ADMIN) {
+      throw new ForbiddenException('Cannot impersonate a super admin');
+    }
+
+    const token = this.jwtWrapperService.signImpersonationToken({
+      sub: targetUser.id,
+      email: targetUser.email,
+      role: { id: targetUser.role.id, name: targetUser.role.name },
+      impersonatedBy: adminUserId,
+      isImpersonation: true,
+    });
+
+    return {
+      access_token: token,
     };
   }
 
