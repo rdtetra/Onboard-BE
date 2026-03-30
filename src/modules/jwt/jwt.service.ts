@@ -51,16 +51,11 @@ export class JwtWrapperService {
     return { secret, expiresIn };
   }
 
-  /** Sign a payload and return the JWT string. */
   sign<T extends object>(payload: T, useCase: JwtUseCase): string {
     const { secret, expiresIn } = this.getConfig(useCase);
     return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
   }
 
-  /**
-   * Super-admin impersonation access token. Same secret as `auth` so existing JWT validation applies;
-   * fixed 15-minute lifetime.
-   */
   signImpersonationToken<T extends object>(payload: T): string {
     const secret = this.configService.get<string>('JWT_SECRET');
     if (!secret) {
@@ -71,7 +66,6 @@ export class JwtWrapperService {
     return jwt.sign(payload, secret, { expiresIn: '15m' } as jwt.SignOptions);
   }
 
-  /** Sign and return token plus expiresAt (ISO string). Useful for widget token response. */
   signWithExpiresAt<T extends object>(
     payload: T,
     useCase: JwtUseCase,
@@ -85,7 +79,6 @@ export class JwtWrapperService {
     return { token, expiresAt };
   }
 
-  /** Verify and decode; throws UnauthorizedException if invalid. */
   verify<T = unknown>(token: string, useCase: JwtUseCase): T {
     const { secret } = this.getConfig(useCase);
     try {
@@ -95,7 +88,6 @@ export class JwtWrapperService {
     }
   }
 
-  /** Decode without verifying (e.g. to read exp). Returns null if malformed. */
   decode(token: string): { exp?: number; [k: string]: unknown } | null {
     try {
       const decoded = jwt.decode(token);

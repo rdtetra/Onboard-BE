@@ -26,8 +26,6 @@ export class KbRetrievalService implements OnModuleInit {
   constructor(
     @InjectRepository(KBChunk)
     private readonly kbChunkRepository: Repository<KBChunk>,
-    // Keep direct repo access here to update lastRefreshed
-    // without introducing a circular service dependency with SourcesService.
     @InjectRepository(KBSource)
     private readonly kbSourceRepository: Repository<KBSource>,
     private readonly configService: ConfigService,
@@ -72,7 +70,7 @@ export class KbRetrievalService implements OnModuleInit {
       }
       const queryEmbedding = await this.createEmbedding(trimmed);
       const vectorLiteral = this.toVectorLiteral(queryEmbedding);
-      const topK = 5;
+      const topK = 8;
       rows = (await this.kbChunkRepository.query(
         `SELECT c.content, (1 - (c.embedding <=> $1::vector)) AS score
          FROM kb_chunks c
@@ -96,7 +94,7 @@ export class KbRetrievalService implements OnModuleInit {
         content: r.content,
         score: typeof r.score === 'string' ? Number(r.score) : r.score,
       }))
-      .filter((r) => Number.isFinite(r.score) && r.score > 0.45);
+      .filter((r) => Number.isFinite(r.score) && r.score > 0.38);
 
     if (usable.length === 0) return '';
     return usable

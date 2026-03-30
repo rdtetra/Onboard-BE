@@ -10,7 +10,7 @@ import { Message } from '../../common/entities/message.entity';
 import { BotService } from '../bot/bot.service';
 import { TokenUsageService } from '../token-transaction/token-usage.service';
 import { RoleName } from '../../types/roles';
-import type { RequestContext } from '../../types/request';
+import { RequestContextId, type RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {
   parsePagination,
@@ -21,6 +21,7 @@ import { MessageSender, MessageStatus } from '../../types/message';
 import type { CreateMessageDto } from './dto/create-message.dto';
 import { InAppEventsService } from '../events/in-app-events.service';
 import { InAppEvents } from '../../types/events';
+import { createInternalContext } from '../../common/utils/request-context.util';
 
 @Injectable()
 export class ConversationService {
@@ -55,7 +56,6 @@ export class ConversationService {
     return this.conversationRepository.save(conversation);
   }
 
-  /** Total conversation count for current scope (all for super admin, org bots for tenant). */
   async countAll(ctx: RequestContext): Promise<number> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
@@ -71,10 +71,6 @@ export class ConversationService {
     });
   }
 
-  /**
-   * List conversations. If botId is provided, scope to that bot (and verify access).
-   * If botId is omitted, return conversations from all bots the user can access (org-scoped).
-   */
   async findAll(
     ctx: RequestContext,
     pagination?: { page?: string; limit?: string },
@@ -252,10 +248,31 @@ export class ConversationService {
     return conversation;
   }
 
-  /**
-   * Add a message to a conversation (typically from widget: user message or bot response).
-   * Deducts 1 token per USER message; bot responses do not use tokens.
-   */
+  async getMessagesThroughUserMessage(
+    conversationId: string,
+    botId: string,
+    userMessageId: string,
+  ): Promise<Message[]> {
+    const ctx = createInternalContext(RequestContextId.OPENAI_BOT_REPLY);
+    await this.findOne(ctx, conversationId, {
+      forWidget: true,
+      botId,
+      relations: [],
+    });
+    const all = await this.messageRepository.find({
+      where: { conversationId },
+      order: { createdAt: 'ASC' },
+    });
+    const idx = all.findIndex((m) => m.id === userMessageId);
+    if (idx === -1) {
+      throw new NotFoundException('Message not found in conversation');
+    }
+    if (all[idx].sender !== MessageSender.USER) {
+      throw new NotFoundException('Message not found in conversation');
+    }
+    return all.slice(0, idx + 1);
+  }
+
   async addMessage(
     ctx: RequestContext,
     conversationId: string,
