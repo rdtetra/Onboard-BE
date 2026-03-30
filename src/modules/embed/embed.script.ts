@@ -61,6 +61,8 @@ export const EMBED_SCRIPT = `
     localStorage.setItem(storageKey, visitorId);
   }
 
+  var onceShownKey = 'onboard_once_shown_' + botId + '_' + visitorId;
+
   if (!document.getElementById('onboard-widget-font')) {
     var pre = document.createElement('link');
     pre.rel = 'preconnect';
@@ -135,6 +137,7 @@ export const EMBED_SCRIPT = `
   var panelCloseTimer = null;
   var taskChips = [];
   var widgetBlocked = false;
+  var oncePerSessionHandledThisPage = false;
 
   function q(sel) { return shadow.querySelector(sel); }
 
@@ -585,11 +588,34 @@ export const EMBED_SCRIPT = `
     }
   }
 
+  function applyOncePerSessionPolicy() {
+    var cfg = widgetConfig;
+    if (!cfg || typeof cfg !== 'object') return;
+    if (cfg.oncePerSession) {
+      try {
+        if (localStorage.getItem(onceShownKey)) {
+          if (!oncePerSessionHandledThisPage) {
+            setWidgetBlocked(true);
+            return;
+          }
+        } else {
+          localStorage.setItem(onceShownKey, '1');
+        }
+        oncePerSessionHandledThisPage = true;
+      } catch (e) {}
+    } else {
+      try {
+        localStorage.removeItem(onceShownKey);
+      } catch (e) {}
+    }
+  }
+
   function loadConfig() {
     var scheme = getPreferredColorSchemeMode();
     return api('/config?mode=' + encodeURIComponent(scheme))
       .then(function(res) {
         applyWidgetConfig(res);
+        applyOncePerSessionPolicy();
         return res;
       })
       .catch(function(err) {
@@ -887,7 +913,13 @@ export const EMBED_SCRIPT = `
     });
     setBootLoading(true);
     loadConfig()
-      .then(function() { setBootLoading(false); })
+      .then(function() {
+        setBootLoading(false);
+        if (widgetBlocked) return;
+        var cfg = widgetConfig;
+        if (!cfg || cfg.behavior !== 'AUTO_SHOW') return;
+        openPanel();
+      })
       .catch(function(err) {
         setBootLoading(false);
         showWidgetError(humanizeError(err, 'Unable to load chat config. Please refresh and try again.'));

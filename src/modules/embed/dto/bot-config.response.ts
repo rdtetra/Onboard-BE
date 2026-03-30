@@ -8,6 +8,7 @@ export class BotConfigResponseDto {
   description: string | null;
   introMessage: string | null;
   behavior: string | null;
+  oncePerSession: boolean;
 
   /** Widget appearance & layout */
   mode: string;

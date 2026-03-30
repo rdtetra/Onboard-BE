@@ -191,6 +191,7 @@ export class EmbedService {
       description: bot.description ?? null,
       introMessage: bot.introMessage ?? null,
       behavior: bot.behavior ?? null,
+      oncePerSession: !!bot.oncePerSession,
 
       mode: widget?.mode ?? d.mode,
       position: widget?.position ?? d.position,
