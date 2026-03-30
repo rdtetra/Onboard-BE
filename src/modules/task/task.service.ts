@@ -194,14 +194,14 @@ export class TaskService {
       .flatMap((task) => task.chips ?? [])
       .filter(
         (chip) =>
-          !!chip.chipName?.trim() &&
-          ((chip.type === ChipType.QUERY && !!chip.chipText?.trim()) ||
+          !!chip.chipText?.trim() &&
+          (chip.type === ChipType.QUERY ||
             (chip.type === ChipType.LINK && !!chip.url?.trim())),
       )
       .map((chip) => ({
         id: chip.id,
         type: chip.type,
-        label: chip.chipName.trim(),
+        label: chip.chipText.trim(),
         question: chip.type === ChipType.QUERY ? chip.chipText.trim() : null,
         url: chip.type === ChipType.LINK ? (chip.url || '').trim() : null,
         newTab: chip.type === ChipType.LINK ? !!chip.newTab : false,
