@@ -67,14 +67,14 @@ export class Bot extends BaseEntity {
   oncePerSession: boolean;
 
   @Column({
-    type: 'timestamp',
+    type: 'timestamptz',
     name: 'visibility_start_date',
     nullable: true,
   })
   visibilityStartDate: Date | null;
 
   @Column({
-    type: 'timestamp',
+    type: 'timestamptz',
     name: 'visibility_end_date',
     nullable: true,
   })

@@ -96,9 +96,28 @@ function botRequiresVerifiedPage(bot: Bot): boolean {
   return hasDomains || isProjectLike;
 }
 
+function isWidgetVisibilityAllowed(bot: Bot, at: Date): boolean {
+  if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
+    return true;
+  }
+  const start = bot.visibilityStartDate;
+  const end = bot.visibilityEndDate;
+  if (bot.botType === BotType.PROJECT) {
+    if (!start || !end) return false;
+  } else if (!start || !end) {
+    return true;
+  }
+  const t = at.getTime();
+  return t >= start.getTime() && t <= end.getTime();
+}
+
 export function isEmbedAllowedForBot(bot: Bot, pageUrl: string | null): boolean {
   if (!botRequiresVerifiedPage(bot)) {
     return true;
+  }
+
+  if (!isWidgetVisibilityAllowed(bot, new Date())) {
+    return false;
   }
 
   if (!pageUrl?.trim()) {
