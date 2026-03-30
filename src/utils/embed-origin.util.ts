@@ -7,28 +7,65 @@ function headerFirst(v: IncomingHttpHeaders[string]): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
+const EMBED_PAGE_URL_HEADER = 'x-embed-page-url';
+
+function clientPageUrlMatchesOrigin(
+  headers: IncomingHttpHeaders,
+  pageUrlRaw: string,
+): string | null {
+  try {
+    const page = new URL(pageUrlRaw.trim());
+    const originHdr = headerFirst(headers.origin);
+    if (!originHdr?.trim()) return null;
+    const originUrl = new URL(originHdr.trim());
+    if (page.origin !== originUrl.origin) return null;
+    return page.href;
+  } catch {
+    return null;
+  }
+}
+
 export function getEmbedPageUrlFromHeaders(
   headers: IncomingHttpHeaders,
 ): string | null {
-  const origin = headerFirst(headers.origin);
-  if (origin?.trim()) {
-    try {
-      return new URL(origin.trim()).href;
-    } catch {
-      /* ignore */
-    }
+  const fromHeader = headerFirst(headers[EMBED_PAGE_URL_HEADER]);
+  if (fromHeader?.trim()) {
+    const ok = clientPageUrlMatchesOrigin(headers, fromHeader);
+    if (ok) return ok;
   }
 
   const referer = headerFirst(headers.referer);
   if (referer?.trim()) {
     try {
-      return new URL(referer.trim()).href;
-    } catch {
-      /* ignore */
-    }
+      const r = new URL(referer.trim());
+      const originHdr = headerFirst(headers.origin);
+      if (originHdr?.trim()) {
+        const o = new URL(originHdr.trim());
+        if (r.origin === o.origin) return r.href;
+      }
+      return r.href;
+    } catch {}
+  }
+
+  const origin = headerFirst(headers.origin);
+  if (origin?.trim()) {
+    try {
+      return new URL(origin.trim()).href;
+    } catch {}
   }
 
   return null;
+}
+
+export function getEmbedPageUrlForSocket(
+  headers: IncomingHttpHeaders,
+  payloadPageUrl?: string | null,
+): string | null {
+  if (payloadPageUrl?.trim()) {
+    const ok = clientPageUrlMatchesOrigin(headers, payloadPageUrl);
+    if (ok) return ok;
+  }
+  return getEmbedPageUrlFromHeaders(headers);
 }
 
 function normalizeHostname(host: string): string {

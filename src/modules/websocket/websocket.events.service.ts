@@ -23,7 +23,7 @@ import type { JoinRoomAck, JoinRoomPayload } from '../../types/websocket';
 import { JwtWrapperService } from '../jwt/jwt.service';
 import { createRequestContext } from '../../common/utils/request-context.util';
 import {
-  getEmbedPageUrlFromHeaders,
+  getEmbedPageUrlForSocket,
   isEmbedAllowedForBot,
 } from '../../utils/embed-origin.util';
 
@@ -110,7 +110,10 @@ export class WebsocketEventsService implements OnModuleInit {
       const bot = await this.botsService.findOne(botCheckCtx, authContext.botId, {
         forWidget: true,
       });
-      const pageUrl = getEmbedPageUrlFromHeaders(client.handshake.headers);
+      const pageUrl = getEmbedPageUrlForSocket(
+        client.handshake.headers,
+        payload.pageUrl,
+      );
       if (!isEmbedAllowedForBot(bot, pageUrl)) {
         return { ok: false, error: 'Widget is not allowed on this site or URL' };
       }

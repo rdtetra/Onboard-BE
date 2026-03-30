@@ -1,6 +1,7 @@
 export interface JoinRoomPayload {
   conversationId: string;
   token: string;
+  pageUrl?: string;
 }
 
 export interface JoinRoomAck {

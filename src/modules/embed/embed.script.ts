@@ -164,8 +164,18 @@ export const EMBED_SCRIPT = `
     widgetBlocked = !!blocked;
     setInputLocked(widgetBlocked);
     setBootLoading(false);
+    if (widgetBlocked) {
+      try { closePanel(); } catch (e) {}
+      try { disconnectSocket(); } catch (e) {}
+    }
     var launcher = q('#onboard-widget-btn');
-    if (launcher) launcher.disabled = widgetBlocked;
+    if (launcher) {
+      launcher.disabled = widgetBlocked;
+      launcher.style.display = widgetBlocked ? 'none' : '';
+    }
+    if (host) {
+      host.style.display = widgetBlocked ? 'none' : '';
+    }
   }
 
   function shouldHardDisable(err) {
@@ -251,6 +261,7 @@ export const EMBED_SCRIPT = `
     var url = apiBase + path;
     var init = { method: opts.method || 'GET', headers: opts.headers || {} };
     init.headers['X-WIDGET-ACCESS-TOKEN'] = token;
+    init.headers['X-EMBED-PAGE-URL'] = window.location.href;
     if (opts.body) {
       init.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
       if (!init.headers['Content-Type']) init.headers['Content-Type'] = 'application/json';
@@ -393,7 +404,7 @@ export const EMBED_SCRIPT = `
           reject(new Error('Join room timeout'));
         }, 3000);
         try {
-          s.emit('JOIN_ROOM', { conversationId: conversationId, token: token }, function(ack) {
+          s.emit('JOIN_ROOM', { conversationId: conversationId, token: token, pageUrl: window.location.href }, function(ack) {
             if (done) return;
             done = true;
             clearTimeout(timer);
@@ -624,7 +635,11 @@ export const EMBED_SCRIPT = `
     try {
       fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-WIDGET-ACCESS-TOKEN': token },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-WIDGET-ACCESS-TOKEN': token,
+          'X-EMBED-PAGE-URL': window.location.href
+        },
         body: '{}',
         keepalive: true
       });
