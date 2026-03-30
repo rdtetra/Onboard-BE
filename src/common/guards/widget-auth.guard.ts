@@ -9,6 +9,10 @@ import { JwtWrapperService } from '../../modules/jwt/jwt.service';
 import { RequestContextId, type RequestContext } from '../../types/request';
 import type { WidgetAuthContext } from '../../types/widget-auth';
 import { createRequestContext } from '../utils/request-context.util';
+import {
+  getEmbedPageUrlFromHeaders,
+  isEmbedAllowedForBot,
+} from '../../utils/embed-origin.util';
 
 export const WIDGET_AUTH_CONTEXT_KEY = 'widgetAuthContext';
 
@@ -68,13 +72,15 @@ export class WidgetAuthGuard implements CanActivate {
       ip: request.ip,
       userAgent: request.headers?.['user-agent'],
     });
-    try {
-      await this.botsService.findOne(widgetCtx, authContext.botId.trim(), {
-        forWidget: true,
-      });
-    } catch (err) {
-      if (err instanceof UnauthorizedException) throw err;
-      throw new UnauthorizedException('Bot is not available');
+    const bot = await this.botsService.findOne(widgetCtx, authContext.botId.trim(), {
+      forWidget: true,
+    });
+
+    const pageUrl = getEmbedPageUrlFromHeaders(request.headers);
+    if (!isEmbedAllowedForBot(bot, pageUrl)) {
+      throw new UnauthorizedException(
+        'Widget is not allowed on this site or URL',
+      );
     }
 
     request[WIDGET_AUTH_CONTEXT_KEY] = authContext;

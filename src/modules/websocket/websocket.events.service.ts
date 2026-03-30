@@ -22,6 +22,10 @@ import { RequestContextId, type RequestContext } from '../../types/request';
 import type { JoinRoomAck, JoinRoomPayload } from '../../types/websocket';
 import { JwtWrapperService } from '../jwt/jwt.service';
 import { createRequestContext } from '../../common/utils/request-context.util';
+import {
+  getEmbedPageUrlFromHeaders,
+  isEmbedAllowedForBot,
+} from '../../utils/embed-origin.util';
 
 @Injectable()
 export class WebsocketEventsService implements OnModuleInit {
@@ -96,46 +100,46 @@ export class WebsocketEventsService implements OnModuleInit {
       return { ok: false, error: 'Invalid widget token' };
     }
 
-    const botCheckCtx: RequestContext = createRequestContext({
-      requestId: RequestContextId.WS_BOT_AUTH,
-      user: null,
-      url: '/ws/chat',
-      method: 'WS',
-    });
     try {
-      await this.botsService.findOne(botCheckCtx, authContext.botId, {
+      const botCheckCtx: RequestContext = createRequestContext({
+        requestId: RequestContextId.WS_BOT_AUTH,
+        user: null,
+        url: '/ws/chat',
+        method: 'WS',
+      });
+      const bot = await this.botsService.findOne(botCheckCtx, authContext.botId, {
         forWidget: true,
       });
+      const pageUrl = getEmbedPageUrlFromHeaders(client.handshake.headers);
+      if (!isEmbedAllowedForBot(bot, pageUrl)) {
+        return { ok: false, error: 'Widget is not allowed on this site or URL' };
+      }
+
+      const widgetCtx: RequestContext = createRequestContext({
+        requestId: RequestContextId.WS_JOIN_ROOM,
+        user: null,
+        url: '/ws/chat',
+        method: 'WS',
+      });
+      const conversation = await this.conversationsService.findOne(
+        widgetCtx,
+        payload.conversationId.trim(),
+        {
+          relations: [],
+          forWidget: true,
+          botId: authContext.botId,
+        },
+      );
+
+      const room = this.getRoomName(conversation.botId, conversation.visitorId);
+      await client.join(room);
+      return { ok: true, room };
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      return { ok: false, error: msg || 'Bot is not available' };
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'Join failed',
+      };
     }
-
-    const widgetCtx: RequestContext = createRequestContext({
-      requestId: RequestContextId.WS_JOIN_ROOM,
-      user: null,
-      url: '/ws/chat',
-      method: 'WS',
-    });
-    const conversation = await this.conversationsService.findOne(
-      widgetCtx,
-      payload.conversationId.trim(),
-      {
-        relations: [],
-        forWidget: true,
-        botId: authContext.botId,
-      },
-    );
-    if (!conversation) {
-      return { ok: false, error: 'Conversation not found' };
-    }
-    if (conversation.botId !== authContext.botId) {
-      return { ok: false, error: 'Conversation not found' };
-    }
-
-    const room = this.getRoomName(conversation.botId, conversation.visitorId);
-    await client.join(room);
-    return { ok: true, room };
   }
 
   private handleSendMessage(payload: InAppSendMessagePayload): void {

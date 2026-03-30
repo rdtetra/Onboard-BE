@@ -134,6 +134,7 @@ export const EMBED_SCRIPT = `
   var conversationLoading = false;
   var panelCloseTimer = null;
   var taskChips = [];
+  var widgetBlocked = false;
 
   function q(sel) { return shadow.querySelector(sel); }
 
@@ -159,11 +160,32 @@ export const EMBED_SCRIPT = `
     }
   }
 
+  function setWidgetBlocked(blocked) {
+    widgetBlocked = !!blocked;
+    setInputLocked(widgetBlocked);
+    setBootLoading(false);
+    var launcher = q('#onboard-widget-btn');
+    if (launcher) launcher.disabled = widgetBlocked;
+  }
+
+  function shouldHardDisable(err) {
+    var status = err && err.status;
+    if (status === 401 || status === 403) return true;
+    var msg = (err && err.message) ? String(err.message).toLowerCase() : '';
+    return (
+      msg.indexOf('widget token') >= 0 ||
+      msg.indexOf('unauthorized') >= 0 ||
+      msg.indexOf('not allowed on this site or url') >= 0 ||
+      msg.indexOf('bot is disabled') >= 0 ||
+      msg.indexOf('bot is archived') >= 0
+    );
+  }
+
   function sendUserMessage(text) {
     var messagesEl = q('.ob-messages');
     var inputEl = q('.ob-input');
     var value = (text || '').trim();
-    if (inputLocked || !conversationId || !value || !messagesEl) return;
+    if (widgetBlocked || inputLocked || !conversationId || !value || !messagesEl) return;
     if (inputEl && (!text || text === inputEl.value)) inputEl.value = '';
     var pendingKey = 'tmp_' + (++pendingCounter);
     var pendingBubble = appendBubble(messagesEl, 'USER', value, null, 'PENDING');
@@ -185,6 +207,7 @@ export const EMBED_SCRIPT = `
         delete pendingUserBubbles[pendingKey];
         clearBotPending();
         showWidgetError(humanizeError(err, 'Message failed to send. Please try again.'));
+        if (shouldHardDisable(err)) setWidgetBlocked(true);
         console.warn('[Onboard widget]', err);
       });
   }
@@ -389,6 +412,7 @@ export const EMBED_SCRIPT = `
       });
     }).catch(function(err) {
       showWidgetError(humanizeError(err, 'Unable to connect right now. Please try again.'));
+      if (shouldHardDisable(err)) setWidgetBlocked(true);
       console.warn('[Onboard widget] socket connect failed', err);
     });
   }
@@ -558,6 +582,10 @@ export const EMBED_SCRIPT = `
         return res;
       })
       .catch(function(err) {
+        if (shouldHardDisable(err)) {
+          setWidgetBlocked(true);
+          showWidgetError(humanizeError(err, 'Widget is not available on this site.'));
+        }
         console.warn('[Onboard widget] config fallback', err);
         return null;
       });
@@ -572,7 +600,7 @@ export const EMBED_SCRIPT = `
   }
 
   function ensureConversationReady() {
-    if (conversationId || conversationLoading) return Promise.resolve();
+    if (widgetBlocked || conversationId || conversationLoading) return Promise.resolve();
     conversationLoading = true;
     setBootLoading(true);
     return createConversationOnLoad()
@@ -581,6 +609,7 @@ export const EMBED_SCRIPT = `
       .then(renderMessages)
       .catch(function(err) {
         showWidgetError(humanizeError(err, 'Unable to start chat right now. Please try again.'));
+        if (shouldHardDisable(err)) setWidgetBlocked(true);
         console.warn('[Onboard widget]', err);
       })
       .then(function() {
@@ -673,6 +702,7 @@ export const EMBED_SCRIPT = `
     if (lower.indexOf('bot is disabled') >= 0) return 'Bot is disabled.';
     if (lower.indexOf('bot is archived') >= 0) return 'Bot is archived.';
     if (lower.indexOf('bot is deleted') >= 0) return 'Bot is deleted.';
+    if (lower.indexOf('not allowed on this site or url') >= 0) return 'Widget is not allowed on this site or URL.';
     if (lower.indexOf('invalid widget token') >= 0 || lower.indexOf('widget token') >= 0) return 'Unauthorized widget token.';
     if (lower.indexOf('network error') >= 0) return 'Network error. Please check your connection and try again.';
     if (lower.indexOf('server error') >= 0) return 'Server error. Please try again.';
@@ -787,7 +817,7 @@ export const EMBED_SCRIPT = `
   }
 
   function openPanel() {
-    if (open) return;
+    if (widgetBlocked || open) return;
     open = true;
     var panel = q('#onboard-widget-panel');
     if (!panel) return;
@@ -814,7 +844,7 @@ export const EMBED_SCRIPT = `
   }
 
   function togglePanel() {
-    if (bootLoading) return;
+    if (widgetBlocked || bootLoading) return;
     open ? closePanel() : openPanel();
   }
 
