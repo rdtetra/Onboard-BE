@@ -24,7 +24,11 @@ export class AdminService {
    * Platform-wide overview: total tenants, active tenants, bots, conversations, KB sources.
    * Super admin only; no org filtering.
    */
-  async getOverview(ctx: RequestContext): Promise<SuperAdminOverview> {
+  async getOverview(
+    ctx: RequestContext,
+    period?: string,
+    botId?: string,
+  ): Promise<SuperAdminOverview> {
     if (!ctx.user?.userId) {
       throw new UnauthorizedException('Authentication required');
     }
@@ -46,12 +50,24 @@ export class AdminService {
       this.sourcesService.countAll(ctx),
     ]);
 
-    return {
+    const base: SuperAdminOverview = {
       totalTenants,
       activeTenants,
       totalBots,
       totalConversations,
       totalKbSources,
     };
+
+    if (period?.trim()) {
+      const conversationsOverTime =
+        await this.botsService.getOverviewConversationsOverTime(
+          ctx,
+          period,
+          botId,
+        );
+      return { ...base, conversationsOverTime };
+    }
+
+    return base;
   }
 }

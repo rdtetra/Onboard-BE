@@ -18,10 +18,7 @@ import { Permission } from '../../types/permissions';
 import { BotType } from '../../types/bot';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
-import type {
-  BotsOverview,
-  BotWithTokensUsed,
-} from '../../types/bots-overview';
+import type { BotsOverview, BotWithTokensUsed } from '../../types/bots-overview';
 
 @Controller('bots')
 export class BotController {
@@ -61,8 +58,9 @@ export class BotController {
   getOverview(
     @RequestContext() ctx: RequestContextType,
     @Query('botId') botId?: string,
+    @Query('period') period?: string,
   ): Promise<BotsOverview> {
-    return this.botsService.getOverview(ctx, botId);
+    return this.botsService.getOverview(ctx, botId, period);
   }
 
   @Get(':id/kb-sources')

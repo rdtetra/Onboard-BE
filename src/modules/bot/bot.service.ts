@@ -26,6 +26,7 @@ import type { PaginatedResult } from '../../types/pagination';
 import type {
   BotsOverview,
   BotWithTokensUsed,
+  OverviewConversationDay,
 } from '../../types/bots-overview';
 import {
   parsePagination,
@@ -160,46 +161,41 @@ export class BotService {
   /**
    * Overview stats for one bot or all org bots: active bots, conversations, messages, tokens used, KB sources.
    * When botId is provided, stats are scoped to that bot; otherwise to all bots in the org.
+   * When period is provided (7days | 30days | 90days), includes conversationsOverTime buckets.
    */
   async getOverview(
     ctx: RequestContext,
     botId?: string,
+    period?: string,
   ): Promise<BotsOverview> {
-    if (!ctx.user?.userId) {
+    const botIds = await this.getOverviewScopedBotIds(ctx, botId);
+
+    const emptyOverview = (): BotsOverview => ({
+      activeBots: 0,
+      totalConversations: 0,
+      totalMessages: 0,
+      totalTokensUsed: 0,
+      totalKbSources: 0,
+    });
+
+    if (!ctx.user) {
       throw new UnauthorizedException('Authentication required');
     }
     const orgId =
       ctx.user.roleName === RoleName.SUPER_ADMIN
         ? undefined
         : ctx.user.organizationId;
-    if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
-      throw new BadRequestException(
-        'Organization context required for bots overview',
-      );
-    }
-
-    let botIds: string[];
-    if (botId) {
-      const bot = await this.findOne(ctx, botId);
-      botIds = [bot.id];
-    } else {
-      const where: FindOptionsWhere<Bot> = {};
-      if (orgId) where.organizationId = orgId;
-      const bots = await this.botRepository.find({
-        where,
-        select: ['id', 'isActive'],
-      });
-      botIds = bots.map((b) => b.id);
-    }
 
     if (botIds.length === 0) {
-      return {
-        activeBots: 0,
-        totalConversations: 0,
-        totalMessages: 0,
-        totalTokensUsed: 0,
-        totalKbSources: 0,
-      };
+      const base = emptyOverview();
+      if (period?.trim()) {
+        const days = this.parseOverviewPeriod(period);
+        return {
+          ...base,
+          conversationsOverTime: this.conversationCountsForEmptyScope(days),
+        };
+      }
+      return base;
     }
 
     const [
@@ -226,13 +222,152 @@ export class BotService {
       this.getDistinctKbSourcesCountForBots(botIds),
     ]);
 
-    return {
+    const base: BotsOverview = {
       activeBots,
       totalConversations,
       totalMessages,
       totalTokensUsed,
       totalKbSources,
     };
+
+    if (period?.trim()) {
+      const days = this.parseOverviewPeriod(period);
+      return {
+        ...base,
+        conversationsOverTime: await this.buildConversationCountsByDay(
+          botIds,
+          days,
+        ),
+      };
+    }
+
+    return base;
+  }
+
+  /** Daily conversation counts for charts (used by overview when period is set). */
+  async getOverviewConversationsOverTime(
+    ctx: RequestContext,
+    period: string,
+    botId?: string,
+  ): Promise<OverviewConversationDay[]> {
+    const days = this.parseOverviewPeriod(period);
+    const botIds = await this.getOverviewScopedBotIds(ctx, botId);
+    if (botIds.length === 0) {
+      return this.conversationCountsForEmptyScope(days);
+    }
+    return this.buildConversationCountsByDay(botIds, days);
+  }
+
+  private async getOverviewScopedBotIds(
+    ctx: RequestContext,
+    botId?: string,
+  ): Promise<string[]> {
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    const orgId =
+      ctx.user.roleName === RoleName.SUPER_ADMIN
+        ? undefined
+        : ctx.user.organizationId;
+    if (!orgId && ctx.user.roleName !== RoleName.SUPER_ADMIN) {
+      throw new BadRequestException(
+        'Organization context required for bots overview',
+      );
+    }
+
+    if (botId?.trim()) {
+      const bot = await this.findOne(ctx, botId.trim());
+      return [bot.id];
+    }
+
+    const where: FindOptionsWhere<Bot> = {};
+    if (orgId) where.organizationId = orgId;
+    const bots = await this.botRepository.find({
+      where,
+      select: ['id', 'isActive'],
+    });
+    return bots.map((b) => b.id);
+  }
+
+  private parseOverviewPeriod(period: string): number {
+    const p = period?.trim();
+    if (!p) {
+      throw new BadRequestException(
+        'period is required (7days, 30days, or 90days)',
+      );
+    }
+    if (p === '7days') return 7;
+    if (p === '30days') return 30;
+    if (p === '90days') return 90;
+    throw new BadRequestException(
+      'period must be one of: 7days, 30days, 90days',
+    );
+  }
+
+  private utcDayStart(d: Date): Date {
+    return new Date(
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+    );
+  }
+
+  private conversationCountsForEmptyScope(days: number): Array<{
+    date: string;
+    count: number;
+  }> {
+    const now = new Date();
+    const endExclusive = this.utcDayStart(now);
+    endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+    const startInclusive = this.utcDayStart(now);
+    startInclusive.setUTCDate(startInclusive.getUTCDate() - (days - 1));
+    return this.fillDailySeries(startInclusive, endExclusive, new Map());
+  }
+
+  private fillDailySeries(
+    startInclusive: Date,
+    endExclusive: Date,
+    counts: Map<string, number>,
+  ): Array<{ date: string; count: number }> {
+    const out: Array<{ date: string; count: number }> = [];
+    const cur = new Date(startInclusive);
+    while (cur < endExclusive) {
+      const key = cur.toISOString().slice(0, 10);
+      out.push({ date: key, count: counts.get(key) ?? 0 });
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return out;
+  }
+
+  private async buildConversationCountsByDay(
+    botIds: string[],
+    days: number,
+  ): Promise<Array<{ date: string; count: number }>> {
+    const now = new Date();
+    const endExclusive = this.utcDayStart(now);
+    endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+    const startInclusive = this.utcDayStart(now);
+    startInclusive.setUTCDate(startInclusive.getUTCDate() - (days - 1));
+
+    const rows: Array<{ day: string; count: string | number }> =
+      await this.conversationRepository.query(
+        `SELECT (c.created_at AT TIME ZONE 'UTC')::date::text AS day,
+                COUNT(*)::int AS count
+           FROM conversations c
+          WHERE c.bot_id = ANY($1)
+            AND c.created_at >= $2
+            AND c.created_at < $3
+          GROUP BY (c.created_at AT TIME ZONE 'UTC')::date
+          ORDER BY 1 ASC`,
+        [botIds, startInclusive, endExclusive],
+      );
+
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      const c =
+        typeof r.count === 'number' ? r.count : parseInt(String(r.count), 10);
+      map.set(r.day, Number.isFinite(c) ? c : 0);
+    }
+
+    return this.fillDailySeries(startInclusive, endExclusive, map);
   }
 
   /** Returns all bots the user can access (org-scoped), id and name only (e.g. for dropdowns). */
