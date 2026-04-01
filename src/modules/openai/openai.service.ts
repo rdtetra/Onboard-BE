@@ -1,4 +1,11 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { Readable } from 'stream';
@@ -14,6 +21,14 @@ import { MessageSender } from '../../types/message';
 import { KbRetrievalService } from '../kb-retrieval/kb-retrieval.service';
 import { RequestContextId, type RequestContext } from '../../types/request';
 import { createInternalContext } from '../../common/utils/request-context.util';
+import { getRequiredEnv } from '../../common/utils/env.util';
+import { RoleName } from '../../types/roles';
+import type {
+  OpenAiCompletionsUsageResult,
+  OpenAiEmbeddingsUsageResult,
+  OpenAiUsagePage,
+  OpenAiUsageQuery,
+} from '../../types/openai-usage';
 
 @Injectable()
 export class OpenAiService implements OnModuleInit {
@@ -28,6 +43,7 @@ export class OpenAiService implements OnModuleInit {
 
   private static readonly MAX_PRIOR_MESSAGES_IN_CONTEXT = 40;
   private static readonly MAX_RETRIEVAL_QUERY_CHARS = 6000;
+  private static readonly DEFAULT_USAGE_WINDOW_DAYS = 30;
 
   private static buildRetrievalQueryFromMessages(through: Message[]): string {
     const parts = through
@@ -58,6 +74,152 @@ export class OpenAiService implements OnModuleInit {
     );
   }
 
+  async getCompletionsUsage(
+    ctx: RequestContext,
+    query?: OpenAiUsageQuery,
+  ): Promise<OpenAiUsagePage<OpenAiCompletionsUsageResult>> {
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    if (ctx.user.roleName !== RoleName.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin access required');
+    }
+
+    const usageBase = getRequiredEnv(this.configService, 'OPENAI_BASE_URL').replace(
+      /\/+$/,
+      '',
+    );
+    const usageApiKey = getRequiredEnv(this.configService, 'OPENAI_ADMIN_API_KEY');
+    const organization = this.configService.get<string>('OPENAI_ORGANIZATION');
+
+    try {
+      const res = await axios.get<OpenAiUsagePage<OpenAiCompletionsUsageResult>>(
+        `${usageBase}/organization/usage/completions`,
+        {
+          params: this.buildUsageParams(query),
+          headers: {
+            Authorization: `Bearer ${usageApiKey}`,
+            ...(organization?.trim() ? { 'OpenAI-Organization': organization } : {}),
+          },
+        },
+      );
+      return res.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const detail =
+          (error.response?.data as { error?: { message?: string } } | undefined)
+            ?.error?.message ?? error.message;
+        if (status === 401 || status === 403) {
+          throw new ForbiddenException(
+            `OpenAI usage request (completions) not authorized: ${detail}`,
+          );
+        }
+        throw new BadRequestException(
+          `OpenAI usage request (completions) failed: ${detail}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  async getEmbeddingsUsage(
+    ctx: RequestContext,
+    query?: OpenAiUsageQuery,
+  ): Promise<OpenAiUsagePage<OpenAiEmbeddingsUsageResult>> {
+    if (!ctx.user?.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    if (ctx.user.roleName !== RoleName.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin access required');
+    }
+
+    const usageBase = getRequiredEnv(this.configService, 'OPENAI_BASE_URL').replace(
+      /\/+$/,
+      '',
+    );
+    const usageApiKey = getRequiredEnv(this.configService, 'OPENAI_ADMIN_API_KEY');
+    const organization = this.configService.get<string>('OPENAI_ORGANIZATION');
+
+    try {
+      const res = await axios.get<OpenAiUsagePage<OpenAiEmbeddingsUsageResult>>(
+        `${usageBase}/organization/usage/embeddings`,
+        {
+          params: this.buildUsageParams(query),
+          headers: {
+            Authorization: `Bearer ${usageApiKey}`,
+            ...(organization?.trim() ? { 'OpenAI-Organization': organization } : {}),
+          },
+        },
+      );
+      return res.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const detail =
+          (error.response?.data as { error?: { message?: string } } | undefined)
+            ?.error?.message ?? error.message;
+        if (status === 401 || status === 403) {
+          throw new ForbiddenException(
+            `OpenAI usage request (embeddings) not authorized: ${detail}`,
+          );
+        }
+        throw new BadRequestException(
+          `OpenAI usage request (embeddings) failed: ${detail}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  private buildUsageParams(query?: OpenAiUsageQuery): Record<string, unknown> {
+    const q = query ?? {};
+
+    const params: Record<string, unknown> = {};
+    const start = q.startTime?.trim();
+    const end = q.endTime?.trim();
+
+    if (start) {
+      const n = Number(start);
+      if (!Number.isFinite(n)) {
+        throw new BadRequestException('start_time must be a unix timestamp');
+      }
+      params.start_time = Math.floor(n);
+    }
+    if (end) {
+      const n = Number(end);
+      if (!Number.isFinite(n)) {
+        throw new BadRequestException('end_time must be a unix timestamp');
+      }
+      params.end_time = Math.floor(n);
+    }
+
+    if (params.start_time == null || params.end_time == null) {
+      const now = new Date();
+      const endExclusive = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
+      );
+      const startInclusive = new Date(endExclusive);
+      startInclusive.setUTCDate(
+        startInclusive.getUTCDate() - OpenAiService.DEFAULT_USAGE_WINDOW_DAYS,
+      );
+      if (params.start_time == null) {
+        params.start_time = Math.floor(startInclusive.getTime() / 1000);
+      }
+      if (params.end_time == null) {
+        params.end_time = Math.floor(endExclusive.getTime() / 1000);
+      }
+    }
+
+    params.bucket_width = '1d';
+
+    if (q.page?.trim()) {
+      params.page = q.page.trim();
+    }
+
+    return params;
+  }
+
   async processBotReply(payload: InAppBotReplyRequiredPayload): Promise<void> {
     const { conversationId, botId, visitorId, userContent, userMessageId } =
       payload;
@@ -70,10 +232,13 @@ export class OpenAiService implements OnModuleInit {
         updatedAt: new Date(),
       });
 
-      const apiKey = this.getRequiredEnv('OPENAI_API_KEY');
-      const model = this.getRequiredEnv('OPENAI_MODEL');
-      const baseUrl = this.getRequiredEnv('OPENAI_BASE_URL').replace(/\/+$/, '');
-      const apiVersion = this.getRequiredEnv('OPENAI_API_VERSION');
+      const apiKey = getRequiredEnv(this.configService, 'OPENAI_API_KEY');
+      const model = getRequiredEnv(this.configService, 'OPENAI_MODEL');
+      const baseUrl = getRequiredEnv(this.configService, 'OPENAI_BASE_URL').replace(
+        /\/+$/,
+        '',
+      );
+      const apiVersion = getRequiredEnv(this.configService, 'OPENAI_API_VERSION');
       const through =
         await this.conversationsService.getMessagesThroughUserMessage(
           conversationId,
@@ -193,14 +358,6 @@ export class OpenAiService implements OnModuleInit {
         updatedAt: new Date(),
       });
     }
-  }
-
-  private getRequiredEnv(name: string): string {
-    const value = this.configService.get<string>(name);
-    if (!value || !value.trim()) {
-      throw new Error(`${name} is missing`);
-    }
-    return value.trim();
   }
 
   private async streamChatCompletion(params: {
