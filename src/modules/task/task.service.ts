@@ -36,7 +36,7 @@ export class TaskService {
     }
     const bot = await this.botsService.findOne(ctx, dto.botId);
     // REVERTED: General bots can have tasks. This might be reverted - uncomment below to restore "Only project bots can have tasks".
-    // if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
+    // if (bot.botType === BotType.GENERAL) { // import BotType when enabling
     //   throw new BadRequestException('Only project bots can have tasks');
     // }
 
@@ -136,7 +136,7 @@ export class TaskService {
     if (dto.botId !== undefined) {
       const bot = await this.botsService.findOne(ctx, dto.botId);
       // REVERTED: General bots can have tasks. This might be reverted - uncomment below to restore "Only project bots can have tasks".
-      // if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
+      // if (bot.botType === BotType.GENERAL) { // import BotType when enabling
       //   throw new BadRequestException('Only project bots can have tasks');
       // }
       task.botId = dto.botId;
