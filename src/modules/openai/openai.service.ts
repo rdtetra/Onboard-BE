@@ -19,6 +19,7 @@ import { ConversationService } from '../conversation/conversation.service';
 import { Message } from '../../common/entities/message.entity';
 import { MessageSender } from '../../types/message';
 import { KbRetrievalService } from '../kb-retrieval/kb-retrieval.service';
+import { TokenUsageService } from '../token-transaction/token-usage.service';
 import { RequestContextId, type RequestContext } from '../../types/request';
 import { createInternalContext } from '../../common/utils/request-context.util';
 import { getRequiredEnv } from '../../common/utils/env.util';
@@ -63,6 +64,7 @@ export class OpenAiService implements OnModuleInit {
     private readonly conversationsService: ConversationService,
     private readonly configService: ConfigService,
     private readonly kbRetrievalService: KbRetrievalService,
+    private readonly tokenUsageService: TokenUsageService,
   ) {}
 
   onModuleInit(): void {
@@ -350,6 +352,11 @@ export class OpenAiService implements OnModuleInit {
         `Failed to generate OpenAI bot reply for conversation ${conversationId}`,
         err instanceof Error ? err.message : String(err),
       );
+      await this.refundBotReplyFailureSafely(
+        conversationId,
+        botId,
+        userMessageId,
+      );
       this.inAppEventsService.emit(InAppEvents.BOT_STATUS_CHANGED, {
         botId,
         visitorId,
@@ -357,6 +364,43 @@ export class OpenAiService implements OnModuleInit {
         status: BotReplyStatus.ERROR,
         updatedAt: new Date(),
       });
+    }
+  }
+
+  private async refundBotReplyFailureSafely(
+    conversationId: string,
+    botId: string,
+    userMessageId: string,
+  ): Promise<void> {
+    try {
+      const ctx: RequestContext = createInternalContext(
+        RequestContextId.OPENAI_BOT_REPLY,
+      );
+      const conversation = await this.conversationsService.findOne(
+        ctx,
+        conversationId,
+        {
+          forWidget: true,
+          botId,
+          relations: ['bot'],
+        },
+      );
+      const organizationId = conversation.bot?.organizationId;
+      if (!organizationId) {
+        return;
+      }
+      await this.tokenUsageService.refundTokens({
+        organizationId,
+        botId,
+        conversationId,
+        amount: 1,
+        metadata: { userMessageId, reason: 'bot_reply_failed' },
+      });
+    } catch (refundErr) {
+      this.logger.warn(
+        `Failed to refund token after bot reply failure for conversation ${conversationId}`,
+        refundErr instanceof Error ? refundErr.message : String(refundErr),
+      );
     }
   }
 

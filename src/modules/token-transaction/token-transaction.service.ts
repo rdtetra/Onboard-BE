@@ -75,6 +75,29 @@ export class TokenTransactionService {
     });
   }
 
+  /** Credits the wallet; same USAGE type as spend so period totals use net SUM(-amount). */
+  async recordUsageRefund(
+    walletId: string,
+    amount: number,
+    options: {
+      botId?: string;
+      conversationId?: string;
+      metadata?: Record<string, unknown>;
+    } = {},
+  ): Promise<TokenTransaction> {
+    if (amount <= 0) {
+      throw new BadRequestException('Refund amount must be positive');
+    }
+    return this.create(internalTokenTransactionsCtx, {
+      walletId,
+      type: TokenTransactionType.USAGE,
+      amount,
+      botId: options.botId ?? null,
+      conversationId: options.conversationId ?? null,
+      metadata: options.metadata ?? null,
+    });
+  }
+
   async recordGrant(
     walletId: string,
     amount: number,
@@ -143,7 +166,7 @@ export class TokenTransactionService {
     return tx;
   }
 
-  /** Sum of USAGE token amount (absolute value) for a wallet in a date range. */
+  /** Net USAGE for a wallet in a date range (debits negative, refunds positive). */
   async getUsageSumForWalletInPeriod(
     walletId: string,
     periodStart: Date,
@@ -151,16 +174,16 @@ export class TokenTransactionService {
   ): Promise<number> {
     const result = await this.transactionRepository
       .createQueryBuilder('tx')
-      .select('COALESCE(SUM(ABS(tx.amount)), 0)', 'sum')
+      .select('COALESCE(SUM(-tx.amount), 0)', 'sum')
       .where('tx.wallet_id = :walletId', { walletId })
       .andWhere('tx.type = :type', { type: TokenTransactionType.USAGE })
       .andWhere('tx.created_at >= :periodStart', { periodStart })
       .andWhere('tx.created_at <= :periodEnd', { periodEnd })
       .getRawOne<{ sum: string }>();
-    return Math.floor(parseFloat(result?.sum ?? '0'));
+    return Math.max(0, Math.floor(parseFloat(result?.sum ?? '0')));
   }
 
-  /** Sum of USAGE token amount (absolute value) for a wallet, filtered by bot IDs. */
+  /** Net USAGE for a wallet, filtered by bot IDs. */
   async getTotalUsageByBotIds(
     walletId: string,
     botIds: string[],
@@ -168,15 +191,15 @@ export class TokenTransactionService {
     if (botIds.length === 0) return 0;
     const result = await this.transactionRepository
       .createQueryBuilder('tx')
-      .select('COALESCE(SUM(ABS(tx.amount)), 0)', 'sum')
+      .select('COALESCE(SUM(-tx.amount), 0)', 'sum')
       .where('tx.wallet_id = :walletId', { walletId })
       .andWhere('tx.type = :type', { type: TokenTransactionType.USAGE })
       .andWhere('tx.bot_id IN (:...botIds)', { botIds })
       .getRawOne<{ sum: string }>();
-    return Math.floor(parseFloat(result?.sum ?? '0'));
+    return Math.max(0, Math.floor(parseFloat(result?.sum ?? '0')));
   }
 
-  /** USAGE token totals per bot for a wallet, for the given bot IDs (all time). */
+  /** Net USAGE per bot for a wallet, for the given bot IDs (all time). */
   async getUsageByBotIds(
     walletId: string,
     botIds: string[],
@@ -185,7 +208,7 @@ export class TokenTransactionService {
     const rows = await this.transactionRepository
       .createQueryBuilder('tx')
       .select('tx.bot_id', 'botId')
-      .addSelect('SUM(ABS(tx.amount))', 'tokensUsed')
+      .addSelect('SUM(-tx.amount)', 'tokensUsed')
       .where('tx.wallet_id = :walletId', { walletId })
       .andWhere('tx.type = :type', { type: TokenTransactionType.USAGE })
       .andWhere('tx.bot_id IN (:...botIds)', { botIds })
@@ -193,11 +216,14 @@ export class TokenTransactionService {
       .getRawMany<{ botId: string; tokensUsed: string }>();
     return rows.map((row) => ({
       botId: row.botId,
-      tokensUsed: Math.floor(parseFloat(row.tokensUsed ?? '0')),
+      tokensUsed: Math.max(
+        0,
+        Math.floor(parseFloat(row.tokensUsed ?? '0')),
+      ),
     }));
   }
 
-  /** USAGE token totals by bot for a wallet, optionally in a date range. */
+  /** Net USAGE by bot for a wallet, optionally in a date range. */
   async getUsageByBotForWalletInPeriod(
     walletId: string,
     options?: { periodStart?: Date; periodEnd?: Date },
@@ -209,7 +235,7 @@ export class TokenTransactionService {
       .leftJoin('tx.bot', 'bot')
       .select('tx.bot_id', 'botId')
       .addSelect('bot.name', 'botName')
-      .addSelect('SUM(ABS(tx.amount))', 'tokensUsed')
+      .addSelect('SUM(-tx.amount)', 'tokensUsed')
       .where('tx.wallet_id = :walletId', { walletId })
       .andWhere('tx.type = :type', { type: TokenTransactionType.USAGE })
       .groupBy('tx.bot_id')
@@ -235,7 +261,10 @@ export class TokenTransactionService {
     return rows.map((row) => ({
       botId: row.botId,
       botName: row.botName ?? null,
-      tokensUsed: Math.floor(parseFloat(row.tokensUsed ?? '0')),
+      tokensUsed: Math.max(
+        0,
+        Math.floor(parseFloat(row.tokensUsed ?? '0')),
+      ),
     }));
   }
 }

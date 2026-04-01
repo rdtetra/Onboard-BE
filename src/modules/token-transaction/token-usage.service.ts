@@ -5,8 +5,7 @@ import { TokenTransaction } from '../../common/entities/token-transaction.entity
 import type { ConsumeTokensParams } from '../../types/token-usage';
 
 /**
- * Handles token consumption when a bot sends a response: deducts from the
- * organization's wallet and creates a USAGE transaction linked to bot and conversation.
+ * Deducts on user message (per turn); refunds on failed bot reply via matching credit row.
  */
 @Injectable()
 export class TokenUsageService {
@@ -33,6 +32,25 @@ export class TokenUsageService {
       await this.tokenWalletService.getOrCreateForOrganization(organizationId);
 
     return this.tokenTransactionsService.recordUsage(wallet.id, amount, {
+      botId,
+      conversationId,
+      metadata: metadata ?? undefined,
+    });
+  }
+
+  async refundTokens(params: ConsumeTokensParams): Promise<TokenTransaction> {
+    const { organizationId, botId, conversationId, amount, metadata } = params;
+
+    if (amount <= 0) {
+      throw new BadRequestException(
+        'Token refund amount must be positive',
+      );
+    }
+
+    const wallet =
+      await this.tokenWalletService.getOrCreateForOrganization(organizationId);
+
+    return this.tokenTransactionsService.recordUsageRefund(wallet.id, amount, {
       botId,
       conversationId,
       metadata: metadata ?? undefined,
