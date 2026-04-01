@@ -14,6 +14,7 @@ import type { RetrievedChunk } from '../../types/kb-retrieval';
 import { BotService } from '../bot/bot.service';
 import { RequestContextId, type RequestContext } from '../../types/request';
 import { createInternalContext } from '../../common/utils/request-context.util';
+import { getRequiredEnv } from '../../common/utils/env.util';
 import { StorageService } from '../storage/storage.service';
 import { getAbsolutePathForDownload } from '../knowledge-base/multer-options';
 import { AuditService } from '../audit/audit.service';
@@ -323,10 +324,13 @@ export class KbRetrievalService implements OnModuleInit {
   }
 
   private async createEmbedding(text: string): Promise<number[]> {
-    const apiKey = this.getRequiredEnv('OPENAI_API_KEY');
-    const model = this.getRequiredEnv('OPENAI_EMBEDDING_MODEL');
-    const baseUrl = this.getRequiredEnv('OPENAI_BASE_URL').replace(/\/+$/, '');
-    const apiVersion = this.getRequiredEnv('OPENAI_API_VERSION');
+    const apiKey = getRequiredEnv(this.configService, 'OPENAI_API_KEY');
+    const model = getRequiredEnv(this.configService, 'OPENAI_EMBEDDING_MODEL');
+    const baseUrl = getRequiredEnv(this.configService, 'OPENAI_BASE_URL').replace(
+      /\/+$/,
+      '',
+    );
+    const apiVersion = getRequiredEnv(this.configService, 'OPENAI_API_VERSION');
 
     const response = await axios.post<{
       data?: Array<{ embedding?: number[] }>;
@@ -353,13 +357,5 @@ export class KbRetrievalService implements OnModuleInit {
 
   private toVectorLiteral(values: number[]): string {
     return `[${values.join(',')}]`;
-  }
-
-  private getRequiredEnv(name: string): string {
-    const value = this.configService.get<string>(name);
-    if (!value || !value.trim()) {
-      throw new Error(`${name} is missing`);
-    }
-    return value.trim();
   }
 }
