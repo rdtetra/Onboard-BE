@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike, In } from 'typeorm';
@@ -70,40 +71,85 @@ export class BotService {
       );
     }
 
-    const isProjectBot =
-      createBotDto.botType === BotType.PROJECT ||
-      createBotDto.botType === BotType.URL_SPECIFIC;
+    if (
+      createBotDto.botType !== BotType.PROJECT &&
+      createBotDto.parentBotId
+    ) {
+      throw new BadRequestException(
+        'parentBot is only allowed for project bots',
+      );
+    }
+
+    const orgId = ctx.user.organizationId;
+
+    const isProjectChild =
+      createBotDto.botType === BotType.PROJECT && !!createBotDto.parentBotId;
+
+    let parentRef: { id: string } | null = null;
+
+    if (isProjectChild) {
+      const parent = await this.findOne(ctx, createBotDto.parentBotId!);
+
+      if (parent.organizationId !== orgId) {
+        throw new BadRequestException(
+          'parentBot not found in this organization',
+        );
+      }
+
+      if (parent.botType !== BotType.GENERAL) {
+        throw new BadRequestException('parentBot must be a general bot');
+      }
+
+      parentRef = { id: parent.id };
+    }
+
+    const isProjectBot = createBotDto.botType !== BotType.GENERAL;
+    const domains = createBotDto.domains ?? [];
+
+    const behavior = isProjectBot
+      ? (createBotDto.behavior ?? Behavior.AUTO_SHOW)
+      : null;
+    const priority = isProjectBot
+      ? (createBotDto.priority ?? BotPriority.MEDIUM)
+      : null;
+    const targetUrls = isProjectBot ? (createBotDto.targetUrls ?? []) : [];
+    const oncePerSession = isProjectBot
+      ? (createBotDto.oncePerSession ?? false)
+      : false;
+    const visibilityStartDate = isProjectBot
+      ? new Date(createBotDto.visibilityStartDate!)
+      : null;
+    const visibilityEndDate = isProjectBot
+      ? new Date(createBotDto.visibilityEndDate!)
+      : null;
+
     const bot = this.botRepository.create({
-      ...createBotDto,
-      organizationId: ctx.user.organizationId,
-      isActive: true,
-      isArchived: false,
-      behavior: isProjectBot
-        ? (createBotDto.behavior ?? Behavior.AUTO_SHOW)
-        : null,
-      priority: isProjectBot
-        ? (createBotDto.priority ?? BotPriority.MEDIUM)
-        : null,
+      botType: createBotDto.botType,
+      name: createBotDto.name,
       description: createBotDto.description ?? null,
       introMessage: createBotDto.introMessage ?? null,
-      targetUrls: isProjectBot ? (createBotDto.targetUrls ?? []) : [],
-      oncePerSession: isProjectBot
-        ? (createBotDto.oncePerSession ?? false)
-        : false,
-      visibilityStartDate: isProjectBot
-        ? new Date(createBotDto.visibilityStartDate!)
-        : null,
-      visibilityEndDate: isProjectBot
-        ? new Date(createBotDto.visibilityEndDate!)
-        : null,
+      domains,
+      organizationId: orgId,
+      isActive: true,
+      isArchived: false,
+      parentBot: parentRef,
+      behavior,
+      priority,
+      targetUrls,
+      oncePerSession,
+      visibilityStartDate,
+      visibilityEndDate,
     });
 
     const saved = await this.botRepository.save(bot);
+
     await this.botWidgetLinkService.createDefaultWidgetForBot(saved.id);
+
     const withWidgets = await this.botRepository.findOne({
       where: { id: saved.id },
       relations: ['widgets'],
     });
+
     return withWidgets ?? saved;
   }
 
@@ -145,7 +191,7 @@ export class BotService {
 
     const [data, total] = await this.botRepository.findAndCount({
       where,
-      relations: ['tasks', 'conversations'],
+      relations: ['tasks', 'conversations', 'parentBot'],
       order: { createdAt: 'DESC' },
       take: limit,
       skip,
@@ -424,9 +470,12 @@ export class BotService {
       return bot;
     }
 
+    const relations = options?.relations?.length
+      ? [...new Set([...options.relations, 'parentBot'])]
+      : ['parentBot'];
     const bot = await this.botRepository.findOne({
       where: { id },
-      ...(options?.relations && { relations: options.relations }),
+      relations,
     });
 
     if (!bot) {
@@ -452,9 +501,12 @@ export class BotService {
     options?: { relations?: string[] },
   ): Promise<Bot> {
     void ctx;
+    const relations = options?.relations?.length
+      ? [...new Set([...options.relations, 'parentBot'])]
+      : ['parentBot'];
     const bot = await this.botRepository.findOne({
       where: { id },
-      ...(options?.relations && { relations: options.relations }),
+      relations,
     });
 
     if (!bot) {
@@ -509,8 +561,38 @@ export class BotService {
     updateBotDto: UpdateBotDto,
   ): Promise<Bot> {
     const bot = await this.findOne(ctx, id);
-    const payload = this.getUpdatePayloadForType(bot, updateBotDto);
+
+    if (bot.botType === BotType.GENERAL) {
+      bot.parentBot = null;
+    }
+
+    if (updateBotDto.parentBotId !== undefined) {
+      if (bot.botType === BotType.GENERAL) {
+        throw new BadRequestException(
+          'parentBot can only be set on project bots',
+        );
+      }
+      if (!updateBotDto.parentBotId) {
+        bot.parentBot = null;
+      } else {
+        const parent = await this.findOne(ctx, updateBotDto.parentBotId);
+        if (parent.organizationId !== bot.organizationId) {
+          throw new BadRequestException(
+            'parentBot not found in this organization',
+          );
+        }
+        if (parent.botType !== BotType.GENERAL) {
+          throw new BadRequestException('parentBot must be a general bot');
+        }
+        bot.parentBot = parent;
+      }
+    }
+
+    const payload = this.getUpdatePayload(bot, updateBotDto);
     Object.assign(bot, payload);
+    if (bot.botType === BotType.PROJECT && bot.domains?.length !== 1) {
+      throw new BadRequestException('Project bot must have exactly one domain');
+    }
     return this.botRepository.save(bot);
   }
 
@@ -548,7 +630,12 @@ export class BotService {
     id: string,
     options?: { name?: string },
   ): Promise<{ widgetToken: string; expiresAt: string; scriptTag: string }> {
-    await this.findOne(ctx, id);
+    const bot = await this.findOne(ctx, id);
+    if (bot.botType !== BotType.GENERAL) {
+      throw new ForbiddenException(
+        'Widget API tokens can only be created for general bots',
+      );
+    }
     const { token, expiresAt } = this.jwtWrapperService.signWithExpiresAt(
       { botId: id, type: 'widget' },
       'widget',
@@ -651,11 +738,10 @@ export class BotService {
     return Math.floor(parseFloat(result?.count ?? '0'));
   }
 
-  private getUpdatePayloadForType(
+  private getUpdatePayload(
     existingBot: Bot,
     updateBotDto: Partial<CreateBotDto>,
   ): Partial<Bot> {
-    const { botType } = existingBot;
     const payload: Partial<Bot> = {};
 
     if (updateBotDto.name !== undefined) {
@@ -671,7 +757,7 @@ export class BotService {
       payload.domains = updateBotDto.domains;
     }
 
-    if (botType === BotType.PROJECT || botType === BotType.URL_SPECIFIC) {
+    if (existingBot.botType !== BotType.GENERAL) {
       if (updateBotDto.targetUrls !== undefined) {
         payload.targetUrls = updateBotDto.targetUrls;
       }

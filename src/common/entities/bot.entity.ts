@@ -24,6 +24,16 @@ export class Bot extends BaseEntity {
   @JoinColumn({ name: 'organization_id' })
   organization: Organization | null;
 
+  @ManyToOne(() => Bot, (bot) => bot.childBots, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'parent_bot' })
+  parentBot: Bot | null;
+
+  @OneToMany(() => Bot, (bot) => bot.parentBot)
+  childBots: Bot[];
+
   @Column({ type: 'enum', enum: BotType, name: 'bot_type' })
   botType: BotType;
 
