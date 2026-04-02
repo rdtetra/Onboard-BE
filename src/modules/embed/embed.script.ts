@@ -1,6 +1,7 @@
 /**
  * Injects a host div with Shadow DOM so widget styles are isolated from the page.
  * Usage: <script src="https://your-api.com/embed/embed.js" data-token="JWT" data-backend-url="https://your-api.com"></script>
+ * SPAs: listens for pushState/replaceState, popstate, and hashchange so config, task chips, and conversations follow the current URL.
  */
 export const EMBED_SCRIPT = `
 (function() {
@@ -138,6 +139,8 @@ export const EMBED_SCRIPT = `
   var taskChips = [];
   var widgetBlocked = false;
   var oncePerSessionHandledThisPage = false;
+  var spaLastHref = window.location.href;
+  var spaNavGeneration = 0;
 
   function q(sel) { return shadow.querySelector(sel); }
 
@@ -673,6 +676,73 @@ export const EMBED_SCRIPT = `
       });
   }
 
+  function onEmbedPageLocationChanged() {
+    try {
+      var href = window.location.href;
+      if (href === spaLastHref) return;
+      spaLastHref = href;
+      spaNavGeneration += 1;
+      var gen = spaNavGeneration;
+
+      forceClosePanelNow();
+
+      disconnectSocket();
+      if (conversationId) {
+        endConversation();
+      }
+      conversationId = null;
+      conversationLoading = false;
+      pendingUserBubbles = {};
+      pendingUserBubblesByMessageId = {};
+      pendingUserQueue = [];
+      pendingCounter = 0;
+
+      var messagesEl = q('.ob-messages');
+      if (messagesEl) messagesEl.innerHTML = '';
+
+      if (!widgetBlocked) {
+        setBootLoading(true);
+      }
+
+      loadConfig()
+        .then(function() {
+          if (gen !== spaNavGeneration) return;
+          if (widgetBlocked) {
+            setBootLoading(false);
+            return;
+          }
+          var cfg = widgetConfig;
+          if (cfg && cfg.behavior === 'AUTO_SHOW') {
+            openPanel();
+          } else {
+            setBootLoading(false);
+          }
+        })
+        .catch(function() {
+          if (gen !== spaNavGeneration) return;
+          setBootLoading(false);
+        });
+    } catch (e) {
+      console.warn('[Onboard widget] SPA navigation refresh failed', e);
+    }
+  }
+
+  function installEmbedSpaNavigationHooks() {
+    window.addEventListener('popstate', onEmbedPageLocationChanged);
+    window.addEventListener('hashchange', onEmbedPageLocationChanged);
+    var wrap = function(kind) {
+      var orig = history[kind];
+      if (typeof orig !== 'function') return;
+      history[kind] = function() {
+        var ret = orig.apply(history, arguments);
+        setTimeout(onEmbedPageLocationChanged, 0);
+        return ret;
+      };
+    };
+    wrap('pushState');
+    wrap('replaceState');
+  }
+
   function endConversation() {
     if (!conversationId || !token) return;
     var url = apiBase + '/conversations/' + conversationId + '/end';
@@ -902,6 +972,19 @@ export const EMBED_SCRIPT = `
     }, 170);
   }
 
+  function forceClosePanelNow() {
+    open = false;
+    if (panelCloseTimer) {
+      clearTimeout(panelCloseTimer);
+      panelCloseTimer = null;
+    }
+    var panel = q('#onboard-widget-panel');
+    if (panel) {
+      panel.classList.remove('open');
+      panel.classList.remove('closing');
+    }
+  }
+
   function togglePanel() {
     if (widgetBlocked || bootLoading) return;
     open ? closePanel() : openPanel();
@@ -955,6 +1038,7 @@ export const EMBED_SCRIPT = `
       if (mq.addEventListener) mq.addEventListener('change', onSchemeChange);
       else if (mq.addListener) mq.addListener(onSchemeChange);
     } catch (e) {}
+    installEmbedSpaNavigationHooks();
     window.addEventListener('beforeunload', function() {
       endConversation();
       disconnectSocket();
