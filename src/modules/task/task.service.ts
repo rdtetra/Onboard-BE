@@ -8,11 +8,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, ILike } from 'typeorm';
 import { Task } from '../../common/entities/task.entity';
 import { Chip } from '../../common/entities/chip.entity';
+import type { Bot } from '../../common/entities/bot.entity';
 import { BotService } from '../bot/bot.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { ChipType } from '../../types/task';
-import { RoleName } from '../../types/roles';
+import { ChipType } from '../../common/enums/task.enum';
+import { RoleName } from '../../common/enums/roles.enum';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {
@@ -172,8 +173,11 @@ export class TaskService {
     await this.taskRepository.remove(task);
   }
 
-  async findWidgetChipsByBotId(
-    botId: string,
+  async findWidgetChipsByBot(
+    bot: Bot,
+    pageUrl: string | null,
+    domain?: string | null,
+    path?: string | null,
   ): Promise<
     Array<{
       id: string;
@@ -184,13 +188,42 @@ export class TaskService {
       newTab: boolean;
     }>
   > {
+    const domainValue = domain?.trim();
+    const pathValue = path?.trim();
+    let host: string;
+    let pathname: string;
+
+    if (domainValue) {
+      host = domainValue;
+      const rawPath = pathValue || '/';
+      pathname = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    } else if (pageUrl?.trim()) {
+      let url: URL;
+      try {
+        url = new URL(pageUrl);
+      } catch {
+        return [];
+      }
+      host = url.hostname;
+      pathname = url.pathname || '/';
+    } else {
+      return [];
+    }
+
+    if (!this.hostnameAllowed(host, bot.domains ?? [])) {
+      return [];
+    }
+
     const tasks = await this.taskRepository.find({
-      where: { botId, isActive: true },
+      where: { botId: bot.id, isActive: true },
       relations: ['chips'],
       order: { createdAt: 'ASC' },
     });
 
     return tasks
+      .filter((task) =>
+        this.pathMatchesTargets(pathname, task.targetUrls ?? []),
+      )
       .flatMap((task) => task.chips ?? [])
       .filter(
         (chip) =>
@@ -206,5 +239,26 @@ export class TaskService {
         url: chip.type === ChipType.LINK ? (chip.url || '').trim() : null,
         newTab: chip.type === ChipType.LINK ? !!chip.newTab : false,
       }));
+  }
+
+  private normalizeHostname(host: string): string {
+    return host.trim().toLowerCase().replace(/\.$/, '');
+  }
+
+  private hostnameAllowed(hostname: string, domains: string[]): boolean {
+    const h = this.normalizeHostname(hostname);
+    return domains.some((d) => this.normalizeHostname(d) === h);
+  }
+
+  private pathMatchesTargets(pathname: string, targetUrls: string[]): boolean {
+    const path = pathname && pathname.length > 0 ? pathname : '/';
+    for (const t of targetUrls) {
+      const raw = t.trim();
+      if (!raw) continue;
+      if (raw === '/') return true;
+      if (path === raw) return true;
+      if (path.startsWith(`${raw}/`)) return true;
+    }
+    return false;
   }
 }

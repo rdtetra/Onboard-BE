@@ -6,17 +6,22 @@ import { WidgetService } from '../widget/widget.service';
 import { BotService } from '../bot/bot.service';
 import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
-import { MessageSender } from '../../types/message';
-import { RequestContextId, type RequestContext } from '../../types/request';
+import { MessageSender } from '../../common/enums/message.enum';
+import { RequestContextId } from '../../common/enums/request-context.enum';
+import type { EmbedPageContext } from '../../types/embed';
+import type { RequestContext } from '../../types/request';
 import type { WidgetAuthContext } from '../../types/widget-auth';
 import { EMBED_SCRIPT } from './embed.script';
 import { CreateWidgetConversationDto } from './dto/create-widget-conversation.dto';
 import { AddWidgetMessageDto } from './dto/add-widget-message.dto';
 import type { BotConfigResponseDto } from './dto/bot-config.response';
 import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
-import { WidgetAppearance } from '../../types/widget';
+import { WidgetAppearance } from '../../common/enums/widget.enum';
 import { createInternalContext } from '../../common/utils/request-context.util';
 import { TaskService } from '../task/task.service';
+import { BotType } from '../../common/enums/bot.enum';
+import type { Bot } from '../../common/entities/bot.entity';
+import { pickChildBotForEmbedContext } from '../../utils/embed-origin.util';
 
 const widgetCtx: RequestContext = createInternalContext(
   RequestContextId.EMBED_WIDGET,
@@ -31,7 +36,33 @@ export class EmbedService {
     private readonly widgetsService: WidgetService,
     private readonly botsService: BotService,
     private readonly tasksService: TaskService,
-  ) {}
+  ) { }
+
+  private async resolveBot(
+    botId: string,
+    context: EmbedPageContext,
+  ): Promise<Bot> {
+    const tokenBot = await this.botsService.findOne(widgetCtx, botId, {
+      forWidget: true,
+    });
+
+    if (
+      tokenBot.botType !== BotType.GENERAL ||
+      (!context.pageUrl?.trim() && !context.domain?.trim())
+    ) {
+      return tokenBot;
+    }
+
+    const children =
+      await this.botsService.findActiveChildBotsByParentIdForWidget(
+        widgetCtx,
+        tokenBot.id,
+      );
+
+    const child = pickChildBotForEmbedContext(children, context);
+
+    return child ?? tokenBot;
+  }
 
   getScript(): string {
     // Compiled: dist/modules/embed/embed.service.js → dist/common/assets/...
@@ -81,22 +112,38 @@ export class EmbedService {
   async createConversation(
     widgetAuthContext: WidgetAuthContext,
     dto: CreateWidgetConversationDto,
+    pageUrl: string | undefined,
+    domain?: string | undefined,
+    path?: string | undefined,
   ): Promise<Conversation> {
     if (!dto.visitorId?.trim()) {
       throw new BadRequestException('visitorId is required');
     }
+
+    const context: EmbedPageContext = {
+      pageUrl: pageUrl?.trim() || null,
+      domain: domain?.trim() || null,
+      path: path?.trim() || null,
+    };
+    const resolvedBot = await this.resolveBot(widgetAuthContext.botId, context);
+
+    const conversationBotId = resolvedBot.id;
+    
     const conversation = await this.conversationsService.create(
       widgetCtx,
-      widgetAuthContext.botId,
+      conversationBotId,
       dto.visitorId,
       { forWidget: true },
     );
-    const bot = await this.botsService.findOne(widgetCtx, widgetAuthContext.botId, {
+
+    const bot = await this.botsService.findOne(widgetCtx, conversationBotId, {
       forWidget: true,
     });
+
     const welcome = (
       bot.introMessage ?? DEFAULT_WIDGET_CONFIG.welcomeMessage
     )?.trim();
+
     if (welcome) {
       await this.conversationsService.addMessage(
         widgetCtx,
@@ -104,25 +151,37 @@ export class EmbedService {
         { content: welcome, sender: MessageSender.BOT },
         {
           forSystem: true,
-          botId: widgetAuthContext.botId,
+          botId: conversationBotId,
           senderOverride: MessageSender.BOT,
           triggerBotReply: false,
         },
       );
     }
+    
     return conversation;
   }
 
   async getMessages(
     widgetAuthContext: WidgetAuthContext,
     conversationId: string,
+    pageUrl?: string,
+    domain?: string,
+    path?: string,
   ): Promise<Message[]> {
+    const context: EmbedPageContext = {
+      pageUrl: pageUrl?.trim() || null,
+      domain: domain?.trim() || null,
+      path: path?.trim() || null,
+    };
+
+    const bot = await this.resolveBot(widgetAuthContext.botId, context);
+    
     const c = await this.conversationsService.findOne(
       widgetCtx,
       conversationId,
       {
         forWidget: true,
-        botId: widgetAuthContext.botId,
+        botId: bot.id,
         relations: [],
         orderMessages: 'ASC',
       },
@@ -130,14 +189,26 @@ export class EmbedService {
     return c.messages ?? [];
   }
 
-  addMessage(
+  async addMessage(
     widgetAuthContext: WidgetAuthContext,
     conversationId: string,
     dto: AddWidgetMessageDto,
+    pageUrl?: string,
+    domain?: string,
+    path?: string,
   ): Promise<Message> {
     if (dto.sender != null && dto.sender !== MessageSender.USER) {
       throw new BadRequestException('Widget clients can only send USER messages');
     }
+
+    const context: EmbedPageContext = {
+      pageUrl: pageUrl?.trim() || null,
+      domain: domain?.trim() || null,
+      path: path?.trim() || null,
+    };
+    
+    const bot = await this.resolveBot(widgetAuthContext.botId, context);
+
     return this.conversationsService.addMessage(
       widgetCtx,
       conversationId,
@@ -145,45 +216,70 @@ export class EmbedService {
       {
         forWidget: true,
         forSystem: false,
-        botId: widgetAuthContext.botId,
+        botId: bot.id,
         senderOverride: undefined,
         triggerBotReply: true,
       },
     );
   }
 
-  endConversation(
+  async endConversation(
     widgetAuthContext: WidgetAuthContext,
     conversationId: string,
+    pageUrl?: string,
+    domain?: string,
+    path?: string,
   ): Promise<void> {
+    const context: EmbedPageContext = {
+      pageUrl: pageUrl?.trim() || null,
+      domain: domain?.trim() || null,
+      path: path?.trim() || null,
+    };
+
+    const bot = await this.resolveBot(widgetAuthContext.botId, context);
+
     return this.conversationsService.endConversation(conversationId, {
       forWidget: true,
-      botId: widgetAuthContext.botId,
+      widgetRootBotId: bot.id,
     });
   }
 
   async getBotConfig(
     widgetAuthContext: WidgetAuthContext,
-    modeQuery?: string,
+    modeQuery: string | undefined,
+    pageUrl: string | undefined,
+    domain?: string | undefined,
+    path?: string | undefined,
   ): Promise<BotConfigResponseDto> {
-    const bot = await this.botsService.findOne(widgetCtx, widgetAuthContext.botId, {
-      forWidget: true,
-    });
+    const context: EmbedPageContext = {
+      pageUrl: pageUrl?.trim() || null,
+      domain: domain?.trim() || null,
+      path: path?.trim() || null,
+    };
+
+    const bot = await this.resolveBot(widgetAuthContext.botId, context);
 
     const appearance =
       modeQuery?.trim().toLowerCase() === WidgetAppearance.DARK
         ? WidgetAppearance.DARK
         : WidgetAppearance.LIGHT;
 
-    const widget = await this.widgetsService.findByBotIdAndMode(
+    const resolvedBotWidget = await this.widgetsService.findByBotIdAndMode(
       widgetCtx,
-      widgetAuthContext.botId,
+      bot.id,
       appearance,
       { forWidget: true },
     );
-    const d = DEFAULT_WIDGET_CONFIG;
-    const taskChips = await this.tasksService.findWidgetChipsByBotId(
-      widgetAuthContext.botId,
+
+    if (!resolvedBotWidget) {
+      throw new BadRequestException('Widget config not found for resolved bot');
+    }
+
+    const taskChips = await this.tasksService.findWidgetChipsByBot(
+      bot,
+      context.pageUrl ?? null,
+      context.domain ?? null,
+      context.path ?? null,
     );
 
     return {
@@ -192,22 +288,19 @@ export class EmbedService {
       introMessage: bot.introMessage ?? null,
       behavior: bot.behavior ?? null,
       oncePerSession: !!bot.oncePerSession,
-
-      mode: widget?.mode ?? d.mode,
-      position: widget?.position ?? d.position,
-      primaryColor: widget?.primaryColor ?? d.primaryColor,
-      headerTextColor: widget?.headerTextColor ?? d.headerTextColor,
-      background: widget?.background ?? d.background,
-      botMessageBg: widget?.botMessageBg ?? d.botMessageBg,
-      botMessageText: widget?.botMessageText ?? d.botMessageText,
-      userMessageBg: widget?.userMessageBg ?? d.userMessageBg,
-      userMessageText: widget?.userMessageText ?? d.userMessageText,
-
-      headerText: widget?.headerText ?? d.headerText,
-      welcomeMessage:
-        widget?.welcomeMessage ?? bot.introMessage ?? d.welcomeMessage,
-      botLogoUrl: widget?.botLogoUrl ?? d.botLogoUrl,
-      showPoweredBy: widget?.showPoweredBy ?? d.showPoweredBy,
+      mode: resolvedBotWidget.mode,
+      position: resolvedBotWidget.position,
+      primaryColor: resolvedBotWidget.primaryColor,
+      headerTextColor: resolvedBotWidget.headerTextColor,
+      background: resolvedBotWidget.background,
+      botMessageBg: resolvedBotWidget.botMessageBg,
+      botMessageText: resolvedBotWidget.botMessageText,
+      userMessageBg: resolvedBotWidget.userMessageBg,
+      userMessageText: resolvedBotWidget.userMessageText,
+      headerText: resolvedBotWidget.headerText,
+      welcomeMessage: resolvedBotWidget.welcomeMessage,
+      botLogoUrl: resolvedBotWidget.botLogoUrl,
+      showPoweredBy: resolvedBotWidget.showPoweredBy,
       taskChips,
     };
   }

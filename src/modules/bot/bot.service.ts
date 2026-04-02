@@ -20,8 +20,8 @@ import { ConfigService } from '@nestjs/config';
 import { JwtWrapperService } from '../jwt/jwt.service';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
-import { BotType, Behavior, BotPriority } from '../../types/bot';
-import { RoleName } from '../../types/roles';
+import { BotType, Behavior, BotPriority } from '../../common/enums/bot.enum';
+import { RoleName } from '../../common/enums/roles.enum';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import type {
@@ -520,6 +520,18 @@ export class BotService {
     }
 
     return bot;
+  }
+
+  async findActiveChildBotsByParentIdForWidget(ctx: RequestContext, parentBotId: string): Promise<Bot[]> {
+    return this.botRepository.find({
+      where: {
+        parentBot: { id: parentBotId },
+        isActive: true,
+        isArchived: false,
+      },
+      relations: ['parentBot'],
+      order: { createdAt: 'ASC' },
+    });
   }
 
   async findKbSources(ctx: RequestContext, botId: string): Promise<KBSource[]> {

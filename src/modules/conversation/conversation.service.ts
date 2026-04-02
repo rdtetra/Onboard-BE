@@ -9,18 +9,19 @@ import { Conversation } from '../../common/entities/conversation.entity';
 import { Message } from '../../common/entities/message.entity';
 import { BotService } from '../bot/bot.service';
 import { TokenUsageService } from '../token-transaction/token-usage.service';
-import { RoleName } from '../../types/roles';
-import { RequestContextId, type RequestContext } from '../../types/request';
+import { RoleName } from '../../common/enums/roles.enum';
+import { RequestContextId } from '../../common/enums/request-context.enum';
+import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
-import { ConversationStatus } from '../../types/conversation';
-import { MessageSender, MessageStatus } from '../../types/message';
+import { ConversationStatus } from '../../common/enums/conversation-status.enum';
+import { MessageSender, MessageStatus } from '../../common/enums/message.enum';
 import type { CreateMessageDto } from './dto/create-message.dto';
 import { InAppEventsService } from '../events/in-app-events.service';
-import { InAppEvents } from '../../types/events';
+import { InAppEvents } from '../../common/enums/events.enum';
 import { createInternalContext } from '../../common/utils/request-context.util';
 
 @Injectable()
@@ -34,6 +35,16 @@ export class ConversationService {
     private readonly tokenUsageService: TokenUsageService,
     private readonly inAppEventsService: InAppEventsService,
   ) {}
+
+  private conversationBelongsToWidgetRoot(
+    conversation: Conversation,
+    widgetRootBotId: string,
+  ): boolean {
+    if (conversation.botId === widgetRootBotId) {
+      return true;
+    }
+    return conversation.bot?.parentBot?.id === widgetRootBotId;
+  }
 
   async create(
     ctx: RequestContext,
@@ -217,13 +228,28 @@ export class ConversationService {
     options?: {
       relations?: string[];
       forWidget?: boolean;
+      /** @deprecated Use widgetRootBotId for embed */
       botId?: string;
+      /** Widget JWT bot (general); allows conversation on that bot or its child */
+      widgetRootBotId?: string;
       orderMessages?: 'ASC' | 'DESC';
     },
   ): Promise<Conversation> {
     let relations = options?.relations ?? ['messages', 'bot'];
     if (options?.orderMessages != null) {
       relations = relations.filter((r) => r !== 'messages');
+    }
+    if (options?.forWidget && options.widgetRootBotId != null) {
+      const extra: string[] = [];
+      if (!relations.includes('bot')) {
+        extra.push('bot');
+      }
+      if (!relations.includes('bot.parentBot')) {
+        extra.push('bot.parentBot');
+      }
+      if (extra.length > 0) {
+        relations = [...relations, ...extra];
+      }
     }
     const conversation = await this.conversationRepository.findOne({
       where: { id },
@@ -233,7 +259,16 @@ export class ConversationService {
       throw new NotFoundException(`Conversation with ID ${id} not found`);
     }
     if (options?.forWidget) {
-      if (options.botId != null && conversation.botId !== options.botId) {
+      if (options.widgetRootBotId != null) {
+        if (
+          !this.conversationBelongsToWidgetRoot(
+            conversation,
+            options.widgetRootBotId,
+          )
+        ) {
+          throw new NotFoundException('Conversation not found');
+        }
+      } else if (options.botId != null && conversation.botId !== options.botId) {
         throw new NotFoundException('Conversation not found');
       }
     } else {
@@ -281,6 +316,7 @@ export class ConversationService {
       forWidget?: boolean;
       forSystem?: boolean;
       botId?: string;
+      widgetRootBotId?: string;
       senderOverride?: MessageSender;
       triggerBotReply?: boolean;
     },
@@ -290,7 +326,8 @@ export class ConversationService {
       ? await this.findOne(ctx, conversationId, {
           relations: ['messages', 'bot'],
           forWidget: true,
-          botId: options.botId,
+          botId: options?.widgetRootBotId != null ? undefined : options.botId,
+          widgetRootBotId: options?.widgetRootBotId,
         })
       : await this.findOne(ctx, conversationId, {
           relations: ['messages', 'bot'],
@@ -348,15 +385,18 @@ export class ConversationService {
 
   async endConversation(
     conversationId: string,
-    options: { forWidget: true; botId: string },
+    options: { forWidget: true; widgetRootBotId: string },
   ): Promise<void> {
     const conversation = await this.conversationRepository.findOne({
       where: { id: conversationId },
+      relations: ['bot', 'bot.parentBot'],
     });
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
-    if (conversation.botId !== options.botId) {
+    if (
+      !this.conversationBelongsToWidgetRoot(conversation, options.widgetRootBotId)
+    ) {
       throw new NotFoundException('Conversation not found');
     }
     if (conversation.status === ConversationStatus.OPEN) {

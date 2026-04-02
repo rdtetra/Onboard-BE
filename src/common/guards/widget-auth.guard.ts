@@ -14,6 +14,7 @@ import {
   getEmbedPageUrlFromHeaders,
   isEmbedAllowedForBot,
 } from '../../utils/embed-origin.util';
+import { BotType } from '../enums/bot.enum';
 
 export const WIDGET_AUTH_CONTEXT_KEY = 'widgetAuthContext';
 
@@ -76,6 +77,12 @@ export class WidgetAuthGuard implements CanActivate {
     const bot = await this.botsService.findOne(widgetCtx, authContext.botId.trim(), {
       forWidget: true,
     });
+
+    if (bot.botType !== BotType.GENERAL) {
+      throw new UnauthorizedException(
+        'Widget token is only valid for general bots',
+      );
+    }
 
     const pageUrl = getEmbedPageUrlFromHeaders(request.headers);
     if (!isEmbedAllowedForBot(bot, pageUrl)) {

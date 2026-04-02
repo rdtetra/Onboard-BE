@@ -259,12 +259,24 @@ export const EMBED_SCRIPT = `
     } catch (e) { return ''; }
   }
 
-  function api(path, opts) {
+  function api(apiPath, opts) {
     opts = opts || {};
-    var url = apiBase + path;
+    var pageUrl = window.location.href || '';
+    var domain = window.location.hostname || '';
+    var pagePath = window.location.pathname || '/';
+    var sep = apiPath.indexOf('?') >= 0 ? '&' : '?';
+    var withPageContext =
+      apiPath +
+      sep +
+      'pageUrl=' +
+      encodeURIComponent(pageUrl) +
+      '&domain=' +
+      encodeURIComponent(domain) +
+      '&path=' +
+      encodeURIComponent(pagePath);
+    var url = apiBase + withPageContext;
     var init = { method: opts.method || 'GET', headers: opts.headers || {} };
     init.headers['X-WIDGET-ACCESS-TOKEN'] = token;
-    init.headers['X-EMBED-PAGE-URL'] = window.location.href;
     if (opts.body) {
       init.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
       if (!init.headers['Content-Type']) init.headers['Content-Type'] = 'application/json';
@@ -407,7 +419,13 @@ export const EMBED_SCRIPT = `
           reject(new Error('Join room timeout'));
         }, 3000);
         try {
-          s.emit('JOIN_ROOM', { conversationId: conversationId, token: token, pageUrl: window.location.href }, function(ack) {
+          s.emit('JOIN_ROOM', {
+            conversationId: conversationId,
+            token: token,
+            pageUrl: window.location.href,
+            domain: window.location.hostname,
+            path: window.location.pathname || '/',
+          }, function(ack) {
             if (done) return;
             done = true;
             clearTimeout(timer);

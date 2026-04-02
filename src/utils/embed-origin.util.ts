@@ -1,6 +1,7 @@
 import type { IncomingHttpHeaders } from 'http';
 import type { Bot } from '../common/entities/bot.entity';
 import { BotType } from '../common/enums/bot.enum';
+import type { EmbedPageContext } from '../types/embed';
 
 function headerFirst(v: IncomingHttpHeaders[string]): string | undefined {
   if (v == null) return undefined;
@@ -57,17 +58,6 @@ export function getEmbedPageUrlFromHeaders(
   return null;
 }
 
-export function getEmbedPageUrlForSocket(
-  headers: IncomingHttpHeaders,
-  payloadPageUrl?: string | null,
-): string | null {
-  if (payloadPageUrl?.trim()) {
-    const ok = clientPageUrlMatchesOrigin(headers, payloadPageUrl);
-    if (ok) return ok;
-  }
-  return getEmbedPageUrlFromHeaders(headers);
-}
-
 function normalizeHostname(host: string): string {
   return host.trim().toLowerCase().replace(/\.$/, '');
 }
@@ -103,20 +93,33 @@ function pathMatchesTargetsExactly(
 }
 
 /**
- * Pick first bot whose targetUrls contains an exact pathname match.
+ * When the widget token is for a parent GENERAL bot with active children, picks
+ * the child whose domains + targetUrls (exact pathname) match the embed page.
+ * Otherwise embed.service falls back to the parent bot.
  */
-export function pickChildBotForEmbedPage(
+export function pickChildBotForEmbedContext(
   children: Bot[],
-  pageUrl: string,
+  context: EmbedPageContext,
 ): Bot | null {
-  let url: URL;
-  try {
-    url = new URL(pageUrl);
-  } catch {
-    return null;
+  let host: string;
+  let pathname: string;
+
+  const domain = context.domain?.trim();
+  if (domain) {
+    const rawPath = context.path?.trim() || '/';
+    pathname = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    host = domain;
+  } else {
+    const pageUrl = context.pageUrl?.trim();
+    if (!pageUrl) return null;
+    try {
+      const url = new URL(pageUrl);
+      host = url.hostname;
+      pathname = url.pathname || '/';
+    } catch {
+      return null;
+    }
   }
-  const host = url.hostname;
-  const pathname = url.pathname || '/';
 
   for (const bot of children) {
     if (!hostnameAllowed(host, bot.domains ?? [])) {

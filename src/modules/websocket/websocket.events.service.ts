@@ -9,23 +9,23 @@ import { BotService } from '../bot/bot.service';
 import { InAppEventsService } from '../events/in-app-events.service';
 import { ConversationService } from '../conversation/conversation.service';
 import {
-  BotReplyStatus,
-  InAppEvents,
   type InAppBotStreamDeltaPayload,
   type InAppBotStatusPayload,
-  WebSocketEvents,
   type InAppMessageStatusPayload,
   type InAppSendMessagePayload,
 } from '../../types/events';
+import {
+  BotReplyStatus,
+  InAppEvents,
+  WebSocketEvents,
+} from '../../common/enums/events.enum';
 import type { WidgetAuthContext } from '../../types/widget-auth';
-import { RequestContextId, type RequestContext } from '../../types/request';
+import { RequestContextId } from '../../common/enums/request-context.enum';
+import type { RequestContext } from '../../types/request';
 import type { JoinRoomAck, JoinRoomPayload } from '../../types/websocket';
 import { JwtWrapperService } from '../jwt/jwt.service';
 import { createRequestContext } from '../../common/utils/request-context.util';
-import {
-  getEmbedPageUrlForSocket,
-  isEmbedAllowedForBot,
-} from '../../utils/embed-origin.util';
+import { BotType } from '../../common/enums/bot.enum';
 
 @Injectable()
 export class WebsocketEventsService implements OnModuleInit {
@@ -110,12 +110,11 @@ export class WebsocketEventsService implements OnModuleInit {
       const bot = await this.botsService.findOne(botCheckCtx, authContext.botId, {
         forWidget: true,
       });
-      const pageUrl = getEmbedPageUrlForSocket(
-        client.handshake.headers,
-        payload.pageUrl,
-      );
-      if (!isEmbedAllowedForBot(bot, pageUrl)) {
-        return { ok: false, error: 'Widget is not allowed on this site or URL' };
+      if (bot.botType !== BotType.GENERAL) {
+        return {
+          ok: false,
+          error: 'Widget token is only valid for general bots',
+        };
       }
 
       const widgetCtx: RequestContext = createRequestContext({
@@ -124,13 +123,14 @@ export class WebsocketEventsService implements OnModuleInit {
         url: '/ws/chat',
         method: 'WS',
       });
+
       const conversation = await this.conversationsService.findOne(
         widgetCtx,
         payload.conversationId.trim(),
         {
           relations: [],
           forWidget: true,
-          botId: authContext.botId,
+          widgetRootBotId: authContext.botId,
         },
       );
 

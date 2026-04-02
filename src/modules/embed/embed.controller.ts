@@ -34,24 +34,51 @@ export class EmbedController {
   createConversation(
     @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Body() dto: CreateWidgetConversationDto,
+    @Query('pageUrl') pageUrl?: string,
+    @Query('domain') domain?: string,
+    @Query('path') path?: string,
   ) {
-    return this.embedService.createConversation(widgetAuthContext, dto);
+    return this.embedService.createConversation(
+      widgetAuthContext,
+      dto,
+      pageUrl,
+      domain,
+      path,
+    );
   }
 
   @Get('config')
   getBotConfig(
     @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Query('mode') mode?: string,
+    @Query('pageUrl') pageUrl?: string,
+    @Query('domain') domain?: string,
+    @Query('path') path?: string,
   ) {
-    return this.embedService.getBotConfig(widgetAuthContext, mode);
+    return this.embedService.getBotConfig(
+      widgetAuthContext,
+      mode,
+      pageUrl,
+      domain,
+      path,
+    );
   }
 
   @Get('conversations/:id/messages')
   getMessages(
     @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Param('id') id: string,
+    @Query('pageUrl') pageUrl?: string,
+    @Query('domain') domain?: string,
+    @Query('path') path?: string,
   ) {
-    return this.embedService.getMessages(widgetAuthContext, id);
+    return this.embedService.getMessages(
+      widgetAuthContext,
+      id,
+      pageUrl,
+      domain,
+      path,
+    );
   }
 
   @Post('conversations/:id/messages')
@@ -59,15 +86,34 @@ export class EmbedController {
     @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Param('id') id: string,
     @Body() dto: AddWidgetMessageDto,
+    @Query('pageUrl') pageUrl?: string,
+    @Query('domain') domain?: string,
+    @Query('path') path?: string,
   ) {
-    return this.embedService.addMessage(widgetAuthContext, id, dto);
+    return this.embedService.addMessage(
+      widgetAuthContext,
+      id,
+      dto,
+      pageUrl,
+      domain,
+      path,
+    );
   }
 
   @Post('conversations/:id/end')
   endConversation(
     @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Param('id') id: string,
+    @Query('pageUrl') pageUrl?: string,
+    @Query('domain') domain?: string,
+    @Query('path') path?: string,
   ) {
-    return this.embedService.endConversation(widgetAuthContext, id);
+    return this.embedService.endConversation(
+      widgetAuthContext,
+      id,
+      pageUrl,
+      domain,
+      path,
+    );
   }
 }
