@@ -2,11 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { resolve } from 'path';
 import * as ejs from 'ejs';
-
-export interface RenderOptions {
-  /** EJS options (e.g. escape, delimiter). */
-  options?: ejs.Options;
-}
+import type { RenderOptions } from '../../types/email';
 
 @Injectable()
 export class EmailTemplatesService {

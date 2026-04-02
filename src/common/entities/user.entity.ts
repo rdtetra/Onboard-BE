@@ -2,7 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Role } from './role.entity';
 import { Organization } from './organization.entity';
-import { UserStatus } from '../../types/user-status';
+import { UserStatus } from '../enums/user-status.enum';
 
 @Entity('users')
 export class User extends BaseEntity {

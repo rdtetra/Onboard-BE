@@ -9,7 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { InvoiceStatus } from '../../../types/invoice-status';
+import { InvoiceStatus } from '../../../common/enums/invoice-status.enum';
 
 export class CreateInvoiceDto {
   @IsUUID()

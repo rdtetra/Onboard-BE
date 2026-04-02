@@ -1,4 +1,4 @@
-import { WidgetAppearance, WidgetPosition } from '../../types/widget';
+import { WidgetAppearance, WidgetPosition } from '../enums/widget.enum';
 
 /** Default widget config used when creating new widgets and when returning embed config with no widget. */
 export const DEFAULT_WIDGET_CONFIG = {

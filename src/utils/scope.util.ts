@@ -1,5 +1,5 @@
 import type { RequestContext } from '../types/request';
-import { RoleName } from '../types/roles';
+import { RoleName } from '../common/enums/roles.enum';
 
 export type ScopeClause = {
   clause: string;

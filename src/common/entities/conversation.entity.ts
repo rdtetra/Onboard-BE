@@ -2,7 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Bot } from './bot.entity';
 import { Message } from './message.entity';
-import { ConversationStatus } from '../../types/conversation';
+import { ConversationStatus } from '../enums/conversation-status.enum';
 
 @Entity('conversations')
 export class Conversation extends BaseEntity {

@@ -8,7 +8,7 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PlanKey } from '../../../types/plan-key';
+import { PlanKey } from '../../../common/enums/plan-key.enum';
 
 export class CreatePlanDto {
   @IsOptional()

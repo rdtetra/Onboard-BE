@@ -10,7 +10,7 @@ import {
   SourceType,
   SourceStatus,
   RefreshSchedule,
-} from '../../types/knowledge-base';
+} from '../enums/knowledge-base.enum';
 import { Organization } from './organization.entity';
 import { Bot } from './bot.entity';
 import { Collection } from './collection.entity';

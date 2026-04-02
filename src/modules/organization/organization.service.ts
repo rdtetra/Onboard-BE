@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Organization } from '../../common/entities/organization.entity';
 import { User } from '../../common/entities/user.entity';
 import { Role } from '../../common/entities/role.entity';
-import { RoleName } from '../../types/roles';
+import { RoleName } from '../../common/enums/roles.enum';
 
 /**
  * Organization is internal: not exposed to clients. A tenant (user) gets an org

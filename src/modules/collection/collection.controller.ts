@@ -14,7 +14,7 @@ import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { Collection } from '../../common/entities/collection.entity';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { Allow } from '../../common/decorators/allow.decorator';
-import { Permission } from '../../types/permissions';
+import { Permission } from '../../common/enums/permissions.enum';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 

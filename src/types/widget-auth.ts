@@ -1,4 +1,4 @@
-export interface WidgetAuthContext {
+export type WidgetAuthContext = {
   botId: string;
-  type: string;
-}
+  type: 'widget';
+};

@@ -7,7 +7,7 @@ import {
   MaxLength,
   ValidateIf,
 } from 'class-validator';
-import { SourceType, RefreshSchedule } from '../../../types/knowledge-base';
+import { SourceType, RefreshSchedule } from '../../../common/enums/knowledge-base.enum';
 
 export class CreateKBSourceDto {
   @IsEnum(SourceType)

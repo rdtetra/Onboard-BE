@@ -1,5 +1,5 @@
 import { IsString, IsNotEmpty, MaxLength, IsOptional, IsEnum } from 'class-validator';
-import { MessageSender } from '../../../types/message';
+import { MessageSender } from '../../../common/enums/message.enum';
 
 export class AddWidgetMessageDto {
   @IsString()

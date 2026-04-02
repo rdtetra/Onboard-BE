@@ -4,18 +4,12 @@ import { Repository, FindOptionsWhere } from 'typeorm';
 import { AuditLog } from '../../common/entities/audit-log.entity';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
+import type { AuditLogPayload } from '../../types/audit';
 import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
-import { RoleName } from '../../types/roles';
-
-export interface AuditLogPayload {
-  action: string;
-  resource: string;
-  resourceId?: string | null;
-  details?: Record<string, unknown> | null;
-}
+import { RoleName } from '../../common/enums/roles.enum';
 
 @Injectable()
 export class AuditService {

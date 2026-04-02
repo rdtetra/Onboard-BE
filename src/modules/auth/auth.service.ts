@@ -24,8 +24,8 @@ import {
   ImpersonateResponse,
 } from '../../types/auth';
 import { User } from '../../common/entities/user.entity';
-import { UserStatus } from '../../types/user-status';
-import { RoleName } from '../../types/roles';
+import { UserStatus } from '../../common/enums/user-status.enum';
+import { RoleName } from '../../common/enums/roles.enum';
 import { UsedToken } from '../../common/entities/used-token.entity';
 import type { RequestContext } from '../../types/request';
 import { AuditService } from '../audit/audit.service';

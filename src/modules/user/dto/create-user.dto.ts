@@ -7,8 +7,8 @@ import {
   MaxLength,
 } from 'class-validator';
 import { IsStrongPassword } from '../../../common/validators/password.validator';
-import { UserStatus } from '../../../types/user-status';
-import { RoleName } from '../../../types/roles';
+import { UserStatus } from '../../../common/enums/user-status.enum';
+import { RoleName } from '../../../common/enums/roles.enum';
 
 export class CreateUserDto {
   @IsEmail()

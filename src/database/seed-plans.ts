@@ -4,9 +4,9 @@ import { Subscription } from '../common/entities/subscription.entity';
 import { Organization } from '../common/entities/organization.entity';
 import { TokenWallet } from '../common/entities/token-wallet.entity';
 import { TokenTransaction } from '../common/entities/token-transaction.entity';
-import { PlanKey } from '../types/plan-key';
-import { SubscriptionStatus } from '../types/subscription-status';
-import { TokenTransactionType } from '../types/token-transaction-type';
+import { PlanKey } from '../common/enums/plan-key.enum';
+import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
+import { TokenTransactionType } from '../common/enums/token-transaction-type.enum';
 
 interface PlanSeedRow {
   key: PlanKey;

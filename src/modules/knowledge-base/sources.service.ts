@@ -15,8 +15,8 @@ import {
   SourceType,
   SourceStatus,
   RefreshSchedule,
-} from '../../types/knowledge-base';
-import { RoleName } from '../../types/roles';
+} from '../../common/enums/knowledge-base.enum';
+import { RoleName } from '../../common/enums/roles.enum';
 import type { RequestContext } from '../../types/request';
 import { getAbsolutePathForDownload } from './multer-options';
 import { fileExists, createFileReadStream } from '../../utils/file.util';

@@ -9,14 +9,14 @@ import { Repository } from 'typeorm';
 import { Subscription } from '../../common/entities/subscription.entity';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
-import { SubscriptionStatus } from '../../types/subscription-status';
+import { SubscriptionStatus } from '../../common/enums/subscription-status.enum';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
-import { RoleName } from '../../types/roles';
+import { RoleName } from '../../common/enums/roles.enum';
 
 @Injectable()
 export class SubscriptionService {

@@ -10,7 +10,7 @@ import { TokenWallet } from '../../common/entities/token-wallet.entity';
 import { CreateTokenWalletDto } from './dto/create-token-wallet.dto';
 import { UpdateTokenWalletDto } from './dto/update-token-wallet.dto';
 import type { RequestContext } from '../../types/request';
-import { RoleName } from '../../types/roles';
+import { RoleName } from '../../common/enums/roles.enum';
 
 @Injectable()
 export class TokenWalletService {

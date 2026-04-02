@@ -8,7 +8,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { BotType, Behavior, BotPriority } from '../../types/bot';
+import { BotType, Behavior, BotPriority } from '../enums/bot.enum';
 import { Organization } from './organization.entity';
 import { KBSource } from './kb-source.entity';
 import { Task } from './task.entity';

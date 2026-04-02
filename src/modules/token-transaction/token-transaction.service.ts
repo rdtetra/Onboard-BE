@@ -9,14 +9,15 @@ import { Repository } from 'typeorm';
 import { TokenTransaction } from '../../common/entities/token-transaction.entity';
 import { CreateTokenTransactionDto } from './dto/create-token-transaction.dto';
 import { TokenWalletService } from '../token-wallet/token-wallet.service';
-import { TokenTransactionType } from '../../types/token-transaction-type';
-import { RequestContextId, type RequestContext } from '../../types/request';
+import { TokenTransactionType } from '../../common/enums/token-transaction-type.enum';
+import { RequestContextId } from '../../common/enums/request-context.enum';
+import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
-import { RoleName } from '../../types/roles';
+import { RoleName } from '../../common/enums/roles.enum';
 import { createInternalContext } from '../../common/utils/request-context.util';
 
 /** Used for usage/grant paths where there is no HTTP request (widget, jobs, etc.). */

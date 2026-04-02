@@ -4,10 +4,10 @@ import {
   type InAppBotReplyRequiredPayload,
   type InAppBotStreamDeltaPayload,
   type InAppBotStatusPayload,
-  InAppEvents,
   type InAppMessageStatusPayload,
   type InAppSendMessagePayload,
 } from '../../types/events';
+import { InAppEvents } from '../../common/enums/events.enum';
 
 type EventPayloadMap = {
   [InAppEvents.SEND_MESSAGE]: InAppSendMessagePayload;

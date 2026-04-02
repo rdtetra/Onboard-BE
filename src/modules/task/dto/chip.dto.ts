@@ -9,7 +9,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ChipType } from '../../../types/task';
+import { ChipType } from '../../../common/enums/task.enum';
 
 export class ChipDto {
   @IsEnum(ChipType)

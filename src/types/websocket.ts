@@ -1,11 +1,11 @@
-export interface JoinRoomPayload {
+export type JoinRoomPayload = {
   conversationId: string;
   token: string;
   pageUrl?: string;
-}
+};
 
-export interface JoinRoomAck {
+export type JoinRoomAck = {
   ok: boolean;
   room?: string;
   error?: string;
-}
+};

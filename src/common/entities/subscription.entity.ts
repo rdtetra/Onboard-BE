@@ -9,7 +9,7 @@ import {
 import { BaseEntity } from './base.entity';
 import { Plan } from './plan.entity';
 import { Organization } from './organization.entity';
-import { SubscriptionStatus } from '../../types/subscription-status';
+import { SubscriptionStatus } from '../enums/subscription-status.enum';
 
 @Entity('subscriptions')
 @Unique(['organizationId'])

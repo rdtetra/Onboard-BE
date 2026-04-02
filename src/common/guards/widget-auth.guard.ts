@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { BotService } from '../../modules/bot/bot.service';
 import { JwtWrapperService } from '../../modules/jwt/jwt.service';
-import { RequestContextId, type RequestContext } from '../../types/request';
+import { RequestContextId } from '../enums/request-context.enum';
+import type { RequestContext } from '../../types/request';
 import type { WidgetAuthContext } from '../../types/widget-auth';
 import { createRequestContext } from '../utils/request-context.util';
 import {

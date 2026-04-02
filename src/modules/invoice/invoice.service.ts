@@ -15,8 +15,8 @@ import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
-import { RoleName } from '../../types/roles';
-import { InvoiceStatus } from '../../types/invoice-status';
+import { RoleName } from '../../common/enums/roles.enum';
+import { InvoiceStatus } from '../../common/enums/invoice-status.enum';
 
 @Injectable()
 export class InvoiceService {

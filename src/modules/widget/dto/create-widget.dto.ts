@@ -9,7 +9,7 @@ import {
   Matches,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { WidgetPosition, WidgetAppearance } from '../../../types/widget';
+import { WidgetPosition, WidgetAppearance } from '../../../common/enums/widget.enum';
 
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
 

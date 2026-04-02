@@ -19,7 +19,7 @@ import { UpdateKBSourceDto } from './dto/update-source.dto';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { Allow } from '../../common/decorators/allow.decorator';
-import { Permission } from '../../types/permissions';
+import { Permission } from '../../common/enums/permissions.enum';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import { kbSourceUploadOptions } from './multer-options';
 import { UploadExceptionFilter } from './upload-exception.filter';

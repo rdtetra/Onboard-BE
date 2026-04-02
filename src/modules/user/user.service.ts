@@ -13,8 +13,8 @@ import { Role } from '../../common/entities/role.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { RoleName } from '../../types/roles';
-import { UserStatus } from '../../types/user-status';
+import { RoleName } from '../../common/enums/roles.enum';
+import { UserStatus } from '../../common/enums/user-status.enum';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {

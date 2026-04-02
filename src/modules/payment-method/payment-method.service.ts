@@ -11,10 +11,10 @@ import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 import { detectCardBrand } from '../../utils/card-brand.util';
 import { parseExpiry } from '../../utils/expiry.util';
-import { PaymentProvider } from '../../types/payment-provider';
-import { PaymentMethodType } from '../../types/payment-method-type';
+import { PaymentProvider } from '../../common/enums/payment-provider.enum';
+import { PaymentMethodType } from '../../common/enums/payment-method-type.enum';
 import type { RequestContext } from '../../types/request';
-import { RoleName } from '../../types/roles';
+import { RoleName } from '../../common/enums/roles.enum';
 
 @Injectable()
 export class PaymentMethodService {

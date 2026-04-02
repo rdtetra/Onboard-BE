@@ -14,7 +14,7 @@ import {
   IsDateString,
   IsUUID,
 } from 'class-validator';
-import { BotType, Behavior, BotPriority } from '../../../types/bot';
+import { BotType, Behavior, BotPriority } from '../../../common/enums/bot.enum';
 
 const DOMAIN_REGEX =
   /^(localhost|([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;

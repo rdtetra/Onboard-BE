@@ -11,8 +11,8 @@ import {
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PaymentProvider } from '../../../types/payment-provider';
-import { PaymentMethodType } from '../../../types/payment-method-type';
+import { PaymentProvider } from '../../../common/enums/payment-provider.enum';
+import { PaymentMethodType } from '../../../common/enums/payment-method-type.enum';
 
 export class CreatePaymentMethodDto {
   @IsOptional()

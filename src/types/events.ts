@@ -1,38 +1,15 @@
 import type { Message } from '../common/entities/message.entity';
-import type { MessageSender, MessageStatus } from './message';
+import type { MessageSender, MessageStatus } from '../common/enums/message.enum';
+import type { BotReplyStatus } from '../common/enums/events.enum';
 
-export enum InAppEvents {
-  SEND_MESSAGE = 'SEND_MESSAGE',
-  MESSAGE_STATUS_UPDATED = 'MESSAGE_STATUS_UPDATED',
-  BOT_REPLY_REQUIRED = 'BOT_REPLY_REQUIRED',
-  BOT_STATUS_CHANGED = 'BOT_STATUS_CHANGED',
-  BOT_STREAM_DELTA = 'BOT_STREAM_DELTA',
-  JOIN_ROOM = 'JOIN_ROOM',
-}
-
-export enum WebSocketEvents {
-  SEND_MESSAGE = 'SEND_MESSAGE',
-  MESSAGE_STATUS_UPDATED = 'MESSAGE_STATUS_UPDATED',
-  BOT_STATUS_CHANGED = 'BOT_STATUS_CHANGED',
-  BOT_STREAM_DELTA = 'BOT_STREAM_DELTA',
-  WIDGET_ERROR = 'WIDGET_ERROR',
-  JOIN_ROOM = 'JOIN_ROOM',
-}
-
-export enum BotReplyStatus {
-  THINKING = 'THINKING',
-  DONE = 'DONE',
-  ERROR = 'ERROR',
-}
-
-export interface InAppSendMessagePayload {
+export type InAppSendMessagePayload = {
   botId: string;
   visitorId: string;
   conversationId: string;
   message: Message;
-}
+};
 
-export interface InAppMessageStatusPayload {
+export type InAppMessageStatusPayload = {
   botId: string;
   visitorId: string;
   conversationId: string;
@@ -40,27 +17,27 @@ export interface InAppMessageStatusPayload {
   sender: MessageSender;
   status: MessageStatus;
   updatedAt: Date;
-}
+};
 
-export interface InAppBotReplyRequiredPayload {
+export type InAppBotReplyRequiredPayload = {
   botId: string;
   visitorId: string;
   conversationId: string;
   userMessageId: string;
   userContent: string;
-}
+};
 
-export interface InAppBotStatusPayload {
+export type InAppBotStatusPayload = {
   botId: string;
   visitorId: string;
   conversationId: string;
   status: BotReplyStatus;
   updatedAt: Date;
-}
+};
 
-export interface InAppBotStreamDeltaPayload {
+export type InAppBotStreamDeltaPayload = {
   botId: string;
   visitorId: string;
   conversationId: string;
   delta: string;
-}
+};

@@ -10,20 +10,20 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { Readable } from 'stream';
 import {
-  BotReplyStatus,
-  InAppEvents,
   type InAppBotReplyRequiredPayload,
 } from '../../types/events';
+import { BotReplyStatus, InAppEvents } from '../../common/enums/events.enum';
 import { InAppEventsService } from '../events/in-app-events.service';
 import { ConversationService } from '../conversation/conversation.service';
 import { Message } from '../../common/entities/message.entity';
-import { MessageSender } from '../../types/message';
+import { MessageSender } from '../../common/enums/message.enum';
 import { KbRetrievalService } from '../kb-retrieval/kb-retrieval.service';
 import { TokenUsageService } from '../token-transaction/token-usage.service';
-import { RequestContextId, type RequestContext } from '../../types/request';
+import { RequestContextId } from '../../common/enums/request-context.enum';
+import type { RequestContext } from '../../types/request';
 import { createInternalContext } from '../../common/utils/request-context.util';
 import { getRequiredEnv } from '../../common/utils/env.util';
-import { RoleName } from '../../types/roles';
+import { RoleName } from '../../common/enums/roles.enum';
 import type {
   OpenAiCompletionsUsageResult,
   OpenAiEmbeddingsUsageResult,

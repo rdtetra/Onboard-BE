@@ -13,9 +13,9 @@ import { BotWidgetLinkService } from '../bot-widget-link/bot-widget-link.service
 import { StorageService } from '../storage/storage.service';
 import { CreateWidgetDto } from './dto/create-widget.dto';
 import { UpdateWidgetDto } from './dto/update-widget.dto';
-import { WidgetAppearance } from '../../types/widget';
+import { WidgetAppearance } from '../../common/enums/widget.enum';
 import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
-import { RoleName } from '../../types/roles';
+import { RoleName } from '../../common/enums/roles.enum';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
 import {

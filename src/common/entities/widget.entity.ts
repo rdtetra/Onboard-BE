@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Bot } from './bot.entity';
-import { WidgetPosition, WidgetAppearance } from '../../types/widget';
+import { WidgetPosition, WidgetAppearance } from '../enums/widget.enum';
 
 @Entity('widgets')
 @Unique(['botId', 'mode'])

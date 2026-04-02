@@ -2,7 +2,7 @@ import { Entity, Column, ManyToMany, JoinTable, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Permission } from './permission.entity';
 import { User } from './user.entity';
-import { RoleName } from '../../types/roles';
+import { RoleName } from '../enums/roles.enum';
 
 @Entity('roles')
 export class Role extends BaseEntity {

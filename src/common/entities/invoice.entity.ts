@@ -2,7 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Organization } from './organization.entity';
 import { Subscription } from './subscription.entity';
-import { InvoiceStatus } from '../../types/invoice-status';
+import { InvoiceStatus } from '../enums/invoice-status.enum';
 
 @Entity('invoices')
 export class Invoice extends BaseEntity {

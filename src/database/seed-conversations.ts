@@ -2,8 +2,8 @@ import { DataSource, Repository } from 'typeorm';
 import { Bot } from '../common/entities/bot.entity';
 import { Conversation } from '../common/entities/conversation.entity';
 import { Message } from '../common/entities/message.entity';
-import { ConversationStatus } from '../types/conversation';
-import { MessageSender } from '../types/message';
+import { ConversationStatus } from '../common/enums/conversation-status.enum';
+import { MessageSender } from '../common/enums/message.enum';
 
 const VISITOR_IDS = [
   '11111111-1111-1111-1111-111111111101',

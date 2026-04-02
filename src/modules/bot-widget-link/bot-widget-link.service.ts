@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { Widget } from '../../common/entities/widget.entity';
-import { WidgetAppearance } from '../../types/widget';
+import { WidgetAppearance } from '../../common/enums/widget.enum';
 import { DEFAULT_WIDGET_CONFIG } from '../../common/constants/widget-config';
 
 @Injectable()

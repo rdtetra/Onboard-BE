@@ -9,7 +9,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
-import { WebSocketEvents } from '../../types/events';
+import { WebSocketEvents } from '../../common/enums/events.enum';
 import type { JoinRoomAck, JoinRoomPayload } from '../../types/websocket';
 import { WebsocketEventsService } from './websocket.events.service';
 

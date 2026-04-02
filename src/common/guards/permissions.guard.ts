@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ALLOW_KEY } from '../decorators/allow.decorator';
-import { Permission } from '../../types/permissions';
+import { Permission } from '../enums/permissions.enum';
 import { UserService } from '../../modules/user/user.service';
 import type { RequestContext } from '../../types/request';
 import { v4 as uuidv4 } from 'uuid';

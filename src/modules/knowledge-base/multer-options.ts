@@ -1,6 +1,6 @@
 import { memoryStorage } from 'multer';
 import { resolve, relative } from 'path';
-import { SourceType } from '../../types/knowledge-base';
+import { SourceType } from '../../common/enums/knowledge-base.enum';
 
 export const UPLOAD_DIR = 'uploads/kb-sources';
 

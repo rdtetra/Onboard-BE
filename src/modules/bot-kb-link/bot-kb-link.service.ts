@@ -7,8 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bot } from '../../common/entities/bot.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
-import { SourceStatus } from '../../types/knowledge-base';
-import { RoleName } from '../../types/roles';
+import { SourceStatus } from '../../common/enums/knowledge-base.enum';
+import { RoleName } from '../../common/enums/roles.enum';
 import type { RequestContext } from '../../types/request';
 
 /**

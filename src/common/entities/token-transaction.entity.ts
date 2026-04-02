@@ -7,7 +7,7 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { TokenWallet } from './token-wallet.entity';
-import { TokenTransactionType } from '../../types/token-transaction-type';
+import { TokenTransactionType } from '../enums/token-transaction-type.enum';
 import { Bot } from './bot.entity';
 import { Conversation } from './conversation.entity';
 

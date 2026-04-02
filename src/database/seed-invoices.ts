@@ -2,7 +2,7 @@ import { DataSource } from 'typeorm';
 import { Invoice } from '../common/entities/invoice.entity';
 import { Subscription } from '../common/entities/subscription.entity';
 import { Plan } from '../common/entities/plan.entity';
-import { InvoiceStatus } from '../types/invoice-status';
+import { InvoiceStatus } from '../common/enums/invoice-status.enum';
 
 function addMonths(d: Date, months: number): Date {
   const out = new Date(d);

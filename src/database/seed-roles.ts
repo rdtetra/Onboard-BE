@@ -1,8 +1,8 @@
 import { DataSource } from 'typeorm';
 import { Role } from '../common/entities/role.entity';
 import { Permission } from '../common/entities/permission.entity';
-import { RoleName } from '../types/roles';
-import { Permission as PermissionEnum } from '../types/permissions';
+import { RoleName } from '../common/enums/roles.enum';
+import { Permission as PermissionEnum } from '../common/enums/permissions.enum';
 
 export async function seedRoles(dataSource: DataSource): Promise<void> {
   const roleRepository = dataSource.getRepository(Role);

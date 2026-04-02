@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import type { Conversation } from './conversation.entity';
-import { MessageSender, MessageStatus } from '../../types/message';
+import { MessageSender, MessageStatus } from '../enums/message.enum';
 
 @Entity('messages')
 export class Message extends BaseEntity {

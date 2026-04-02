@@ -1,4 +1,5 @@
-import { PAGINATION, type PaginatedResult } from '../types/pagination';
+import { PAGINATION } from '../common/constants/pagination';
+import type { PaginatedResult } from '../types/pagination';
 
 export function parsePagination(query: { page?: string; limit?: string }): {
   page: number;

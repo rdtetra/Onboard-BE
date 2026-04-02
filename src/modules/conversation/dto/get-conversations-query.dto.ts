@@ -5,7 +5,7 @@ import {
   IsString,
   IsDateString,
 } from 'class-validator';
-import { ConversationStatus } from '../../../types/conversation';
+import { ConversationStatus } from '../../../common/enums/conversation-status.enum';
 
 export class GetConversationsQueryDto {
   @IsOptional()

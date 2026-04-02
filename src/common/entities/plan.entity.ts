@@ -1,7 +1,7 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Subscription } from './subscription.entity';
-import { PlanKey } from '../../types/plan-key';
+import { PlanKey } from '../enums/plan-key.enum';
 
 @Entity('plans')
 export class Plan extends BaseEntity {

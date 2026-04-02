@@ -2,7 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { OpenAiService } from './openai.service';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { Allow } from '../../common/decorators/allow.decorator';
-import { Permission } from '../../types/permissions';
+import { Permission } from '../../common/enums/permissions.enum';
 import type { RequestContext as RequestContextType } from '../../types/request';
 import type {
   OpenAiCompletionsUsageResult,

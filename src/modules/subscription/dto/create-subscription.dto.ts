@@ -5,7 +5,7 @@ import {
   IsOptional,
   IsDateString,
 } from 'class-validator';
-import { SubscriptionStatus } from '../../../types/subscription-status';
+import { SubscriptionStatus } from '../../../common/enums/subscription-status.enum';
 
 export class CreateSubscriptionDto {
   @IsUUID()

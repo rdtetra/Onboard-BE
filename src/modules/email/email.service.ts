@@ -1,15 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
-export interface SendMailOptions {
-  to: string | string[];
-  subject: string;
-  text?: string;
-  html?: string;
-  from?: string;
-  cc?: string | string[];
-  bcc?: string | string[];
-}
+import type { SendMailOptions } from '../../types/email';
 
 @Injectable()
 export class EmailService {

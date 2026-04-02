@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Role } from './role.entity';
-import { Permission as PermissionEnum } from '../../types/permissions';
+import { Permission as PermissionEnum } from '../enums/permissions.enum';
 
 @Entity('permissions')
 export class Permission extends BaseEntity {

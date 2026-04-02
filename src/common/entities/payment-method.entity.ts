@@ -1,8 +1,8 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Organization } from './organization.entity';
-import { PaymentProvider } from '../../types/payment-provider';
-import { PaymentMethodType } from '../../types/payment-method-type';
+import { PaymentProvider } from '../enums/payment-provider.enum';
+import { PaymentMethodType } from '../enums/payment-method-type.enum';
 
 @Entity('payment_methods')
 export class PaymentMethod extends BaseEntity {

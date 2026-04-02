@@ -13,7 +13,7 @@ import { UpdateTokenWalletDto } from './dto/update-token-wallet.dto';
 import { TokenWallet } from '../../common/entities/token-wallet.entity';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { Allow } from '../../common/decorators/allow.decorator';
-import { Permission } from '../../types/permissions';
+import { Permission } from '../../common/enums/permissions.enum';
 import type { RequestContext as RequestContextType } from '../../types/request';
 
 @Controller('token-wallet')

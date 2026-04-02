@@ -5,7 +5,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
-import { RoleName } from '../../../types/roles';
+import { RoleName } from '../../../common/enums/roles.enum';
 
 export class InviteUserDto {
   @IsEmail()

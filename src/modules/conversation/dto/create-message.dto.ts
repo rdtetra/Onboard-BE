@@ -8,7 +8,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { MessageSender } from '../../../types/message';
+import { MessageSender } from '../../../common/enums/message.enum';
 
 export class CreateMessageDto {
   @IsString()

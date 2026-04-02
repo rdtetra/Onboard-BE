@@ -7,7 +7,7 @@ import { UserService } from '../user/user.service';
 import { BotService } from '../bot/bot.service';
 import { ConversationService } from '../conversation/conversation.service';
 import { SourcesService } from '../knowledge-base/sources.service';
-import { RoleName } from '../../types/roles';
+import { RoleName } from '../../common/enums/roles.enum';
 import type { RequestContext } from '../../types/request';
 import type { SuperAdminOverview } from '../../types/super-admin-overview';
 

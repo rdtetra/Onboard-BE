@@ -1,6 +1,6 @@
 import type { IncomingHttpHeaders } from 'http';
 import type { Bot } from '../common/entities/bot.entity';
-import { BotType } from '../types/bot';
+import { BotType } from '../common/enums/bot.enum';
 
 function headerFirst(v: IncomingHttpHeaders[string]): string | undefined {
   if (v == null) return undefined;
@@ -89,23 +89,63 @@ function pathMatchesTargets(pathname: string, targetUrls: string[]): boolean {
   return false;
 }
 
+function pathMatchesTargetsExactly(
+  pathname: string,
+  targetUrls: string[],
+): boolean {
+  const path = pathname && pathname.length > 0 ? pathname : '/';
+  for (const t of targetUrls) {
+    const raw = t.trim();
+    if (!raw) continue;
+    if (path === raw) return true;
+  }
+  return false;
+}
+
+/**
+ * Pick first bot whose targetUrls contains an exact pathname match.
+ */
+export function pickChildBotForEmbedPage(
+  children: Bot[],
+  pageUrl: string,
+): Bot | null {
+  let url: URL;
+  try {
+    url = new URL(pageUrl);
+  } catch {
+    return null;
+  }
+  const host = url.hostname;
+  const pathname = url.pathname || '/';
+
+  for (const bot of children) {
+    if (!hostnameAllowed(host, bot.domains ?? [])) {
+      continue;
+    }
+    if (!pathMatchesTargetsExactly(pathname, bot.targetUrls ?? [])) {
+      continue;
+    }
+    return bot;
+  }
+  return null;
+}
+
 function botRequiresVerifiedPage(bot: Bot): boolean {
   const hasDomains = (bot.domains?.length ?? 0) > 0;
-  const isProjectLike =
-    bot.botType === BotType.PROJECT || bot.botType === BotType.URL_SPECIFIC;
-  return hasDomains || isProjectLike;
+  return hasDomains || bot.botType !== BotType.GENERAL;
 }
 
 function isWidgetVisibilityAllowed(bot: Bot, at: Date): boolean {
-  if (bot.botType !== BotType.PROJECT && bot.botType !== BotType.URL_SPECIFIC) {
+  if (bot.botType === BotType.GENERAL) {
     return true;
   }
   const start = bot.visibilityStartDate;
   const end = bot.visibilityEndDate;
-  if (bot.botType === BotType.PROJECT) {
+  const laxWhenMissingDates = bot.parentBot != null;
+  if (laxWhenMissingDates) {
+    if (!start || !end) return true;
+  } else {
     if (!start || !end) return false;
-  } else if (!start || !end) {
-    return true;
   }
   const t = at.getTime();
   return t >= start.getTime() && t <= end.getTime();
@@ -142,7 +182,7 @@ export function isEmbedAllowedForBot(bot: Bot, pageUrl: string | null): boolean 
     return false;
   }
 
-  if (bot.botType === BotType.PROJECT || bot.botType === BotType.URL_SPECIFIC) {
+  if (bot.botType !== BotType.GENERAL) {
     const targets = bot.targetUrls ?? [];
     if (targets.length === 0) return false;
     return pathMatchesTargets(pathname, targets);

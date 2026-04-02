@@ -5,7 +5,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { ChipType } from '../../types/task';
+import { ChipType } from '../enums/task.enum';
 import type { Task } from './task.entity';
 
 @Entity('chips')
