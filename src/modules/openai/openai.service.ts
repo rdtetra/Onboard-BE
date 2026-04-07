@@ -3,7 +3,6 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
-  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -32,7 +31,7 @@ import type {
 } from '../../types/openai-usage';
 
 @Injectable()
-export class OpenAiService implements OnModuleInit {
+export class OpenAiService {
   private readonly logger = new Logger(OpenAiService.name);
   private static readonly SYSTEM_PROMPT =
     'You are a careful and accurate assistant. ' +
@@ -40,7 +39,9 @@ export class OpenAiService implements OnModuleInit {
     'Do not invent facts, names, links, prices, policies, or technical details. ' +
     'You may use earlier turns in this chat only to understand the latest message (references, pronouns, what was asked before). ' +
     'Prefer correctness over completeness. Keep responses concise. ' +
-    'If something is not covered by the passages, say briefly that you do not have that detail—do not output a long canned apology and do not change topic mid-answer.';
+    'If something is not covered by the passages, say briefly that you do not have that detail—do not output a long canned apology and do not change topic mid-answer. ' +
+    'Format answers for readability when it helps: use Markdown ' +
+    '(short paragraphs, bullet lines starting with "- ", numbered "1. ", **bold**, and links as [label](https://...)).';
 
   private static readonly MAX_PRIOR_MESSAGES_IN_CONTEXT = 40;
   private static readonly MAX_RETRIEVAL_QUERY_CHARS = 6000;
@@ -66,15 +67,6 @@ export class OpenAiService implements OnModuleInit {
     private readonly kbRetrievalService: KbRetrievalService,
     private readonly tokenUsageService: TokenUsageService,
   ) {}
-
-  onModuleInit(): void {
-    this.inAppEventsService.on(
-      InAppEvents.BOT_REPLY_REQUIRED,
-      (payload: InAppBotReplyRequiredPayload) => {
-        void this.processBotReply(payload);
-      },
-    );
-  }
 
   async getCompletionsUsage(
     ctx: RequestContext,
