@@ -15,7 +15,6 @@ import { WebsocketEventsService } from './websocket.events.service';
 
 @WebSocketGateway({
   namespace: '/chat',
-  cors: { origin: true, credentials: true },
 })
 export class WidgetChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
