@@ -84,7 +84,7 @@ export const EMBED_SCRIPT = `
   var defaultWidgetLogoSvg = ___DEFAULT_WIDGET_LOGO_SVG_JSON___;
   var sendSvg = '<svg class="ob-send-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
 
-  var css = ':host { display: block; } * { box-sizing: border-box; } .ob-root { font-family: Roboto, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 10px; } #onboard-widget-btn { width: 56px; height: 56px; padding: 12px; box-sizing: border-box; border-radius: 50%; border: none; background: #7B61FF; color: #fff; cursor: pointer; box-shadow: 0 4px 20px rgba(123,97,255,0.45); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.15s, transform 0.15s; } #onboard-widget-btn:hover { background: #6A52E8; transform: scale(1.03); } #onboard-widget-btn.loading { cursor: wait; } #onboard-widget-btn.loading .ob-widget-logo-svg { animation: ob-spin 1s linear infinite; } @keyframes ob-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } #onboard-widget-btn .ob-widget-logo-svg { width: 100%; height: 100%; max-width: 27px; max-height: 27px; } #onboard-widget-panel { display: none; width: 400px; max-width: calc(100vw - 20px); height: 480px; max-height: calc(100vh - 100px); background: #fff; border-radius: 16px; box-shadow: 0px 4px 24px 0px #0000001F; flex-direction: column; overflow: hidden; } #onboard-widget-panel.open { display: flex; } .ob-section-header { flex-shrink: 0; position: relative; padding: 12px 16px; background: #7B61FF; display: flex; align-items: center; justify-content: flex-start; } .ob-header-row { display: flex; align-items: center; text-align: left; } .ob-header-logo { width: 46px; height: 46px; border-radius: 50%; background: #FEFEFE4D; color: #FEFEFE; padding: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; } .ob-header-logo .ob-widget-logo-svg { max-width: 21px; max-height: 21px; width: 100%; height: 100%; } .ob-header-copy { display: flex; flex-direction: column; align-items: flex-start; margin-left: 12px; min-width: 0; } .ob-header-title { font-family: Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 1.25; color: #FEFEFE; } .ob-header-status { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-family: Roboto, sans-serif; font-size: 12px; font-weight: 400; color: #FEFEFE; } .ob-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #00A94F; flex-shrink: 0; } .ob-close { position: absolute; top: 12px; right: 16px; background: transparent; border: none; color: #E9EAF2; font-size: 24px; line-height: 1; cursor: pointer; padding: 0; opacity: 0.9; border-radius: 9999px; display: flex; align-items: center; justify-content: center; } .ob-section-messages { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: #fff; padding: 16px; } .ob-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; } .ob-msg { display: flex; flex-direction: column; max-width: 88%; } .ob-msg-bot { align-self: flex-start; } .ob-msg-user { align-self: flex-end; max-width: 88%; } .ob-bubble { padding: 12px 14px; border-radius: 16px; word-break: break-word; line-height: 1.45; display: flex; flex-direction: column; gap: 10px; font-size: 14px; font-weight: 400; } .ob-msg-bot .ob-bubble { background: #F2EFFF; color: #7B61FF; border-radius: 16px 16px 16px 4px; } .ob-msg-user .ob-bubble { background: #7B61FF; color: #FEFEFE; border-radius: 16px 16px 4px 16px; } .ob-bubble-text { font-size: 14px; font-weight: 400; } .ob-msg-meta { display: flex; align-items: center; gap: 6px; justify-content: flex-end; } .ob-msg-bot .ob-msg-meta { justify-content: flex-start; } .ob-msg-time { font-size: 12px; font-weight: 400; } .ob-msg-status { font-size: 11px; font-weight: 500; opacity: 0.95; } .ob-msg-status-pending { color: #E7E7E7; } .ob-msg-status-sent { color: #E7E7E7; } .ob-msg-status-error { color: #FFD2D2; } .ob-msg-bot .ob-msg-time { color: #6974A6; } .ob-msg-user .ob-msg-time { color: #E7E7E7; text-align: right; } .ob-msg-user.pending .ob-bubble { opacity: 0.85; } .ob-msg-bot-loading .ob-bubble { width: 52px; min-width: 52px; align-items: center; } .ob-msg-bot-loading .ob-bubble-text { width: 24px; text-align: left; letter-spacing: 1px; } .ob-section-footer { flex-shrink: 0; padding: 16px; border-top: 1px solid #E5E7EB; background: #fff; } .ob-task-chips-wrap { width: 75%; margin-left: auto; } .ob-task-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 8px; } .ob-task-chip { border: 1px solid #DCD7FF; background: #F7F5FF; color: #6C57DA; border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 1; padding: 8px 12px; cursor: pointer; transition: filter 0.15s; } .ob-task-chip:hover { filter: brightness(0.97); } .ob-task-chip:disabled { opacity: 0.65; cursor: not-allowed; } .ob-input-row { display: flex; align-items: center; gap: 10px; } .ob-input { flex: 1; height: 36px; padding: 8px; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #1F307A; outline: none; transition: border-color 0.15s; box-sizing: border-box; } .ob-input::placeholder { color: #BABFD6; font-size: 14px; font-weight: 500; } .ob-input:focus { border-color: #7B61FF; } .ob-send { width: 36px; height: 36px; border: none; border-radius: 8px; background: #7B61FF; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; } .ob-send:hover { background: #6A52E8; } .ob-send .ob-send-svg { width: 20px; height: 20px; flex-shrink: 0; } .ob-powered { text-align: center; font-size: 12px; color: #9CA3AF; margin-top: 10px; } .ob-powered-brand { font-weight: 500; }';
+  var css = ':host { display: block; } * { box-sizing: border-box; } .ob-root { font-family: Roboto, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 10px; } #onboard-widget-btn { width: 56px; height: 56px; padding: 12px; box-sizing: border-box; border-radius: 50%; border: none; background: #7B61FF; color: #fff; cursor: pointer; box-shadow: 0 4px 20px rgba(123,97,255,0.45); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.15s, transform 0.15s; } #onboard-widget-btn:hover { background: #6A52E8; transform: scale(1.03); } #onboard-widget-btn.loading { cursor: wait; } #onboard-widget-btn.loading .ob-widget-logo-svg { animation: ob-spin 1s linear infinite; } @keyframes ob-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } #onboard-widget-btn .ob-widget-logo-svg { width: 100%; height: 100%; max-width: 27px; max-height: 27px; } #onboard-widget-panel { display: none; width: 400px; max-width: calc(100vw - 20px); height: 480px; max-height: calc(100vh - 100px); background: #fff; border-radius: 16px; box-shadow: 0px 4px 24px 0px #0000001F; flex-direction: column; overflow: hidden; } #onboard-widget-panel.open { display: flex; } #onboard-widget-panel.ob-ui-locked .ob-section-footer { pointer-events: none; user-select: none; opacity: 0.72; } #onboard-widget-panel.ob-ui-locked .ob-task-chips-wrap { pointer-events: none; } .ob-section-header { flex-shrink: 0; position: relative; padding: 12px 16px; background: #7B61FF; display: flex; align-items: center; justify-content: flex-start; } .ob-header-row { display: flex; align-items: center; text-align: left; } .ob-header-logo { width: 46px; height: 46px; border-radius: 50%; background: #FEFEFE4D; color: #FEFEFE; padding: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; } .ob-header-logo .ob-widget-logo-svg { max-width: 21px; max-height: 21px; width: 100%; height: 100%; } .ob-header-copy { display: flex; flex-direction: column; align-items: flex-start; margin-left: 12px; min-width: 0; } .ob-header-title { font-family: Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 1.25; color: #FEFEFE; } .ob-header-status { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-family: Roboto, sans-serif; font-size: 12px; font-weight: 400; color: #FEFEFE; } .ob-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #00A94F; flex-shrink: 0; } .ob-close { position: absolute; top: 12px; right: 16px; background: transparent; border: none; color: #E9EAF2; font-size: 24px; line-height: 1; cursor: pointer; padding: 0; opacity: 0.9; border-radius: 9999px; display: flex; align-items: center; justify-content: center; } .ob-section-messages { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: #fff; padding: 16px; } .ob-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; } .ob-msg { display: flex; flex-direction: column; max-width: 88%; } .ob-msg-bot { align-self: flex-start; } .ob-msg-user { align-self: flex-end; max-width: 88%; } .ob-bubble { padding: 12px 14px; border-radius: 16px; word-break: break-word; line-height: 1.45; display: flex; flex-direction: column; gap: 10px; font-size: 14px; font-weight: 400; } .ob-msg-bot .ob-bubble { background: #F2EFFF; color: #7B61FF; border-radius: 16px 16px 16px 4px; } .ob-msg-user .ob-bubble { background: #7B61FF; color: #FEFEFE; border-radius: 16px 16px 4px 16px; } .ob-bubble-text { font-size: 14px; font-weight: 400; } .ob-msg-meta { display: flex; align-items: center; gap: 6px; justify-content: flex-end; } .ob-msg-bot .ob-msg-meta { justify-content: flex-start; } .ob-msg-time { font-size: 12px; font-weight: 400; } .ob-msg-status { font-size: 11px; font-weight: 500; opacity: 0.95; } .ob-msg-status-pending { color: #E7E7E7; } .ob-msg-status-sent { color: #E7E7E7; } .ob-msg-status-error { color: #FFD2D2; } .ob-msg-bot .ob-msg-time { color: #6974A6; } .ob-msg-user .ob-msg-time { color: #E7E7E7; text-align: right; } .ob-msg-user.pending .ob-bubble { opacity: 0.85; } .ob-msg-bot-loading .ob-bubble { width: 52px; min-width: 52px; align-items: center; } .ob-msg-bot-loading .ob-bubble-text { width: 24px; text-align: left; letter-spacing: 1px; } .ob-section-footer { flex-shrink: 0; padding: 16px; border-top: 1px solid #E5E7EB; background: #fff; } .ob-task-chips-wrap { width: 75%; margin-left: auto; } .ob-task-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 8px; } .ob-task-chip { border: 1px solid #DCD7FF; background: #F7F5FF; color: #6C57DA; border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 1; padding: 8px 12px; cursor: pointer; transition: filter 0.15s; } .ob-task-chip:hover { filter: brightness(0.97); } .ob-task-chip:disabled { opacity: 0.65; cursor: not-allowed; } .ob-input-row { display: flex; align-items: center; gap: 10px; } .ob-input { flex: 1; height: 36px; padding: 8px; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #1F307A; outline: none; transition: border-color 0.15s; box-sizing: border-box; } .ob-input::placeholder { color: #BABFD6; font-size: 14px; font-weight: 500; } .ob-input:focus { border-color: #7B61FF; } .ob-send { width: 36px; height: 36px; border: none; border-radius: 8px; background: #7B61FF; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; } .ob-send:hover { background: #6A52E8; } .ob-send .ob-send-svg { width: 20px; height: 20px; flex-shrink: 0; } .ob-powered { text-align: center; font-size: 12px; color: #9CA3AF; margin-top: 10px; } .ob-powered-brand { font-weight: 500; }';
 
   var html =
     '<style>' + css + '</style>' +
@@ -102,7 +102,7 @@ export const EMBED_SCRIPT = `
     '<div class="ob-section-messages"><div class="ob-messages" role="log" aria-live="polite"></div><div class="ob-task-chips-wrap"><div class="ob-task-chips" role="list"></div></div></div>' +
     '<div class="ob-section-footer">' +
     '<div class="ob-input-row">' +
-    '<input type="text" class="ob-input" placeholder="Type your message..." autocomplete="off" />' +
+    '<input type="text" class="ob-input" placeholder="Type your message..." autocomplete="off" disabled />' +
     '<button type="button" class="ob-send" aria-label="Send">' + sendSvg + '</button>' +
     '</div>' +
     '<div class="ob-powered">Powered by <span class="ob-powered-brand">Onboard io</span></div>' +
@@ -135,30 +135,88 @@ export const EMBED_SCRIPT = `
   var botStreamBubble = null;
   var botStreamText = '';
   var conversationLoading = false;
+  var messagesLoading = false;
+  var configLoadingActive = false;
+  var botThinkingInputLock = false;
+  var socketChatInputLock = false;
+  var chatTranscriptReady = false;
   var panelCloseTimer = null;
   var taskChips = [];
   var widgetBlocked = false;
   var oncePerSessionHandledThisPage = false;
   var spaLastHref = window.location.href;
   var spaNavGeneration = 0;
+  var suppressSocketReconnect = false;
+  var socketNeedsRejoinAfterReconnect = false;
+  var socketConnectErrorCount = 0;
+  var SOCKET_CONNECT_ERRORS_BEFORE_REFRESH_HINT = 8;
+  var JOIN_ROOM_ACK_MS = 5000;
 
   function q(sel) { return shadow.querySelector(sel); }
+
+  function isComposerBlocked() {
+    return (
+      configLoadingActive ||
+      bootLoading ||
+      conversationLoading ||
+      messagesLoading ||
+      botThinkingInputLock ||
+      socketChatInputLock ||
+      (!!conversationId && !chatTranscriptReady)
+    );
+  }
+
+  function syncWidgetInputDisabled() {
+    if (widgetBlocked) {
+      setInputLocked(true);
+      return;
+    }
+    setInputLocked(isComposerBlocked());
+  }
+
+  function focusChatInputDeferred() {
+    var panel = q('#onboard-widget-panel');
+    var inputEl = panel && panel.querySelector('.ob-input');
+    if (!panel || !inputEl || widgetBlocked || !panel.classList.contains('open')) return;
+    function attempt() {
+      if (inputEl.disabled) return;
+      try {
+        inputEl.focus({ preventScroll: true });
+      } catch (e) {
+        try {
+          inputEl.focus();
+        } catch (e2) {}
+      }
+    }
+    requestAnimationFrame(function() {
+      attempt();
+      setTimeout(attempt, 0);
+    });
+  }
 
   function setBootLoading(loading) {
     bootLoading = !!loading;
     var launcher = q('#onboard-widget-btn');
-    if (!launcher) return;
-    if (bootLoading) launcher.classList.add('loading');
-    else launcher.classList.remove('loading');
+    if (launcher) {
+      if (bootLoading) launcher.classList.add('loading');
+      else launcher.classList.remove('loading');
+    }
+    if (widgetBlocked) return;
+    syncWidgetInputDisabled();
   }
 
   function setInputLocked(locked) {
     inputLocked = !!locked;
     var panel = q('#onboard-widget-panel');
     if (!panel) return;
+    if (inputLocked) panel.classList.add('ob-ui-locked');
+    else panel.classList.remove('ob-ui-locked');
     var inputEl = panel.querySelector('.ob-input');
     var sendBtn = panel.querySelector('.ob-send');
-    if (inputEl) inputEl.disabled = inputLocked;
+    if (inputEl) {
+      inputEl.disabled = inputLocked;
+      inputEl.readOnly = inputLocked;
+    }
     if (sendBtn) sendBtn.disabled = inputLocked;
     var chips = panel.querySelectorAll('.ob-task-chip');
     if (chips && chips.length) {
@@ -168,6 +226,10 @@ export const EMBED_SCRIPT = `
 
   function setWidgetBlocked(blocked) {
     widgetBlocked = !!blocked;
+    if (widgetBlocked) {
+      botThinkingInputLock = false;
+      socketChatInputLock = false;
+    }
     setInputLocked(widgetBlocked);
     setBootLoading(false);
     if (widgetBlocked) {
@@ -201,7 +263,9 @@ export const EMBED_SCRIPT = `
     var messagesEl = q('.ob-messages');
     var inputEl = q('.ob-input');
     var value = (text || '').trim();
-    if (widgetBlocked || inputLocked || !conversationId || !value || !messagesEl) return;
+    if (widgetBlocked || isComposerBlocked() || !conversationId || !value || !messagesEl) {
+      return;
+    }
     if (inputEl && (!text || text === inputEl.value)) inputEl.value = '';
     var pendingKey = 'tmp_' + (++pendingCounter);
     var pendingBubble = appendBubble(messagesEl, 'USER', value, null, 'PENDING');
@@ -334,14 +398,54 @@ export const EMBED_SCRIPT = `
   function connectSocket() {
     if (socket && socket.connected) return Promise.resolve(socket);
     return loadSocketIoClient().then(function(io) {
-      socket = io(socketBase + '/chat', {
-        transports: ['websocket'],
-        withCredentials: true,
-      });
+      if (!socket) {
+        socket = io(socketBase + '/chat', {
+          transports: ['websocket'],
+          withCredentials: true,
+          reconnection: true,
+          reconnectionAttempts: 12,
+          reconnectionDelay: 800,
+          reconnectionDelayMax: 10000,
+        });
+      } else if (!socket.connected) {
+        try {
+          socket.connect();
+        } catch (e) {
+          console.warn('[Onboard widget] socket.connect()', e);
+        }
+      }
       if (!socketSendBound) {
+        socket.on('connect', function() {
+          var unlockFromFailures =
+            socketConnectErrorCount >= SOCKET_CONNECT_ERRORS_BEFORE_REFRESH_HINT;
+          socketConnectErrorCount = 0;
+          if (unlockFromFailures && !suppressSocketReconnect) {
+            socketChatInputLock = false;
+            syncWidgetInputDisabled();
+          }
+          if (suppressSocketReconnect) return;
+          if (!conversationId || widgetBlocked) return;
+          if (socketNeedsRejoinAfterReconnect) {
+            socketNeedsRejoinAfterReconnect = false;
+            rejoinAfterReconnect(socket);
+          }
+        });
+        socket.on('disconnect', function(reason) {
+          if (suppressSocketReconnect) return;
+          if (!conversationId || widgetBlocked) return;
+          if (reason === 'io client disconnect') return;
+          socketNeedsRejoinAfterReconnect = true;
+        });
         socket.on('connect_error', function(err) {
-          showWidgetError(humanizeError(err, 'Connection issue. Please try again.'));
+          socketConnectErrorCount += 1;
           console.warn('[Onboard widget] socket connect error', err);
+          if (socketConnectErrorCount >= SOCKET_CONNECT_ERRORS_BEFORE_REFRESH_HINT) {
+            showWidgetError(
+              'Unable to reach chat after several attempts. Please check your connection and refresh the page.',
+            );
+            socketChatInputLock = true;
+            syncWidgetInputDisabled();
+          }
         });
         socket.on('SEND_MESSAGE', function(payload) {
           var data = payload && payload.message ? payload.message : null;
@@ -360,7 +464,9 @@ export const EMBED_SCRIPT = `
           var wrap = appendBubble(messagesEl, sender, data.content, data.createdAt, data.status || 'SENT');
           renderTaskChips();
           messagesEl.scrollTop = messagesEl.scrollHeight;
-          setInputLocked(false);
+          botThinkingInputLock = false;
+          syncWidgetInputDisabled();
+          focusChatInputDeferred();
         });
         socket.on('BOT_STREAM_DELTA', function(payload) {
           if (!payload) return;
@@ -398,7 +504,9 @@ export const EMBED_SCRIPT = `
           }
           if (payload.status === 'DONE') {
             clearBotPending(false);
-            setInputLocked(false);
+            botThinkingInputLock = false;
+            syncWidgetInputDisabled();
+            focusChatInputDeferred();
             return;
           }
           if (payload.status === 'ERROR') {
@@ -411,24 +519,29 @@ export const EMBED_SCRIPT = `
     });
   }
 
-  function joinRoom() {
-    if (!conversationId || !token) return Promise.resolve();
-    return connectSocket().then(function(s) {
-      return new Promise(function(resolve, reject) {
-        var done = false;
-        var timer = setTimeout(function() {
-          if (done) return;
-          done = true;
-          reject(new Error('Join room timeout'));
-        }, 3000);
-        try {
-          s.emit('JOIN_ROOM', {
+  function emitJoinRoomAck(clientSocket) {
+    return new Promise(function(resolve, reject) {
+      if (!conversationId || !token) {
+        resolve();
+        return;
+      }
+      var done = false;
+      var timer = setTimeout(function() {
+        if (done) return;
+        done = true;
+        reject(new Error('Join room timeout'));
+      }, JOIN_ROOM_ACK_MS);
+      try {
+        clientSocket.emit(
+          'JOIN_ROOM',
+          {
             conversationId: conversationId,
             token: token,
             pageUrl: window.location.href,
             domain: window.location.hostname,
             path: window.location.pathname || '/',
-          }, function(ack) {
+          },
+          function(ack) {
             if (done) return;
             done = true;
             clearTimeout(timer);
@@ -437,28 +550,82 @@ export const EMBED_SCRIPT = `
               return;
             }
             resolve();
-          });
-        } catch (e) {
-          if (done) return;
-          done = true;
-          clearTimeout(timer);
-          reject(e);
-        }
+          },
+        );
+      } catch (e) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        reject(e);
+      }
+    });
+  }
+
+  function rejoinAfterReconnect(sock) {
+    var attempt = 0;
+    var max = 5;
+    function tryOnce() {
+      if (!conversationId || widgetBlocked) return;
+      if (!sock || !sock.connected) return;
+      attempt += 1;
+      emitJoinRoomAck(sock)
+        .then(function() {
+          socketChatInputLock = false;
+          syncWidgetInputDisabled();
+        })
+        .catch(function(err) {
+          console.warn('[Onboard widget] rejoin after reconnect failed', err);
+          if (attempt < max) {
+            setTimeout(tryOnce, 500 * attempt);
+          } else {
+            showWidgetError(
+              'Chat disconnected and could not be restored. Please refresh the page to continue.',
+            );
+            socketChatInputLock = true;
+            syncWidgetInputDisabled();
+          }
+        });
+    }
+    tryOnce();
+  }
+
+  function joinRoom() {
+    if (!conversationId || !token) return Promise.resolve();
+    var maxAttempts = 4;
+    function attemptJoin(n) {
+      return connectSocket().then(function(s) {
+        return emitJoinRoomAck(s);
+      }).catch(function(err) {
+        if (n + 1 >= maxAttempts) return Promise.reject(err);
+        return new Promise(function(resolve) {
+          setTimeout(function() {
+            resolve(attemptJoin(n + 1));
+          }, 450 * (n + 1));
+        });
       });
-    }).catch(function(err) {
-      showWidgetError(humanizeError(err, 'Unable to connect right now. Please try again.'));
+    }
+    return attemptJoin(0).catch(function(err) {
+      showWidgetError(
+        humanizeError(err, 'Unable to connect right now. Please refresh the page.'),
+      );
       if (shouldHardDisable(err)) setWidgetBlocked(true);
       console.warn('[Onboard widget] socket connect failed', err);
     });
   }
 
   function disconnectSocket() {
+    suppressSocketReconnect = true;
+    socketNeedsRejoinAfterReconnect = false;
+    socketConnectErrorCount = 0;
     try {
       if (socket) socket.disconnect();
       socket = null;
       socketSendBound = false;
       clearBotPending();
     } catch (e) {}
+    setTimeout(function() {
+      suppressSocketReconnect = false;
+    }, 500);
   }
 
   function getConfigValue(key, fallback) {
@@ -632,6 +799,8 @@ export const EMBED_SCRIPT = `
   }
 
   function loadConfig() {
+    configLoadingActive = true;
+    if (!widgetBlocked) syncWidgetInputDisabled();
     var scheme = getPreferredColorSchemeMode();
     return api('/config?mode=' + encodeURIComponent(scheme))
       .then(function(res) {
@@ -646,6 +815,10 @@ export const EMBED_SCRIPT = `
         }
         console.warn('[Onboard widget] config fallback', err);
         return null;
+      })
+      .finally(function() {
+        configLoadingActive = false;
+        if (!widgetBlocked) syncWidgetInputDisabled();
       });
   }
 
@@ -658,21 +831,33 @@ export const EMBED_SCRIPT = `
   }
 
   function ensureConversationReady() {
-    if (widgetBlocked || conversationId || conversationLoading) return Promise.resolve();
+    if (widgetBlocked) return Promise.resolve();
+    if (conversationLoading) return Promise.resolve();
+    if (conversationId) return Promise.resolve();
     conversationLoading = true;
+    messagesLoading = true;
+    chatTranscriptReady = false;
+    if (!widgetBlocked) syncWidgetInputDisabled();
     setBootLoading(true);
     return createConversationOnLoad()
       .then(function() { return joinRoom(); })
       .then(function() { return loadMessages(); })
-      .then(renderMessages)
+      .then(function(list) {
+        renderMessages(list);
+        chatTranscriptReady = true;
+      })
       .catch(function(err) {
+        chatTranscriptReady = true;
         showWidgetError(humanizeError(err, 'Unable to start chat right now. Please try again.'));
         if (shouldHardDisable(err)) setWidgetBlocked(true);
         console.warn('[Onboard widget]', err);
       })
-      .then(function() {
+      .finally(function() {
+        messagesLoading = false;
         conversationLoading = false;
         setBootLoading(false);
+        if (!widgetBlocked) syncWidgetInputDisabled();
+        focusChatInputDeferred();
       });
   }
 
@@ -692,6 +877,8 @@ export const EMBED_SCRIPT = `
       }
       conversationId = null;
       conversationLoading = false;
+      messagesLoading = false;
+      chatTranscriptReady = false;
       pendingUserBubbles = {};
       pendingUserBubblesByMessageId = {};
       pendingUserQueue = [];
@@ -813,6 +1000,7 @@ export const EMBED_SCRIPT = `
   function showWidgetError(message) {
     var messagesEl = q('.ob-messages');
     if (!messagesEl) return;
+    botThinkingInputLock = false;
     clearBotPending(false);
     appendBubble(
       messagesEl,
@@ -822,7 +1010,8 @@ export const EMBED_SCRIPT = `
       'SENT'
     );
     messagesEl.scrollTop = messagesEl.scrollHeight;
-    setInputLocked(false);
+    syncWidgetInputDisabled();
+    focusChatInputDeferred();
   }
 
   function humanizeError(err, fallback) {
@@ -854,8 +1043,9 @@ export const EMBED_SCRIPT = `
   }
 
   function startBotPending() {
-    clearBotPending();
-    setInputLocked(true);
+    clearBotPending(false);
+    botThinkingInputLock = true;
+    syncWidgetInputDisabled();
     var messagesEl = q('.ob-messages');
     if (!messagesEl) return;
     botPendingBubble = appendBubble(
@@ -886,7 +1076,9 @@ export const EMBED_SCRIPT = `
         clearInterval(botTypingInterval);
         botTypingInterval = null;
       }
-      setInputLocked(false);
+      botThinkingInputLock = false;
+      syncWidgetInputDisabled();
+      focusChatInputDeferred();
     }, 25000);
   }
 
@@ -925,7 +1117,10 @@ export const EMBED_SCRIPT = `
     }
     botStreamBubble = null;
     botStreamText = '';
-    if (shouldUnlock) setInputLocked(false);
+    if (shouldUnlock) {
+      botThinkingInputLock = false;
+      syncWidgetInputDisabled();
+    }
   }
 
   function renderMessages(list) {
@@ -986,7 +1181,7 @@ export const EMBED_SCRIPT = `
   }
 
   function togglePanel() {
-    if (widgetBlocked || bootLoading) return;
+    if (widgetBlocked || bootLoading || configLoadingActive) return;
     open ? closePanel() : openPanel();
   }
 
@@ -1008,9 +1203,21 @@ export const EMBED_SCRIPT = `
     panel.querySelector('.ob-close').onclick = closePanel;
     panel.querySelector('.ob-send').onclick = function() {
       sendUserMessage(inputEl.value || '');
+      try {
+        inputEl.focus();
+      } catch (e) {}
     };
+    inputEl.addEventListener('beforeinput', function(e) {
+      if (isComposerBlocked()) e.preventDefault();
+    });
     inputEl.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') panel.querySelector('.ob-send').click();
+      if (isComposerBlocked()) {
+        if (e.key !== 'Tab') e.preventDefault();
+        return;
+      }
+      if (e.key !== 'Enter' || e.isComposing) return;
+      e.preventDefault();
+      sendUserMessage(inputEl.value || '');
     });
     setBootLoading(true);
     loadConfig()
