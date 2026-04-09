@@ -8,8 +8,9 @@ import {
   IsOptional,
   IsBoolean,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ChipType } from '../../../common/enums/task.enum';
+import { transformLinkChipUrl } from '../transforms/link-chip-url.transform';
 
 export class ChipDto {
   @IsEnum(ChipType)
@@ -27,6 +28,7 @@ export class ChipDto {
   chipText: string;
 
   /** Required when type is 'link'. Must be a valid URL. */
+  @Transform(transformLinkChipUrl)
   @ValidateIf((o) => o.type === ChipType.LINK)
   @IsUrl()
   @IsNotEmpty({ message: 'url is required when chip type is link' })
