@@ -7,7 +7,9 @@ import {
   MaxLength,
   ValidateIf,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { SourceType, RefreshSchedule } from '../../../common/enums/knowledge-base.enum';
+import { transformKbSourceUrl } from '../transforms/kb-source-url.transform';
 
 export class CreateKBSourceDto {
   @IsEnum(SourceType)
@@ -18,6 +20,7 @@ export class CreateKBSourceDto {
   @MaxLength(200)
   name: string;
 
+  @Transform(transformKbSourceUrl)
   @ValidateIf((o) => o.sourceType === SourceType.URL)
   @IsNotEmpty({ message: 'URL is required for URL source type' })
   @IsUrl()

@@ -27,6 +27,7 @@ import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
+import { normalizeHttpUrl } from '../../utils/normalize-http-url';
 
 @Injectable()
 export class SourcesService {
@@ -167,7 +168,7 @@ export class SourcesService {
 
     const sourceValue =
       dto.sourceType === SourceType.URL
-        ? dto.url!
+        ? normalizeHttpUrl(dto.url!.trim())
         : dto.sourceType === SourceType.TXT
           ? dto.content!
           : dto.fileKey!;
@@ -179,7 +180,10 @@ export class SourcesService {
       name: dto.name,
       organizationId: ctx.user.organizationId,
       sourceType: dto.sourceType,
-      sourceValue: sourceValue.trim(),
+      sourceValue:
+        dto.sourceType === SourceType.URL
+          ? sourceValue
+          : sourceValue.trim(),
       status: this.isIndexableSourceType(dto.sourceType)
         ? SourceStatus.PROCESSING
         : SourceStatus.READY,
@@ -510,7 +514,7 @@ export class SourcesService {
     }
     if (existing.sourceType === SourceType.URL) {
       if (dto.url !== undefined) {
-        payload.sourceValue = dto.url.trim();
+        payload.sourceValue = normalizeHttpUrl(dto.url.trim());
       }
       if (dto.refreshSchedule !== undefined) {
         payload.refreshSchedule = dto.refreshSchedule;
