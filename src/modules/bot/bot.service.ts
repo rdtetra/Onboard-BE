@@ -662,6 +662,18 @@ export class BotService {
 
   async enable(ctx: RequestContext, id: string): Promise<Bot> {
     const bot = await this.findOne(ctx, id);
+    if (bot.botType === BotType.GENERAL) {
+      if (!bot.organizationId) {
+        throw new BadRequestException(
+          'Organization context required to enable general bot',
+        );
+      }
+      await this.assertNoGeneralDomainConflicts(
+        bot.organizationId,
+        bot.domains ?? [],
+        bot.id,
+      );
+    }
     bot.isActive = true;
     return this.botRepository.save(bot);
   }
@@ -798,6 +810,8 @@ export class BotService {
       where: {
         organizationId,
         botType: BotType.GENERAL,
+        isActive: true,
+        isArchived: false,
       },
       select: {
         id: true,
