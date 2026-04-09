@@ -14,11 +14,10 @@ import {
   IsDateString,
   IsUUID,
 } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { BotType, Behavior } from '../../../common/enums/bot.enum';
-
-const DOMAIN_REGEX =
-  /^(localhost|([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
-const TARGET_URL_REGEX = /^\/[a-zA-Z0-9\-_.~/:?=&%]*$/;
+import { transformTrimDomainsArray } from '../transforms/trim-domains-array.transform';
+import { BOT_TARGET_PATH_REGEX } from '../../../common/regex';
 
 export class CreateBotDto {
   @IsIn([BotType.GENERAL, BotType.PROJECT], {
@@ -42,19 +41,15 @@ export class CreateBotDto {
   @MaxLength(5000)
   introMessage?: string;
 
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @Matches(DOMAIN_REGEX, {
-    each: true,
-    message:
-      'Each domain must be a valid hostname (e.g. example.com or localhost)',
-  })
+  /** Hostname format validated in BotService (`BOT_DOMAIN_REGEX` in common/regex). */
+  @Transform(transformTrimDomainsArray)
   @ValidateIf((o) => o.botType === BotType.GENERAL || o.botType === BotType.PROJECT)
-  @ArrayMinSize(1, { message: 'domains is required for general and project bots' })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'domains must include at least one hostname' })
+  @IsString({ each: true })
   @ValidateIf((o) => o.botType === BotType.PROJECT)
   @ArrayMaxSize(1, { message: 'Project bot must have exactly one domain' })
-  domains?: string[];
+  domains: string[];
 
   @ValidateIf((o) => o.botType === BotType.PROJECT)
   @IsNotEmpty({
@@ -64,12 +59,10 @@ export class CreateBotDto {
   @IsUUID('4', { message: 'parentBotId must be a valid UUID' })
   parentBotId?: string | null;
 
-  @ValidateIf(
-    (o) => o.botType === BotType.PROJECT,
-  )
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
   @IsArray()
   @IsString({ each: true })
-  @Matches(TARGET_URL_REGEX, {
+  @Matches(BOT_TARGET_PATH_REGEX, {
     each: true,
     message: 'Each target URL must be a path starting with /',
   })
@@ -80,28 +73,21 @@ export class CreateBotDto {
 
   @IsOptional()
   @IsBoolean()
-  @ValidateIf(
-    (o) => o.botType === BotType.PROJECT,
-  )
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
+  @Type(() => Boolean)
   oncePerSession?: boolean;
 
-  @ValidateIf(
-    (o) => o.botType === BotType.PROJECT,
-  )
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
   @IsEnum(Behavior)
   @IsNotEmpty({ message: 'behavior is required for project bots' })
   behavior?: Behavior;
 
-  @ValidateIf(
-    (o) => o.botType === BotType.PROJECT,
-  )
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
   @IsDateString()
   @IsNotEmpty({ message: 'visibilityStartDate is required for project bots' })
   visibilityStartDate?: string;
 
-  @ValidateIf(
-    (o) => o.botType === BotType.PROJECT,
-  )
+  @ValidateIf((o) => o.botType === BotType.PROJECT)
   @IsDateString()
   @IsNotEmpty({ message: 'visibilityEndDate is required for project bots' })
   visibilityEndDate?: string;

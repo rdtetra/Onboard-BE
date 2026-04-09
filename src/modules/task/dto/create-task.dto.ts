@@ -11,8 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ChipDto } from './chip.dto';
-
-const TARGET_URL_REGEX = /^\/[a-zA-Z0-9\-_.~/:?=&%]*$/;
+import { BOT_TARGET_PATH_REGEX } from '../../../common/regex';
 
 export class CreateTaskDto {
   @IsString()
@@ -22,7 +21,7 @@ export class CreateTaskDto {
 
   @IsArray()
   @IsString({ each: true })
-  @Matches(TARGET_URL_REGEX, {
+  @Matches(BOT_TARGET_PATH_REGEX, {
     each: true,
     message: 'Each target URL must be a path starting with /',
   })

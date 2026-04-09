@@ -10,8 +10,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { WidgetPosition, WidgetAppearance } from '../../../common/enums/widget.enum';
-
-const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
+import { WIDGET_HEX_COLOR_REGEX } from '../../../common/regex';
 
 export class CreateWidgetDto {
   @IsUUID()
@@ -33,47 +32,47 @@ export class CreateWidgetDto {
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, {
+  @Matches(WIDGET_HEX_COLOR_REGEX, {
     message: 'primaryColor must be a valid hex code (e.g. #ffffff)',
   })
   primaryColor?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, {
+  @Matches(WIDGET_HEX_COLOR_REGEX, {
     message: 'headerTextColor must be a valid hex code',
   })
   headerTextColor?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, { message: 'background must be a valid hex code' })
+  @Matches(WIDGET_HEX_COLOR_REGEX, { message: 'background must be a valid hex code' })
   background?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, {
+  @Matches(WIDGET_HEX_COLOR_REGEX, {
     message: 'botMessageBg must be a valid hex code',
   })
   botMessageBg?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, {
+  @Matches(WIDGET_HEX_COLOR_REGEX, {
     message: 'botMessageText must be a valid hex code',
   })
   botMessageText?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, {
+  @Matches(WIDGET_HEX_COLOR_REGEX, {
     message: 'userMessageBg must be a valid hex code',
   })
   userMessageBg?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(HEX_COLOR_REGEX, {
+  @Matches(WIDGET_HEX_COLOR_REGEX, {
     message: 'userMessageText must be a valid hex code',
   })
   userMessageText?: string;

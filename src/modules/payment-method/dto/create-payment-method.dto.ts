@@ -13,6 +13,11 @@ import {
 import { Type } from 'class-transformer';
 import { PaymentProvider } from '../../../common/enums/payment-provider.enum';
 import { PaymentMethodType } from '../../../common/enums/payment-method-type.enum';
+import {
+  PAYMENT_CARD_EXPIRY_REGEX,
+  PAYMENT_CARD_NUMBER_CHARS_REGEX,
+  PAYMENT_CARD_PREFIX_DIGITS_REGEX,
+} from '../../../common/regex';
 
 export class CreatePaymentMethodDto {
   @IsOptional()
@@ -31,7 +36,7 @@ export class CreatePaymentMethodDto {
   @IsOptional()
   @IsString()
   @MaxLength(24)
-  @Matches(/^[\d\s-]+$/, {
+  @Matches(PAYMENT_CARD_NUMBER_CHARS_REGEX, {
     message: 'cardNumber must contain only digits, spaces or dashes',
   })
   cardNumber?: string;
@@ -43,7 +48,7 @@ export class CreatePaymentMethodDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^(0[1-9]|1[0-2])\/([0-9]{2}|[0-9]{4})$/, {
+  @Matches(PAYMENT_CARD_EXPIRY_REGEX, {
     message: 'expiry must be MM/YY or MM/YYYY',
   })
   expiry?: string;
@@ -57,7 +62,9 @@ export class CreatePaymentMethodDto {
   @IsString()
   @MinLength(6)
   @MaxLength(6)
-  @Matches(/^\d+$/, { message: 'cardPrefix must be 6 digits' })
+  @Matches(PAYMENT_CARD_PREFIX_DIGITS_REGEX, {
+    message: 'cardPrefix must be 6 digits',
+  })
   cardPrefix?: string | null;
 
   @IsOptional()
