@@ -56,8 +56,11 @@ export class CreateBotDto {
   @ArrayMaxSize(1, { message: 'Project bot must have exactly one domain' })
   domains?: string[];
 
-  @IsOptional()
   @ValidateIf((o) => o.botType === BotType.PROJECT)
+  @IsNotEmpty({
+    message:
+      'Project bots must have a parent general bot (parentBotId is required)',
+  })
   @IsUUID('4', { message: 'parentBotId must be a valid UUID' })
   parentBotId?: string | null;
 

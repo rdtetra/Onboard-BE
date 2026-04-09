@@ -71,35 +71,26 @@ export class BotService {
       );
     }
 
-    if (
-      createBotDto.botType !== BotType.PROJECT &&
-      createBotDto.parentBotId
-    ) {
-      throw new BadRequestException(
-        'parentBot is only allowed for project bots',
-      );
-    }
-
     const orgId = ctx.user.organizationId;
-
-    const isProjectChild =
-      createBotDto.botType === BotType.PROJECT && !!createBotDto.parentBotId;
 
     let parentRef: { id: string } | null = null;
 
-    if (isProjectChild) {
-      const parent = await this.findOne(ctx, createBotDto.parentBotId!);
-
+    if (createBotDto.botType === BotType.PROJECT) {
+      const parentId = createBotDto.parentBotId?.trim();
+      if (!parentId) {
+        throw new BadRequestException(
+          'Project bots must have a parent general bot (parentBotId is required)',
+        );
+      }
+      const parent = await this.findOne(ctx, parentId);
       if (parent.organizationId !== orgId) {
         throw new BadRequestException(
           'parentBot not found in this organization',
         );
       }
-
       if (parent.botType !== BotType.GENERAL) {
         throw new BadRequestException('parentBot must be a general bot');
       }
-
       parentRef = { id: parent.id };
     }
 
@@ -584,10 +575,23 @@ export class BotService {
           'parentBot can only be set on project bots',
         );
       }
-      if (!updateBotDto.parentBotId) {
+      const rawParentId = updateBotDto.parentBotId;
+      const cleared =
+        rawParentId === null ||
+        rawParentId === undefined ||
+        (typeof rawParentId === 'string' && !String(rawParentId).trim());
+      if (cleared) {
+        if (
+          bot.botType === BotType.PROJECT ||
+          bot.botType === BotType.URL_SPECIFIC
+        ) {
+          throw new BadRequestException(
+            'Project bots must have a parent general bot; parentBotId cannot be cleared',
+          );
+        }
         bot.parentBot = null;
       } else {
-        const parent = await this.findOne(ctx, updateBotDto.parentBotId);
+        const parent = await this.findOne(ctx, String(rawParentId).trim());
         if (parent.organizationId !== bot.organizationId) {
           throw new BadRequestException(
             'parentBot not found in this organization',
@@ -604,6 +608,16 @@ export class BotService {
     Object.assign(bot, payload);
     if (bot.botType === BotType.PROJECT && bot.domains?.length !== 1) {
       throw new BadRequestException('Project bot must have exactly one domain');
+    }
+    if (bot.botType === BotType.PROJECT || bot.botType === BotType.URL_SPECIFIC) {
+      const parentId =
+        bot.parentBot &&
+        (typeof bot.parentBot === 'object' ? bot.parentBot.id : null);
+      if (!parentId) {
+        throw new BadRequestException(
+          'Project bots must have a parent general bot',
+        );
+      }
     }
     return this.botRepository.save(bot);
   }
