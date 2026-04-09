@@ -33,6 +33,7 @@ import {
   parsePagination,
   toPaginatedResult,
 } from '../../utils/pagination.util';
+import { BOT_DOMAIN_REGEX } from '../../common/regex';
 
 @Injectable()
 export class BotService {
@@ -95,7 +96,10 @@ export class BotService {
     }
 
     const isProjectBot = createBotDto.botType !== BotType.GENERAL;
-    const domains = createBotDto.domains ?? [];
+    const domains = this.assertValidDomainsArray(
+      createBotDto.domains,
+      createBotDto.botType,
+    );
     if (createBotDto.botType === BotType.GENERAL) {
       await this.assertNoGeneralDomainConflicts(orgId, domains);
     }
@@ -787,6 +791,32 @@ export class BotService {
     return Math.floor(parseFloat(result?.count ?? '0'));
   }
 
+  private assertValidDomainsArray(raw: unknown, botType: BotType): string[] {
+    if (!Array.isArray(raw)) {
+      throw new BadRequestException('domains must be an array');
+    }
+    const trimmed = raw.map((d) => (typeof d === 'string' ? d.trim() : ''));
+    if (trimmed.length < 1) {
+      throw new BadRequestException(
+        'domains must include at least one hostname',
+      );
+    }
+    for (const d of trimmed) {
+      if (!d || !BOT_DOMAIN_REGEX.test(d)) {
+        throw new BadRequestException(
+          'Each domain must be a valid hostname only (e.g. example.com or localhost)',
+        );
+      }
+    }
+    if (
+      (botType === BotType.PROJECT || botType === BotType.URL_SPECIFIC) &&
+      trimmed.length !== 1
+    ) {
+      throw new BadRequestException('Project bot must have exactly one domain');
+    }
+    return trimmed;
+  }
+
   private async assertNoGeneralDomainConflicts(
     organizationId: string,
     domains: string[],
@@ -852,7 +882,10 @@ export class BotService {
       payload.introMessage = updateBotDto.introMessage;
     }
     if (updateBotDto.domains !== undefined) {
-      payload.domains = updateBotDto.domains;
+      payload.domains = this.assertValidDomainsArray(
+        updateBotDto.domains,
+        existingBot.botType,
+      );
     }
 
     if (existingBot.botType !== BotType.GENERAL) {
