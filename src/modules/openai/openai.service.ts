@@ -33,15 +33,33 @@ import type {
 @Injectable()
 export class OpenAiService {
   private readonly logger = new Logger(OpenAiService.name);
-  private static readonly SYSTEM_PROMPT =
-    'You are a careful and accurate assistant. ' +
-    'Ground factual claims in the knowledge passages supplied in the latest user message when they apply. ' +
-    'Do not invent facts, names, links, prices, policies, or technical details. ' +
-    'You may use earlier turns in this chat only to understand the latest message (references, pronouns, what was asked before). ' +
-    'Prefer correctness over completeness. Keep responses concise. ' +
-    'If something is not covered by the passages, say briefly that you do not have that detail—do not output a long canned apology and do not change topic mid-answer. ' +
-    'Format answers for readability when it helps: use Markdown ' +
-    '(short paragraphs, bullet lines starting with "- ", numbered "1. ", **bold**, and links as [label](https://...)).';
+
+  private static readonly SYSTEM_PROMPT_CORE =
+    'You are a careful and accurate support assistant. ' +
+    'Only treat something as a fact if it is supported by the reference material in the latest user message; do not answer factual questions from general world knowledge. ' +
+    'You may use earlier chat turns only to understand the latest message (pronouns, context). ' +
+    'Prefer correctness over completeness. Keep responses concise and conversational. ' +
+    'If the reference material partly applies, you may briefly summarize what it covers or ask a short clarifying question using terms that actually appear there (e.g. “Did you mean …?”). ' +
+    'Do not invent facts. ' +
+    'Never mention to the user: passages, documents, knowledge base, retrieval, embeddings, “the text provided”, “according to the sources”, or anything that reveals internal tooling—you sound like normal human support. ' +
+    'Closing lines: do not end replies with generic invitations such as “feel free to ask”, “let me know if you have more questions”, or “if you have more specific questions about …, feel free to ask” when you have given a clear, complete, on-topic answer—stop after the answer. ' +
+    'Only add a short offer to help further (one clause or sentence) when the answer is incomplete, uncertain, vague, partly off-material, or you are asking the user to clarify—never as a habit after every message. ' +
+    'Format answers with Markdown when it helps (short paragraphs, "- " bullets, numbered lists, **bold**, [label](url) links).';
+
+  private static buildBotReplySystemPrompt(assistantScopeLabel: string): string {
+    const scope =
+      assistantScopeLabel.trim().length > 0
+        ? assistantScopeLabel.trim()
+        : 'what we support';
+    const scopeQuoted = JSON.stringify(scope);
+    return (
+      OpenAiService.SYSTEM_PROMPT_CORE +
+      ' When the user’s question is outside your scope or nothing in the reference material applies, reply briefly and politely—for example that you can only help with questions related to ' +
+      scopeQuoted +
+      ' (paraphrase naturally; keep it one or two short sentences). Do not invite clarification about unrelated topics unless the reference material suggests a related on-topic angle. ' +
+      'For those off-scope replies only, a brief “happy to help if you have a related question” style sign-off is fine; still avoid repeating it when the user already got a solid answer.'
+    );
+  }
 
   private static readonly MAX_PRIOR_MESSAGES_IN_CONTEXT = 40;
   private static readonly MAX_RETRIEVAL_QUERY_CHARS = 6000;
@@ -226,6 +244,17 @@ export class OpenAiService {
         updatedAt: new Date(),
       });
 
+      const systemCtx: RequestContext = createInternalContext(
+        RequestContextId.OPENAI_BOT_REPLY,
+      );
+      const conversationForScope = await this.conversationsService.findOne(
+        systemCtx,
+        conversationId,
+        { forWidget: true, botId, relations: ['bot'] },
+      );
+      const assistantScopeLabel =
+        conversationForScope.bot?.name?.trim() ?? '';
+
       const apiKey = getRequiredEnv(this.configService, 'OPENAI_API_KEY');
       const model = getRequiredEnv(this.configService, 'OPENAI_MODEL');
       const baseUrl = getRequiredEnv(this.configService, 'OPENAI_BASE_URL').replace(
@@ -262,16 +291,16 @@ export class OpenAiService {
         botId,
         retrievalQuery,
       );
-      const systemCtx: RequestContext = createInternalContext(
-        RequestContextId.OPENAI_BOT_REPLY,
-      );
       if (!context.trim()) {
+        const offTopicLine =
+          assistantScopeLabel.length > 0
+            ? `Sorry—I can only help with questions related to ${assistantScopeLabel}.`
+            : 'Sorry—I can’t help with that. Please ask something related to what this assistant supports.';
         await this.conversationsService.addMessage(
           systemCtx,
           conversationId,
           {
-            content:
-              "I’m sorry, I can’t answer that right now. Please try asking in a different way.",
+            content: offTopicLine,
             sender: MessageSender.BOT,
           },
           {
@@ -291,12 +320,15 @@ export class OpenAiService {
         return;
       }
       const userPrompt =
-        'Knowledge base passages (retrieval used your recent user messages plus this turn):\n\n' +
+        'Reference material for this turn (internal use only—do not tell the user you are reading reference material, documents, or a knowledge base):\n\n' +
         `${context}\n\n` +
         `Latest user message to answer:\n${userContent.trim()}\n\n` +
-        'Answer the latest message. Use the passages above for facts when they apply. ' +
+        'Answer using only the reference material above for factual claims. ' +
         'Use earlier chat messages only to interpret the latest message. ' +
-        'If the passages do not support an answer, say so briefly once—do not insert a stock apology in the middle of other sentences.';
+        'If there is no exact answer in the reference material, you may still reply briefly in a helpful tone: what is covered on-topic, or one clarifying question tied to terms in the material—not general knowledge. ' +
+        'When nothing applies, fall back to the scope phrasing from your system instructions. ' +
+        'Keep any “I don’t have that detail” style line brief. ' +
+        'If the answer is direct and sufficient, end there—no extra “feel free to ask” paragraph.';
 
       const botText = await this.streamChatCompletion({
         apiKey,
@@ -304,7 +336,10 @@ export class OpenAiService {
         baseUrl,
         apiVersion,
         messages: [
-          { role: 'system', content: OpenAiService.SYSTEM_PROMPT },
+          {
+            role: 'system',
+            content: OpenAiService.buildBotReplySystemPrompt(assistantScopeLabel),
+          },
           ...historyMessages,
           { role: 'user', content: userPrompt },
         ],

@@ -10,7 +10,6 @@ import mammoth from 'mammoth';
 import { KBChunk } from '../../common/entities/kb-chunk.entity';
 import { KBSource } from '../../common/entities/kb-source.entity';
 import { SourceStatus, SourceType } from '../../common/enums/knowledge-base.enum';
-import type { RetrievedChunk } from '../../types/kb-retrieval';
 import { BotService } from '../bot/bot.service';
 import { RequestContextId } from '../../common/enums/request-context.enum';
 import type { RequestContext } from '../../types/request';
@@ -20,10 +19,56 @@ import { StorageService } from '../storage/storage.service';
 import { getAbsolutePathForDownload } from '../knowledge-base/multer-options';
 import { AuditService } from '../audit/audit.service';
 
+/** One chunk from vector search, with cosine-style similarity (higher = closer match). */
+type VectorRetrievedChunk = { content: string; score: number };
+
 @Injectable()
 export class KbRetrievalService implements OnModuleInit {
   private readonly logger = new Logger(KbRetrievalService.name);
   private vectorEnabled = false;
+
+  /** Tail of long chat-derived queries sent to the rewriter (chars). */
+  private static readonly RETRIEVAL_REWRITE_MAX_INPUT_CHARS = 4000;
+  private static readonly RETRIEVAL_REWRITE_MAX_OUTPUT_CHARS = 2000;
+  private static readonly RETRIEVAL_REWRITE_SYSTEM =
+    'You rewrite user text into a dense search query for semantic (vector) retrieval over a knowledge base.\n' +
+    'Expand with synonyms, related concepts, entities, and phrases likely to appear in docs.\n' +
+    'Prefer a single flowing phrase or a short comma-separated list of key terms—not bullet points.\n' +
+    'Output only the search query text: no quotes, labels, markdown, or explanation.\n' +
+    'If the input is already specific, enrich lightly without changing meaning.';
+
+  private static readonly RETRIEVAL_VECTOR_TOP_K = 15;
+  /** Target words per stored KB chunk (~300–500). */
+  private static readonly RETRIEVAL_CHUNK_SIZE_WORDS = 400;
+  /** Word overlap between consecutive chunks (~50–80). */
+  private static readonly RETRIEVAL_CHUNK_OVERLAP_WORDS = 65;
+  /** Chunks passed to the answer LLM after re-ranking (target range 4–6). */
+  private static readonly RETRIEVAL_RERANK_KEEP = 5;
+  private static readonly RETRIEVAL_RERANK_MAX_CHUNK_CHARS = 1400;
+  private static readonly RETRIEVAL_RERANK_QUERY_MAX_CHARS = 4000;
+  private static readonly RETRIEVAL_RERANK_SYSTEM =
+    'You rank knowledge base passages by usefulness for answering the user question.\n' +
+    'Passages are numbered starting at 1.\n' +
+    'Reply with ONLY a JSON array of integers: passage numbers in best-first order.\n' +
+    'Include at most the number of indices requested; omit passages that are irrelevant or redundant.\n' +
+    'If nothing is useful, reply with an empty array [].\n' +
+    'No markdown fences, labels, or explanation—only the JSON array.';
+
+  /** pgvector cosine distance → similarity; normalize for storage/display. */
+  private static parseVectorSimilarityScore(raw: string | number): number {
+    const n = typeof raw === 'string' ? Number(raw) : raw;
+    if (!Number.isFinite(n)) {
+      return 0;
+    }
+    return Math.max(0, Math.min(1, n));
+  }
+
+  private static formatSimilarityForPrompt(score: number): string {
+    if (!Number.isFinite(score)) {
+      return '0.00';
+    }
+    return Math.max(0, Math.min(1, score)).toFixed(2);
+  }
 
   constructor(
     @InjectRepository(KBChunk)
@@ -52,12 +97,11 @@ export class KbRetrievalService implements OnModuleInit {
   }
 
   async retrieveContext(botId: string, query: string): Promise<string> {
-    const startedAt = Date.now();
     const trimmed = query.trim();
     if (!trimmed) return '';
     if (!this.vectorEnabled) return '';
 
-    let rows: Array<{ content: string; score: string | number }> = [];
+    let sourceIds: string[] = [];
     try {
       const widgetCtx: RequestContext = createInternalContext(
         RequestContextId.KB_RETRIEVAL_BOT,
@@ -66,14 +110,34 @@ export class KbRetrievalService implements OnModuleInit {
         forWidget: true,
         relations: ['kbSources'],
       });
-      const sourceIds = (bot.kbSources || []).map((s) => s.id);
-      if (sourceIds.length === 0) {
-        return '';
-      }
-      const queryEmbedding = await this.createEmbedding(trimmed);
+      sourceIds = (bot.kbSources || []).map((s) => s.id);
+    } catch (err) {
+      this.logger.warn(
+        `Vector retrieval unavailable for botId=${botId}; answering without KB context.`,
+        err instanceof Error ? err.message : String(err),
+      );
+      return '';
+    }
+
+    if (sourceIds.length === 0) {
+      return '';
+    }
+
+    const retrievalRewriteModel = getRequiredEnv(
+      this.configService,
+      'OPENAI_RETRIEVAL_REWRITE_MODEL',
+    );
+
+    let rows: VectorRetrievedChunk[] = [];
+    try {
+      const queryForEmbedding = await this.rewriteQueryForEmbedding(
+        trimmed,
+        retrievalRewriteModel,
+      );
+      const queryEmbedding = await this.createEmbedding(queryForEmbedding);
       const vectorLiteral = this.toVectorLiteral(queryEmbedding);
-      const topK = 8;
-      rows = (await this.kbChunkRepository.query(
+      const topK = KbRetrievalService.RETRIEVAL_VECTOR_TOP_K;
+      const rawRows = (await this.kbChunkRepository.query(
         `SELECT c.content, (1 - (c.embedding <=> $1::vector)) AS score
          FROM kb_chunks c
          INNER JOIN kb_sources s ON s.id = c.kb_source_id
@@ -83,6 +147,10 @@ export class KbRetrievalService implements OnModuleInit {
          LIMIT $4`,
         [vectorLiteral, sourceIds, SourceStatus.READY, topK],
       )) as Array<{ content: string; score: string | number }>;
+      rows = rawRows.map((r) => ({
+        content: r.content,
+        score: KbRetrievalService.parseVectorSimilarityScore(r.score),
+      }));
     } catch (err) {
       this.logger.warn(
         `Vector retrieval unavailable for botId=${botId}; answering without KB context.`,
@@ -91,16 +159,25 @@ export class KbRetrievalService implements OnModuleInit {
       return '';
     }
 
-    const usable = rows
-      .map<RetrievedChunk>((r) => ({
-        content: r.content,
-        score: typeof r.score === 'string' ? Number(r.score) : r.score,
-      }))
-      .filter((r) => Number.isFinite(r.score) && r.score > 0.38);
+    if (rows.length === 0) return '';
 
-    if (usable.length === 0) return '';
-    return usable
-      .map((r, i) => `Context ${i + 1}:\n${r.content}`)
+    const keep = KbRetrievalService.RETRIEVAL_RERANK_KEEP;
+    const afterRerank = await this.rerankRetrievalChunks(
+      trimmed,
+      rows,
+      retrievalRewriteModel,
+      keep,
+    );
+    const finalRows: VectorRetrievedChunk[] =
+      afterRerank.length > 0
+        ? afterRerank
+        : rows.slice(0, Math.min(keep, rows.length));
+
+    return finalRows
+      .map(
+        (r, i) =>
+          `[Passage ${i + 1} | score: ${KbRetrievalService.formatSimilarityForPrompt(r.score)}]\n${r.content}`,
+      )
       .join('\n\n');
   }
 
@@ -278,16 +355,24 @@ export class KbRetrievalService implements OnModuleInit {
     return readFile(localPath);
   }
 
-  private chunkText(input: string, size = 140, overlap = 30): string[] {
+  private chunkText(input: string): string[] {
     if (!input || !input.trim()) return [];
-  
-    input = input.replace(/\s+/g, ' ').trim();
-  
-    const sentences = input.split(/(?<=[.?!])\s+/);
-  
+
+    const size = KbRetrievalService.RETRIEVAL_CHUNK_SIZE_WORDS;
+    const overlap = KbRetrievalService.RETRIEVAL_CHUNK_OVERLAP_WORDS;
+    if (overlap >= size) {
+      throw new Error(
+        'RETRIEVAL_CHUNK_OVERLAP_WORDS must be less than RETRIEVAL_CHUNK_SIZE_WORDS',
+      );
+    }
+
+    let normalized = input.replace(/\s+/g, ' ').trim();
+
+    const sentences = normalized.split(/(?<=[.?!])\s+/);
+
     const chunks: string[] = [];
     let currentWords: string[] = [];
-  
+
     for (const sentence of sentences) {
       const words = sentence.split(/\s+/);
       if (currentWords.length + words.length <= size) {
@@ -296,10 +381,10 @@ export class KbRetrievalService implements OnModuleInit {
         if (currentWords.length) {
           chunks.push(currentWords.join(' ').trim());
         }
-  
+
         const overlapWords = currentWords.slice(-overlap);
         currentWords = [...overlapWords, ...words];
-  
+
         while (currentWords.length > size) {
           const slice = currentWords.slice(0, size);
           chunks.push(slice.join(' ').trim());
@@ -307,11 +392,11 @@ export class KbRetrievalService implements OnModuleInit {
         }
       }
     }
-  
+
     if (currentWords.length) {
       chunks.push(currentWords.join(' ').trim());
     }
-  
+
     return chunks;
   }
 
@@ -322,6 +407,213 @@ export class KbRetrievalService implements OnModuleInit {
       .replace(/\t+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  /**
+   * Expands short or vague user wording into retrieval-friendly text before embedding.
+   * On API failure, returns the original query (trimmed).
+   */
+  private async rewriteQueryForEmbedding(
+    query: string,
+    rewriteModel: string,
+  ): Promise<string> {
+    const trimmed = query.trim();
+    if (!trimmed) return trimmed;
+
+    const maxIn = KbRetrievalService.RETRIEVAL_REWRITE_MAX_INPUT_CHARS;
+    const forModel =
+      trimmed.length > maxIn ? trimmed.slice(-maxIn) : trimmed;
+
+    try {
+      const apiKey = getRequiredEnv(this.configService, 'OPENAI_API_KEY');
+      const baseUrl = getRequiredEnv(this.configService, 'OPENAI_BASE_URL').replace(
+        /\/+$/,
+        '',
+      );
+      const apiVersion = getRequiredEnv(this.configService, 'OPENAI_API_VERSION');
+
+      const response = await axios.post<{
+        choices?: Array<{ message?: { content?: string | null } }>;
+      }>(
+        `${baseUrl}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`,
+        {
+          model: rewriteModel,
+          messages: [
+            {
+              role: 'system',
+              content: KbRetrievalService.RETRIEVAL_REWRITE_SYSTEM,
+            },
+            { role: 'user', content: forModel },
+          ],
+          temperature: 0.2,
+          max_tokens: 256,
+          stream: false,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      const raw = response.data?.choices?.[0]?.message?.content?.trim() ?? '';
+      const collapsed = raw.replace(/\s+/g, ' ').trim();
+      if (!collapsed) {
+        return trimmed;
+      }
+      const maxOut = KbRetrievalService.RETRIEVAL_REWRITE_MAX_OUTPUT_CHARS;
+      return collapsed.length > maxOut ? collapsed.slice(0, maxOut) : collapsed;
+    } catch (err) {
+      this.logger.debug(
+        `Retrieval query rewrite skipped: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return trimmed;
+    }
+  }
+
+  /**
+   * Cross-checks vector candidates with a chat model; returns best-first subset.
+   * On failure or empty parse, returns [] so caller can fall back to vector order.
+   */
+  private async rerankRetrievalChunks(
+    userQuery: string,
+    candidates: VectorRetrievedChunk[],
+    model: string,
+    keep: number,
+  ): Promise<VectorRetrievedChunk[]> {
+    if (candidates.length === 0) return [];
+    if (candidates.length === 1) return [candidates[0]];
+
+    const maxQ = KbRetrievalService.RETRIEVAL_RERANK_QUERY_MAX_CHARS;
+    const q = userQuery.length > maxQ ? userQuery.slice(-maxQ) : userQuery;
+
+    const maxC = KbRetrievalService.RETRIEVAL_RERANK_MAX_CHUNK_CHARS;
+    const numbered = candidates
+      .map((row, i) => {
+        const c = row.content;
+        const body = c.length > maxC ? `${c.slice(0, maxC)}…` : c;
+        const sc = KbRetrievalService.formatSimilarityForPrompt(row.score);
+        return `### ${i + 1} | score: ${sc}\n${body}`;
+      })
+      .join('\n\n');
+
+    const userPayload =
+      `User question:\n${q}\n\n` +
+      `Return at most ${keep} passage numbers (1-based), best first, as a JSON array only.\n\n` +
+      `Passages:\n${numbered}`;
+
+    try {
+      const apiKey = getRequiredEnv(this.configService, 'OPENAI_API_KEY');
+      const baseUrl = getRequiredEnv(this.configService, 'OPENAI_BASE_URL').replace(
+        /\/+$/,
+        '',
+      );
+      const apiVersion = getRequiredEnv(this.configService, 'OPENAI_API_VERSION');
+
+      const response = await axios.post<{
+        choices?: Array<{ message?: { content?: string | null } }>;
+      }>(
+        `${baseUrl}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`,
+        {
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: KbRetrievalService.RETRIEVAL_RERANK_SYSTEM,
+            },
+            { role: 'user', content: userPayload },
+          ],
+          temperature: 0,
+          max_tokens: 128,
+          stream: false,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      const raw =
+        response.data?.choices?.[0]?.message?.content?.trim() ?? '';
+      const indices = this.parseRerankIndicesFromModel(
+        raw,
+        candidates.length,
+        keep,
+      );
+      if (indices.length === 0) {
+        return [];
+      }
+      return indices
+        .map((i) => candidates[i - 1])
+        .filter(
+          (row): row is VectorRetrievedChunk =>
+            row != null &&
+            typeof row.content === 'string' &&
+            row.content.length > 0,
+        );
+    } catch (err) {
+      this.logger.debug(
+        `Retrieval re-rank skipped: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return [];
+    }
+  }
+
+  private parseRerankIndicesFromModel(
+    raw: string,
+    maxIndex: number,
+    keep: number,
+  ): number[] {
+    const stripped = raw
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/i, '')
+      .trim();
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(stripped);
+    } catch {
+      const match = stripped.match(/\[[\s\d,]*\d+\s*\]/);
+      if (!match) {
+        return [];
+      }
+      try {
+        parsed = JSON.parse(match[0]);
+      } catch {
+        return [];
+      }
+    }
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const out: number[] = [];
+    const seen = new Set<number>();
+    for (const item of parsed) {
+      const n =
+        typeof item === 'number' && Number.isInteger(item)
+          ? item
+          : parseInt(String(item).trim(), 10);
+      if (
+        !Number.isFinite(n) ||
+        n < 1 ||
+        n > maxIndex ||
+        seen.has(n)
+      ) {
+        continue;
+      }
+      seen.add(n);
+      out.push(n);
+      if (out.length >= keep) {
+        break;
+      }
+    }
+    return out;
   }
 
   private async createEmbedding(text: string): Promise<number[]> {
