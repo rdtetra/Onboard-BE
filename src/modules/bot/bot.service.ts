@@ -96,6 +96,9 @@ export class BotService {
 
     const isProjectBot = createBotDto.botType !== BotType.GENERAL;
     const domains = createBotDto.domains ?? [];
+    if (createBotDto.botType === BotType.GENERAL) {
+      await this.assertNoGeneralDomainConflicts(orgId, domains);
+    }
 
     const behavior = isProjectBot
       ? (createBotDto.behavior ?? Behavior.AUTO_SHOW)
@@ -606,6 +609,18 @@ export class BotService {
 
     const payload = this.getUpdatePayload(bot, updateBotDto);
     Object.assign(bot, payload);
+    if (bot.botType === BotType.GENERAL && updateBotDto.domains !== undefined) {
+      if (!bot.organizationId) {
+        throw new BadRequestException(
+          'Organization context required to update general bot domains',
+        );
+      }
+      await this.assertNoGeneralDomainConflicts(
+        bot.organizationId,
+        bot.domains ?? [],
+        bot.id,
+      );
+    }
     if (bot.botType === BotType.PROJECT && bot.domains?.length !== 1) {
       throw new BadRequestException('Project bot must have exactly one domain');
     }
@@ -762,6 +777,53 @@ export class BotService {
       .select('COUNT(DISTINCT kb.id)', 'count')
       .getRawOne<{ count: string }>();
     return Math.floor(parseFloat(result?.count ?? '0'));
+  }
+
+  private async assertNoGeneralDomainConflicts(
+    organizationId: string,
+    domains: string[],
+    excludeBotId?: string,
+  ): Promise<void> {
+    const normalizedRequested = new Set(
+      (domains ?? [])
+        .map((domain) => domain?.trim().toLowerCase())
+        .filter((domain): domain is string => Boolean(domain)),
+    );
+
+    if (normalizedRequested.size === 0) {
+      return;
+    }
+
+    const generalBots = await this.botRepository.find({
+      where: {
+        organizationId,
+        botType: BotType.GENERAL,
+      },
+      select: {
+        id: true,
+        name: true,
+        domains: true,
+      },
+    });
+
+    const conflictingDomains = new Set<string>();
+    for (const existingBot of generalBots) {
+      if (excludeBotId && existingBot.id === excludeBotId) {
+        continue;
+      }
+      for (const existingDomain of existingBot.domains ?? []) {
+        const normalizedExisting = existingDomain?.trim().toLowerCase();
+        if (normalizedExisting && normalizedRequested.has(normalizedExisting)) {
+          conflictingDomains.add(existingDomain);
+        }
+      }
+    }
+
+    if (conflictingDomains.size > 0) {
+      throw new BadRequestException(
+        `A general bot with domain(s) ${Array.from(conflictingDomains).join(', ')} already exists`,
+      );
+    }
   }
 
   private getUpdatePayload(
