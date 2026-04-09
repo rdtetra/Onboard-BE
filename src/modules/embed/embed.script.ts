@@ -147,6 +147,8 @@ export const EMBED_SCRIPT = `
   var spaLastHref = window.location.href;
   var spaNavGeneration = 0;
   var suppressSocketReconnect = false;
+  /** Matches last /embed/config ?mode= so seeded welcome uses the same widget row as styling. */
+  var embedWidgetMode = 'light';
   var socketNeedsRejoinAfterReconnect = false;
   var socketConnectErrorCount = 0;
   var SOCKET_CONNECT_ERRORS_BEFORE_REFRESH_HINT = 8;
@@ -827,6 +829,7 @@ export const EMBED_SCRIPT = `
     configLoadingActive = true;
     if (!widgetBlocked) syncWidgetInputDisabled();
     var scheme = getPreferredColorSchemeMode();
+    embedWidgetMode = scheme;
     return api('/config?mode=' + encodeURIComponent(scheme))
       .then(function(res) {
         applyWidgetConfig(res);
@@ -848,7 +851,10 @@ export const EMBED_SCRIPT = `
   }
 
   function createConversationOnLoad() {
-    return api('/conversations', { method: 'POST', body: { visitorId: visitorId } }).then(function(c) {
+    return api(
+      '/conversations?mode=' + encodeURIComponent(embedWidgetMode),
+      { method: 'POST', body: { visitorId: visitorId } },
+    ).then(function(c) {
       var convo = c && c.data ? c.data : c;
       conversationId = convo && convo.id;
       return c;

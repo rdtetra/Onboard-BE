@@ -38,32 +38,6 @@ export class EmbedService {
     private readonly tasksService: TaskService,
   ) { }
 
-  private async resolveBot(
-    botId: string,
-    context: EmbedPageContext,
-  ): Promise<Bot> {
-    const tokenBot = await this.botsService.findOne(widgetCtx, botId, {
-      forWidget: true,
-    });
-
-    if (
-      tokenBot.botType !== BotType.GENERAL ||
-      (!context.pageUrl?.trim() && !context.domain?.trim())
-    ) {
-      return tokenBot;
-    }
-
-    const children =
-      await this.botsService.findActiveChildBotsByParentIdForWidget(
-        widgetCtx,
-        tokenBot.id,
-      );
-
-    const child = pickChildBotForEmbedContext(children, context);
-
-    return child ?? tokenBot;
-  }
-
   getScript(): string {
     // Compiled: dist/modules/embed/embed.service.js → dist/common/assets/...
     const distRelative = join(
@@ -112,6 +86,7 @@ export class EmbedService {
   async createConversation(
     widgetAuthContext: WidgetAuthContext,
     dto: CreateWidgetConversationDto,
+    modeQuery: string | undefined,
     pageUrl: string | undefined,
     domain?: string | undefined,
     path?: string | undefined,
@@ -136,13 +111,30 @@ export class EmbedService {
       { forWidget: true },
     );
 
-    const bot = await this.botsService.findOne(widgetCtx, conversationBotId, {
-      forWidget: true,
-    });
+    const appearance = this.embedAppearanceFromQuery(modeQuery);
+    let resolvedWidget = await this.widgetsService.findByBotIdAndMode(
+      widgetCtx,
+      conversationBotId,
+      appearance,
+      { forWidget: true },
+    );
+    if (!resolvedWidget) {
+      const fallback =
+        appearance === WidgetAppearance.DARK
+          ? WidgetAppearance.LIGHT
+          : WidgetAppearance.DARK;
+      resolvedWidget = await this.widgetsService.findByBotIdAndMode(
+        widgetCtx,
+        conversationBotId,
+        fallback,
+        { forWidget: true },
+      );
+    }
 
     const welcome = (
-      bot.introMessage ?? DEFAULT_WIDGET_CONFIG.welcomeMessage
-    )?.trim();
+      resolvedWidget?.welcomeMessage?.trim() ||
+      DEFAULT_WIDGET_CONFIG.welcomeMessage
+    ).trim();
 
     if (welcome) {
       await this.conversationsService.addMessage(
@@ -259,10 +251,7 @@ export class EmbedService {
 
     const bot = await this.resolveBot(widgetAuthContext.botId, context);
 
-    const appearance =
-      modeQuery?.trim().toLowerCase() === WidgetAppearance.DARK
-        ? WidgetAppearance.DARK
-        : WidgetAppearance.LIGHT;
+    const appearance = this.embedAppearanceFromQuery(modeQuery);
 
     const resolvedBotWidget = await this.widgetsService.findByBotIdAndMode(
       widgetCtx,
@@ -303,5 +292,39 @@ export class EmbedService {
       showPoweredBy: resolvedBotWidget.showPoweredBy,
       taskChips,
     };
+  }
+
+  private async resolveBot(
+    botId: string,
+    context: EmbedPageContext,
+  ): Promise<Bot> {
+    const tokenBot = await this.botsService.findOne(widgetCtx, botId, {
+      forWidget: true,
+    });
+
+    if (
+      tokenBot.botType !== BotType.GENERAL ||
+      (!context.pageUrl?.trim() && !context.domain?.trim())
+    ) {
+      return tokenBot;
+    }
+
+    const children =
+      await this.botsService.findActiveChildBotsByParentIdForWidget(
+        widgetCtx,
+        tokenBot.id,
+      );
+
+    const child = pickChildBotForEmbedContext(children, context);
+
+    return child ?? tokenBot;
+  }
+
+  private embedAppearanceFromQuery(
+    modeQuery: string | undefined,
+  ): WidgetAppearance {
+    return modeQuery?.trim().toLowerCase() === WidgetAppearance.DARK
+      ? WidgetAppearance.DARK
+      : WidgetAppearance.LIGHT;
   }
 }

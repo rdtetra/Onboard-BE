@@ -34,6 +34,7 @@ export class EmbedController {
   createConversation(
     @WidgetAuthContext() widgetAuthContext: WidgetAuthContextType,
     @Body() dto: CreateWidgetConversationDto,
+    @Query('mode') mode?: string,
     @Query('pageUrl') pageUrl?: string,
     @Query('domain') domain?: string,
     @Query('path') path?: string,
@@ -41,6 +42,7 @@ export class EmbedController {
     return this.embedService.createConversation(
       widgetAuthContext,
       dto,
+      mode,
       pageUrl,
       domain,
       path,
