@@ -14,7 +14,7 @@ import {
   IsDateString,
   IsUUID,
 } from 'class-validator';
-import { BotType, Behavior, BotPriority } from '../../../common/enums/bot.enum';
+import { BotType, Behavior } from '../../../common/enums/bot.enum';
 
 const DOMAIN_REGEX =
   /^(localhost|([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
@@ -91,13 +91,6 @@ export class CreateBotDto {
   @IsEnum(Behavior)
   @IsNotEmpty({ message: 'behavior is required for project bots' })
   behavior?: Behavior;
-
-  @ValidateIf(
-    (o) => o.botType === BotType.PROJECT,
-  )
-  @IsEnum(BotPriority)
-  @IsNotEmpty({ message: 'priority is required for project bots' })
-  priority?: BotPriority;
 
   @ValidateIf(
     (o) => o.botType === BotType.PROJECT,

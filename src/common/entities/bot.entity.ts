@@ -8,7 +8,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { BotType, Behavior, BotPriority } from '../enums/bot.enum';
+import { BotType, Behavior } from '../enums/bot.enum';
 import { Organization } from './organization.entity';
 import { KBSource } from './kb-source.entity';
 import { Task } from './task.entity';
@@ -50,13 +50,6 @@ export class Bot extends BaseEntity {
     nullable: true,
   })
   behavior: Behavior | null;
-
-  @Column({
-    type: 'enum',
-    enum: BotPriority,
-    nullable: true,
-  })
-  priority: BotPriority | null;
 
   @Column({ type: 'varchar' })
   name: string;

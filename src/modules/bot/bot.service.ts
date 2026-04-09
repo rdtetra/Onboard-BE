@@ -20,7 +20,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtWrapperService } from '../jwt/jwt.service';
 import { CreateBotDto } from './dto/create-bot.dto';
 import { UpdateBotDto } from './dto/update-bot.dto';
-import { BotType, Behavior, BotPriority } from '../../common/enums/bot.enum';
+import { BotType, Behavior } from '../../common/enums/bot.enum';
 import { RoleName } from '../../common/enums/roles.enum';
 import type { RequestContext } from '../../types/request';
 import type { PaginatedResult } from '../../types/pagination';
@@ -103,9 +103,6 @@ export class BotService {
     const behavior = isProjectBot
       ? (createBotDto.behavior ?? Behavior.AUTO_SHOW)
       : null;
-    const priority = isProjectBot
-      ? (createBotDto.priority ?? BotPriority.MEDIUM)
-      : null;
     const targetUrls = isProjectBot ? (createBotDto.targetUrls ?? []) : [];
     const oncePerSession = isProjectBot
       ? (createBotDto.oncePerSession ?? false)
@@ -128,7 +125,6 @@ export class BotService {
       isArchived: false,
       parentBot: parentRef,
       behavior,
-      priority,
       targetUrls,
       oncePerSession,
       visibilityStartDate,
@@ -868,9 +864,6 @@ export class BotService {
       }
       if (updateBotDto.behavior !== undefined) {
         payload.behavior = updateBotDto.behavior;
-      }
-      if (updateBotDto.priority !== undefined) {
-        payload.priority = updateBotDto.priority;
       }
       if (updateBotDto.visibilityStartDate !== undefined) {
         payload.visibilityStartDate = updateBotDto.visibilityStartDate
