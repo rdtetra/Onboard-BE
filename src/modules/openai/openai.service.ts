@@ -15,6 +15,7 @@ import { BotReplyStatus, InAppEvents } from '../../common/enums/events.enum';
 import { InAppEventsService } from '../events/in-app-events.service';
 import { ConversationService } from '../conversation/conversation.service';
 import { Message } from '../../common/entities/message.entity';
+import type { Bot } from '../../common/entities/bot.entity';
 import { MessageSender } from '../../common/enums/message.enum';
 import { KbRetrievalService } from '../kb-retrieval/kb-retrieval.service';
 import { TokenUsageService } from '../token-transaction/token-usage.service';
@@ -42,9 +43,43 @@ export class OpenAiService {
     'If the reference material partly applies, you may briefly summarize what it covers or ask a short clarifying question using terms that actually appear there (e.g. “Did you mean …?”). ' +
     'Do not invent facts. ' +
     'Never mention to the user: passages, documents, knowledge base, retrieval, embeddings, “the text provided”, “according to the sources”, or anything that reveals internal tooling—you sound like normal human support. ' +
-    'Closing lines: do not end replies with generic invitations such as “feel free to ask”, “let me know if you have more questions”, or “if you have more specific questions about …, feel free to ask” when you have given a clear, complete, on-topic answer—stop after the answer. ' +
-    'Only add a short offer to help further (one clause or sentence) when the answer is incomplete, uncertain, vague, partly off-material, or you are asking the user to clarify—never as a habit after every message. ' +
+    'Do not end replies with boilerplate invitations: no “feel free to ask”, “let me know if you have more questions”, “if you want more information (about this), just ask me”, “don’t hesitate to ask”, “reach out if you need anything else”, or similar—finish on the substance of the answer. ' +
+    'If you need a specific detail from the user to continue, ask that question directly; do not wrap it in a generic “ask me anything” closer. ' +
     'Format answers with Markdown when it helps (short paragraphs, "- " bullets, numbered lists, **bold**, [label](url) links).';
+
+  /**
+   * User-facing scope: prefer linked KB source names so multi-source bots are not labeled by bot.name only.
+   */
+  private static buildAssistantScopeLabel(bot: Bot | null | undefined): string {
+    if (!bot) {
+      return '';
+    }
+    const sources = bot.kbSources ?? [];
+    const seen = new Set<string>();
+    const names: string[] = [];
+    for (const s of sources) {
+      const n = s.name?.trim();
+      if (!n) {
+        continue;
+      }
+      const key = n.toLowerCase();
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      names.push(n);
+    }
+    if (names.length === 0) {
+      return bot.name?.trim() ?? '';
+    }
+    if (names.length === 1) {
+      return names[0]!;
+    }
+    if (names.length === 2) {
+      return `${names[0]} and ${names[1]}`;
+    }
+    return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+  }
 
   private static buildBotReplySystemPrompt(assistantScopeLabel: string): string {
     const scope =
@@ -54,10 +89,13 @@ export class OpenAiService {
     const scopeQuoted = JSON.stringify(scope);
     return (
       OpenAiService.SYSTEM_PROMPT_CORE +
+      ' The assistant may cover several topic areas summarized as: ' +
+      scopeQuoted +
+      '. If the reference material in the user message answers the question—even when it comes from a different subject than the bot title—use that material; do not refuse or say you only handle one brand or topic unless nothing in the reference material is relevant. ' +
       ' When the user’s question is outside your scope or nothing in the reference material applies, reply briefly and politely—for example that you can only help with questions related to ' +
       scopeQuoted +
       ' (paraphrase naturally; keep it one or two short sentences). Do not invite clarification about unrelated topics unless the reference material suggests a related on-topic angle. ' +
-      'For those off-scope replies only, a brief “happy to help if you have a related question” style sign-off is fine; still avoid repeating it when the user already got a solid answer.'
+      'Do not add a closing line inviting the user to ask more or offering further help in generic terms—end when the message is complete.'
     );
   }
 
@@ -250,10 +288,11 @@ export class OpenAiService {
       const conversationForScope = await this.conversationsService.findOne(
         systemCtx,
         conversationId,
-        { forWidget: true, botId, relations: ['bot'] },
+        { forWidget: true, botId, relations: ['bot', 'bot.kbSources'] },
       );
-      const assistantScopeLabel =
-        conversationForScope.bot?.name?.trim() ?? '';
+      const assistantScopeLabel = OpenAiService.buildAssistantScopeLabel(
+        conversationForScope.bot,
+      );
 
       const apiKey = getRequiredEnv(this.configService, 'OPENAI_API_KEY');
       const model = getRequiredEnv(this.configService, 'OPENAI_MODEL');
@@ -328,7 +367,8 @@ export class OpenAiService {
         'If there is no exact answer in the reference material, you may still reply briefly in a helpful tone: what is covered on-topic, or one clarifying question tied to terms in the material—not general knowledge. ' +
         'When nothing applies, fall back to the scope phrasing from your system instructions. ' +
         'Keep any “I don’t have that detail” style line brief. ' +
-        'If the answer is direct and sufficient, end there—no extra “feel free to ask” paragraph.';
+        'If the answer is direct and sufficient, end there. ' +
+        'Never append lines like “if you want more information, just ask” or any generic invite to ask more questions.';
 
       const botText = await this.streamChatCompletion({
         apiKey,

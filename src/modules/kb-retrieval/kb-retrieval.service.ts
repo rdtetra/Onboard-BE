@@ -20,7 +20,12 @@ import { getAbsolutePathForDownload } from '../knowledge-base/multer-options';
 import { AuditService } from '../audit/audit.service';
 
 /** One chunk from vector search, with cosine-style similarity (higher = closer match). */
-type VectorRetrievedChunk = { content: string; score: number };
+type VectorRetrievedChunk = {
+  content: string;
+  score: number;
+  /** KB source display name (for multi-source bots). */
+  sourceName: string;
+};
 
 @Injectable()
 export class KbRetrievalService implements OnModuleInit {
@@ -48,6 +53,7 @@ export class KbRetrievalService implements OnModuleInit {
   private static readonly RETRIEVAL_RERANK_QUERY_MAX_CHARS = 4000;
   private static readonly RETRIEVAL_RERANK_SYSTEM =
     'You rank knowledge base passages by usefulness for answering the user question.\n' +
+    'Passages may come from different sources (see source labels); prefer the best on-topic content regardless of source.\n' +
     'Passages are numbered starting at 1.\n' +
     'Reply with ONLY a JSON array of integers: passage numbers in best-first order.\n' +
     'Include at most the number of indices requested; omit passages that are irrelevant or redundant.\n' +
@@ -68,6 +74,27 @@ export class KbRetrievalService implements OnModuleInit {
       return '0.00';
     }
     return Math.max(0, Math.min(1, score)).toFixed(2);
+  }
+
+  /** Safe one-line label for prompts (avoid breaking `|` headers). */
+  private static sanitizeSourceLabel(name: string): string {
+    const t = (name || '').trim().replace(/\|/g, '/').replace(/\s+/g, ' ');
+    return t.length > 0 ? t.slice(0, 120) : 'Unknown source';
+  }
+
+  private static formatPassageHeader(
+    index: number,
+    score: number,
+    sourceName: string,
+  ): string {
+    const src = KbRetrievalService.sanitizeSourceLabel(sourceName);
+    return `[Passage ${index} | score: ${KbRetrievalService.formatSimilarityForPrompt(score)} | source: ${src}]`;
+  }
+
+  /** At least 1 chunk per source in the candidate pool; then global top-K by score. */
+  private static perSourceChunkCap(sourceCount: number, topK: number): number {
+    const n = Math.max(1, sourceCount);
+    return Math.max(1, Math.ceil(topK / n));
   }
 
   constructor(
@@ -123,6 +150,8 @@ export class KbRetrievalService implements OnModuleInit {
       return '';
     }
 
+    const uniqueSourceIds = [...new Set(sourceIds)];
+
     const retrievalRewriteModel = getRequiredEnv(
       this.configService,
       'OPENAI_RETRIEVAL_REWRITE_MODEL',
@@ -137,19 +166,44 @@ export class KbRetrievalService implements OnModuleInit {
       const queryEmbedding = await this.createEmbedding(queryForEmbedding);
       const vectorLiteral = this.toVectorLiteral(queryEmbedding);
       const topK = KbRetrievalService.RETRIEVAL_VECTOR_TOP_K;
+      const perSourceCap = KbRetrievalService.perSourceChunkCap(
+        uniqueSourceIds.length,
+        topK,
+      );
       const rawRows = (await this.kbChunkRepository.query(
-        `SELECT c.content, (1 - (c.embedding <=> $1::vector)) AS score
-         FROM kb_chunks c
-         INNER JOIN kb_sources s ON s.id = c.kb_source_id
-         WHERE c.kb_source_id = ANY($2::uuid[])
-           AND s.status = $3
-         ORDER BY c.embedding <=> $1::vector
-         LIMIT $4`,
-        [vectorLiteral, sourceIds, SourceStatus.READY, topK],
-      )) as Array<{ content: string; score: string | number }>;
+        `SELECT sub.content, sub.score, sub.source_name
+         FROM (
+           SELECT c.content,
+                  (1 - (c.embedding <=> $1::vector)) AS score,
+                  s.name AS source_name,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY c.kb_source_id
+                    ORDER BY c.embedding <=> $1::vector
+                  ) AS rn
+           FROM kb_chunks c
+           INNER JOIN kb_sources s ON s.id = c.kb_source_id
+           WHERE c.kb_source_id = ANY($2::uuid[])
+             AND s.status = $3
+         ) sub
+         WHERE sub.rn <= $4
+         ORDER BY sub.score DESC
+         LIMIT $5`,
+        [
+          vectorLiteral,
+          uniqueSourceIds,
+          SourceStatus.READY,
+          perSourceCap,
+          topK,
+        ],
+      )) as Array<{
+        content: string;
+        score: string | number;
+        source_name: string | null;
+      }>;
       rows = rawRows.map((r) => ({
         content: r.content,
         score: KbRetrievalService.parseVectorSimilarityScore(r.score),
+        sourceName: (r.source_name ?? '').trim(),
       }));
     } catch (err) {
       this.logger.warn(
@@ -176,7 +230,7 @@ export class KbRetrievalService implements OnModuleInit {
     return finalRows
       .map(
         (r, i) =>
-          `[Passage ${i + 1} | score: ${KbRetrievalService.formatSimilarityForPrompt(r.score)}]\n${r.content}`,
+          `${KbRetrievalService.formatPassageHeader(i + 1, r.score, r.sourceName)}\n${r.content}`,
       )
       .join('\n\n');
   }
@@ -494,7 +548,8 @@ export class KbRetrievalService implements OnModuleInit {
         const c = row.content;
         const body = c.length > maxC ? `${c.slice(0, maxC)}…` : c;
         const sc = KbRetrievalService.formatSimilarityForPrompt(row.score);
-        return `### ${i + 1} | score: ${sc}\n${body}`;
+        const src = KbRetrievalService.sanitizeSourceLabel(row.sourceName);
+        return `### ${i + 1} | score: ${sc} | source: ${src}\n${body}`;
       })
       .join('\n\n');
 
